@@ -311,7 +311,7 @@ Công khai với người đã xác thực; dùng ở lobby để biết có c�
   "status": "active"
 }
 ```
-404 `ROOM_NOT_FOUND`. Phòng `closed` trả 200 với `status: "closed"` hoặc 404 (chốt khi code; ưu tiên 404 để không lộ).
+Mã phòng chưa tồn tại trả `404 ROOM_NOT_FOUND`. Phòng đã đóng trả `200` với `status: "closed"` và `participants: 0`.
 
 ### GET `/rooms/mine`
 Danh sách phòng `active` do user làm host. (Khai báo route này **trước** `/rooms/{code}` để không bị bắt nhầm là code.)

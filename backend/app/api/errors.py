@@ -7,6 +7,17 @@ from slowapi.errors import RateLimitExceeded
 from app.core.errors import AuthError, ErrorCode
 
 AUTH_ERRORS = {
+    ErrorCode.ROOM_NOT_FOUND: (404, "Không tìm thấy phòng."),
+    ErrorCode.ROOM_CLOSED: (409, "Phòng đã đóng."),
+    ErrorCode.ROOM_FULL: (409, "Phòng đã đầy."),
+    ErrorCode.ROOM_LIMIT_REACHED: (409, "Đã đạt số phòng đang mở tối đa."),
+    ErrorCode.MODE_NOT_SUPPORTED: (400, "Chế độ phòng chưa được hỗ trợ."),
+    ErrorCode.BANNED: (403, "Bạn không thể vào lại phòng này."),
+    ErrorCode.ALREADY_IN_ROOM: (409, "Kết nối đã ở một phòng khác."),
+    ErrorCode.NOT_IN_ROOM: (403, "Bạn chưa vào phòng."),
+    ErrorCode.NOT_ROOM_HOST: (403, "Thao tác này cần quyền host."),
+    ErrorCode.PEER_NOT_FOUND: (404, "Không tìm thấy người tham gia trong phòng."),
+    ErrorCode.INVALID_PAYLOAD: (422, "Dữ liệu sự kiện không hợp lệ."),
     ErrorCode.ACCOUNT_DISABLED: (403, "Tài khoản đã bị khóa."),
     ErrorCode.PASSWORD_CHANGE_REQUIRED: (403, "Bạn cần đổi mật khẩu trước."),
     ErrorCode.FORBIDDEN: (403, "Bạn không có quyền thực hiện yêu cầu này."),

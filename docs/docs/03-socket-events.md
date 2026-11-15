@@ -20,12 +20,12 @@ Không dùng query string vì URL bị ghi vào log của proxy.
 ### 1.2 Server xử lý `connect(sid, environ, auth)`
 
 1. Không có `auth.token` hoặc JWT sai/hết hạn → từ chối.
-2. Với user thật: đọc DB, `is_active = false` → từ chối. Nếu `must_change_password` → từ chối.
+2. Với user thật: đọc DB, `is_active = false` → từ chối. Nếu `must_change_password` → từ chối. Phiên `family_id` trong JWT phải còn refresh token hợp lệ để tránh kết nối lại sau khi thu hồi phiên.
 3. Với khách: kiểm tra `allow_guest = true`.
 4. Lưu phiên: `sessions[sid] = { user_id, display_name, role, is_guest, ip, connected_at }`.
 5. Thêm `sid` vào `users_online[user_id]` (một user có thể mở nhiều tab).
 
-Từ chối bằng `raise ConnectionRefusedError({"code": "...", "message": "..."})`. Client nhận ở sự kiện `connect_error` với `err.data.code`:
+Từ chối bằng `ConnectionRefusedError(message, {"code": code, "message": message})`. Client nhận ở sự kiện `connect_error` với `err.data.code`:
 
 | code | Ý nghĩa | Client nên |
 |---|---|---|
@@ -101,7 +101,7 @@ Server (trong `room.lock`):
 2. Phòng không có trong DB → `ROOM_NOT_FOUND`; `status = closed` → `ROOM_CLOSED`.
 3. `user_id` nằm trong `banned_user_ids` → `BANNED`.
 4. Phòng có mật khẩu: kiểm tra (argon2 verify). Sai → `WRONG_PASSWORD`. Giới hạn **5 lần sai / 5 phút / user+IP** → `RATE_LIMITED`.
-5. Số peer ≥ `min(room.max_participants, max_participants_per_room)` → `ROOM_FULL`.
+5. Số peer ≥ `min(room.max_participants, max_participants_per_room)` → `ROOM_FULL`. Khi thay tab của cùng người dùng, chỗ của tab cũ được dùng lại.
 6. Cùng `user_id` đã ở phòng này bằng `sid` khác (mở hai tab) → **tab cũ bị đá** (`kicked` với `reason = "SESSION_REPLACED"`), tab mới vào.
 7. Một socket chỉ ở **một phòng tại một thời điểm**; đang ở phòng khác → `ALREADY_IN_ROOM`.
 8. Thành công: `sio.enter_room(sid, code)`, thêm `Peer`, xóa `empty_since`.
@@ -168,7 +168,7 @@ Thông báo trạng thái bật/tắt của chính mình để UI người khác
 |---|---|---|
 | `kick` | `{ "peer_id", "reason"? }` | Đá người ra khỏi phòng, **cấm vào lại** tới khi phòng đóng |
 | `mute_peer` | `{ "peer_id", "kind": "audio" \| "video" }` | Gửi `force_mute` cho người đó |
-| `transfer_host` | `{ "peer_id" }` | Chuyển quyền host tạm cho người khác (người đó phải là user đăng nhập) |
+| `transfer_host` | `{ "peer_id" }` | Chọn host tạm trong số người dùng đã đăng nhập. Khi owner đang có mặt, quyền của host tạm bắt đầu lúc owner rời phòng. |
 | `close_room` | không | Đóng phòng (tương đương `DELETE /rooms/{code}`) |
 
 Không phải host → ack `{ok: false, error: {code: "NOT_ROOM_HOST"}}`. Các sự kiện này gọi **cùng hàm trong `room_service`** mà HTTP admin API cũng gọi, nên không viết logic hai lần.

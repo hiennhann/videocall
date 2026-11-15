@@ -8,7 +8,7 @@ from uuid import UUID
 
 from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from limits import parse
+from limits import RateLimitItem, parse
 from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -108,12 +108,15 @@ async def require_admin(request: Request, principal: CurrentPrincipal) -> AuditA
     if user.must_change_password:
         raise AuthError(ErrorCode.PASSWORD_CHANGE_REQUIRED)
 
-    limiter = request.app.state.limiter.limiter
-    key = str(user.id)
-    if not limiter.hit(ADMIN_LIMIT, "admin", key):
-        reset, _ = limiter.get_window_stats(ADMIN_LIMIT, "admin", key)
-        raise AuthError(ErrorCode.RATE_LIMITED, retry_after=max(1, ceil(reset - time())))
+    enforce_rate_limit(request, ADMIN_LIMIT, "admin", str(user.id))
     return AuditActor(user.id, user.email, client_info(request).ip)
 
 
 type CurrentAdmin = Annotated[AuditActor, Depends(require_admin)]
+
+
+def enforce_rate_limit(request: Request, limit: RateLimitItem, scope: str, key: str) -> None:
+    limiter = request.app.state.limiter.limiter
+    if not limiter.hit(limit, scope, key):
+        reset, _ = limiter.get_window_stats(limit, scope, key)
+        raise AuthError(ErrorCode.RATE_LIMITED, retry_after=max(1, ceil(reset - time())))

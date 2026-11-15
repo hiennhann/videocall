@@ -1,6 +1,6 @@
 # Video Call / Livestream
 
-Backend Python cho dự án gọi video thời gian thực. A1 cung cấp khung FastAPI, PostgreSQL 16, Alembic và Docker Compose. A2 thêm API xác thực và hồ sơ. Xem [tài liệu thiết kế](docs/docs/README.md) để biết lộ trình.
+Backend Python cho dự án gọi video thời gian thực. A1 cung cấp khung FastAPI, PostgreSQL 16, Alembic và Docker Compose. A2 thêm API xác thực và hồ sơ. A3 thêm quản trị và cấu hình. A4 thêm phòng và signaling Socket.IO. Xem [tài liệu thiết kế](docs/docs/README.md) để biết lộ trình.
 
 ## Chạy trên Windows
 
@@ -22,6 +22,8 @@ Tạo quản trị viên A3 bằng lệnh sau. Nhập mật khẩu hai lần khi
 ```powershell
 docker compose exec app python -m app.cli create-admin --email admin@example.com
 ```
+
+Ở A4, dùng `POST /api/v1/rooms` trong Swagger để tạo phòng. Client Socket.IO kết nối tới `http://localhost:8000` tại `/socket.io`, gửi `auth: { token: accessToken }` khi kết nối và gọi `join_room` với mã phòng. Giữ Uvicorn ở một worker để mọi kết nối dùng chung trạng thái phòng.
 
 ```powershell
 docker compose ps -a
