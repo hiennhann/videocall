@@ -5,13 +5,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /opt/videocall
 
-COPY pyproject.toml ./
-COPY app/ app/
+COPY backend/pyproject.toml ./
+COPY backend/app/ app/
 RUN python -m pip install --no-cache-dir . \
     && useradd --system --user-group --no-create-home app
 
-COPY alembic.ini ./
-COPY migrations/ migrations/
+COPY backend/alembic.ini ./
+COPY backend/migrations/ migrations/
+COPY client/ client/
 
 USER app
 EXPOSE 8000

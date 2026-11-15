@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lobby · Videocall</title>
+  <link rel="stylesheet" href="/client/styles.css">
+  <script type="module" src="/client/js/lobby.js"></script>
+</head>
+<body>
+  <header class="topbar"><div class="shell"><a class="brand" href="/lobby">Videocall</a><button id="logout" class="secondary" type="button">Đăng xuất</button></div></header>
+  <main class="shell page">
+    <h1>Phòng gọi</h1>
+    <p id="profile" class="muted"></p>
+    <p id="message" class="notice" role="status" hidden></p>
+    <div class="grid">
+      <section class="panel"><h2>Vào phòng</h2>
+        <form id="join-form">
+          <label>Mã phòng <input name="code" placeholder="abc-defg-hjk" maxlength="12" autocomplete="off" required></label>
+          <button>Tiếp tục</button>
+        </form>
+      </section>
+      <section class="panel" id="create-panel" hidden><h2>Tạo phòng</h2>
+        <form id="create-form">
+          <label>Tên phòng <input name="name" maxlength="100"></label>
+          <label>Mật khẩu phòng <input name="password" type="password" minlength="4" maxlength="64" autocomplete="new-password"></label>
+          <button>Tạo phòng</button>
+        </form>
+      </section>
+    </div>
+    <section class="panel" id="mine-panel" hidden><h2>Phòng của bạn</h2><ul id="mine" class="link-list"></ul></section>
+    <section class="panel" id="password-panel" hidden><h2>Đổi mật khẩu</h2>
+      <form id="password-form">
+        <label>Mật khẩu hiện tại <input name="current_password" type="password" autocomplete="current-password" required></label>
+        <label>Mật khẩu mới <input name="new_password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
+        <button>Đổi mật khẩu</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

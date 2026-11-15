@@ -53,4 +53,4 @@ jobs:
           alembic downgrade base
           alembic upgrade head
       - run: pytest --cov=app
-      - run: docker build .
+      - run: docker build -f Dockerfile ..

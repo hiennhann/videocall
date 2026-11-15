@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from app.api.admin import public_router
 from app.api.admin import router as admin_router
 from app.api.auth import create_auth_router
+from app.api.client import mount_client
 from app.api.errors import (
     auth_error_handler,
     internal_error_handler,
@@ -80,6 +81,7 @@ def create_app() -> FastAPI:
     app.include_router(public_router, prefix="/api/v1")
     app.include_router(rooms_router, prefix="/api/v1")
     app.include_router(admin_rooms_router, prefix="/api/v1")
+    mount_client(app)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,

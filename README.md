@@ -15,7 +15,9 @@ Invoke-RestMethod http://localhost:8000/ready
 
 `/health` kiểm tra process. `/ready` trả `200` khi kết nối được PostgreSQL và Alembic đã ở `head`, hoặc `503` nếu app chưa sẵn sàng. Compose chạy `migrate` trước `app`. Tài khoản ứng dụng và tài khoản migration dùng hai URL riêng. Các giá trị trong `.env.example` dành cho môi trường dev.
 
-Mở [Swagger UI](http://localhost:8000/docs) để gọi `POST /api/v1/auth/register` rồi `POST /api/v1/auth/login`. Dùng nút **Authorize** với `access_token` để gọi `GET /api/v1/me`.
+Mở [Videocall](http://localhost:8000/) để tạo tài khoản, đăng nhập và tạo phòng gọi 1–1. Mở một cửa sổ ẩn danh hoặc trình duyệt khác, đăng nhập bằng tài khoản khác hoặc tên khách, rồi nhập mã phòng. Bấm **Vào phòng và bật camera** ở cả hai phiên. A5 dùng kết nối WebRTC trực tiếp. TURN cho kiểm thử khác mạng thuộc A7.
+
+Swagger vẫn có tại [`/docs`](http://localhost:8000/docs) để thử API.
 
 Tạo quản trị viên A3 bằng lệnh sau. Nhập mật khẩu hai lần khi được hỏi, rồi đăng nhập qua `/api/v1/auth/login` để dùng các API `/api/v1/admin`.
 

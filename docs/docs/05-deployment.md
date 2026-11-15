@@ -201,7 +201,7 @@ app.example.com {
 - **HTTPS là bắt buộc** thì trình duyệt mới cho truy cập camera/mic (trừ `localhost`). Caddy tự xin và gia hạn chứng chỉ Let's Encrypt; cần mở cổng 80 và 443 và domain đã trỏ về VPS trước.
 - **Không dùng HTTP Basic Auth để khóa `/admin`**: Basic Auth dùng chính header `Authorization`, xung đột với Bearer token. Dùng IP allowlist hoặc truy cập qua VPN (WireGuard/Tailscale).
 - Header `Content-Security-Policy` chặt cho trang admin sẽ thêm ở bước A6, khi biết các nguồn script (HTMX).
-- Client JS thuần có thể được phục vụ trực tiếp bởi `app` (FastAPI `StaticFiles`) hoặc bởi Caddy (`file_server`); chốt ở A5.
+- Từ A5, FastAPI phục vụ client tại `/`, `/lobby` và `/room`. Docker image kèm thư mục `client/` và Socket.IO client 4.8.4.
 
 ## 6. Quản lý bí mật và môi trường
 

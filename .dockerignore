@@ -1,0 +1,13 @@
+**
+!backend/
+!backend/Dockerfile
+!backend/pyproject.toml
+!backend/alembic.ini
+!backend/app/
+!backend/app/**
+!backend/migrations/
+!backend/migrations/**
+!client/
+!client/**
+**/__pycache__
+**/*.py[cod]

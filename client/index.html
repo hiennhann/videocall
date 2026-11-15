@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đăng nhập · Videocall</title>
+  <link rel="stylesheet" href="/client/styles.css">
+  <script type="module" src="/client/js/login.js"></script>
+</head>
+<body>
+  <header class="topbar"><div class="shell"><a class="brand" href="/">Videocall</a><a href="/admin">Quản trị</a></div></header>
+  <main class="shell auth-layout">
+    <section class="intro">
+      <h1>Gọi video<br>một đối một.</h1>
+      <p>Tạo phòng và gửi mã cho người bạn muốn gọi.</p>
+    </section>
+    <section class="panel">
+      <h2>Đăng nhập</h2>
+      <p id="message" class="notice" role="status" hidden></p>
+      <form id="account-form">
+        <label>Email <input name="email" type="email" autocomplete="username" maxlength="254" required></label>
+        <label>Mật khẩu <input name="password" type="password" autocomplete="current-password" maxlength="128" required></label>
+        <button>Đăng nhập</button>
+      </form>
+      <details id="register-panel">
+        <summary>Tạo tài khoản</summary>
+        <form id="register-form">
+          <label>Tên hiển thị <input name="display_name" minlength="2" maxlength="50" autocomplete="name" required></label>
+          <label>Email <input name="email" type="email" autocomplete="email" maxlength="254" required></label>
+          <label>Mật khẩu <input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></label>
+          <button>Tạo tài khoản</button>
+        </form>
+      </details>
+      <details id="guest-panel">
+        <summary>Vào bằng tên khách</summary>
+        <form id="guest-form">
+          <label>Tên hiển thị <input name="display_name" minlength="2" maxlength="50" required></label>
+          <button>Tiếp tục</button>
+        </form>
+      </details>
+    </section>
+  </main>
+</body>
+</html>

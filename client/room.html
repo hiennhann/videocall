@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cuộc gọi · Videocall</title>
+  <link rel="stylesheet" href="/client/styles.css">
+  <script src="/client/vendor/socket.io.min.js" defer></script>
+  <script type="module" src="/client/js/room.js"></script>
+</head>
+<body class="call-page">
+  <header class="topbar"><div class="shell"><a class="brand" href="/lobby">Videocall</a><a href="/lobby">Về lobby</a></div></header>
+  <main class="shell page">
+    <div class="heading-row"><div><h1 id="room-name">Phòng gọi</h1><p id="room-code"></p></div><button id="copy-code" type="button" class="secondary" hidden>Sao chép mã</button></div>
+    <p id="message" role="status" class="notice" hidden></p>
+    <section id="join-panel" class="panel" hidden>
+      <form id="enter-form">
+        <label id="password-label" hidden>Mật khẩu phòng <input name="password" type="password" maxlength="64" autocomplete="off"></label>
+        <button type="submit">Vào phòng và bật camera</button>
+      </form>
+    </section>
+    <section id="call-panel" hidden aria-label="Cuộc gọi">
+      <div class="video-grid">
+        <figure><video id="remote" autoplay playsinline></video><figcaption id="remote-name">Đang chờ người tham gia</figcaption></figure>
+        <figure><video id="local" autoplay muted playsinline></video><figcaption>Bạn</figcaption></figure>
+      </div>
+      <div class="controls">
+        <button id="play-remote" class="secondary" type="button" hidden>Phát luồng video</button>
+        <button id="mic" type="button" class="secondary" aria-pressed="true">Mic bật</button>
+        <button id="camera" type="button" class="secondary" aria-pressed="true">Camera bật</button>
+        <button id="leave" type="button" class="danger">Rời phòng</button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
