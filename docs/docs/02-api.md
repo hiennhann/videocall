@@ -64,14 +64,18 @@ Lỗi validate (422) có `details.fields`:
   "name": "An",
   "iat": 1763195400,
   "exp": 1763196300,
-  "jti": "uuid"
+  "jti": "uuid",
+  "family_id": "uuid"
 }
 ```
 
 - Thời hạn mặc định **15 phút** (`access_token_ttl_minutes`).
 - Khóa ký `JWT_SECRET` (≥ 32 byte ngẫu nhiên) nằm trong biến môi trường.
 - Claim `role` chỉ để client hiển thị giao diện. **Server luôn đọc user từ DB** ở mỗi request (tìm theo PK, rất nhẹ) để kiểm tra `is_active` và `role`. Nhờ vậy khóa tài khoản hoặc đổi quyền có tác dụng ngay, không phải chờ token hết hạn.
+- `family_id` có trong token của tài khoản và định danh phiên đăng nhập. Endpoint đổi mật khẩu dùng claim đã ký này để giữ refresh token của phiên hiện tại.
 - Khách (guest): `sub = "guest:<uuid>"`, `role = "guest"`, không có dòng trong DB nên không kiểm tra DB; hết hạn theo `guest_ttl_minutes`.
+
+Ở A2, server đọc tài khoản từ DB và API dùng `role = "user"`, `must_change_password = false`. A3 bổ sung `role`, `is_active`, `must_change_password` và `last_login_at` qua migration `0003`. A4 tích hợp ngắt socket khi đăng xuất toàn bộ hoặc đổi mật khẩu.
 
 ### 1.2 Refresh token
 
@@ -196,7 +200,7 @@ Response `200`:
 
 Chống dò email qua thời gian phản hồi: khi email không tồn tại, vẫn chạy một lần verify hash giả để thời gian gần bằng nhau.
 
-Thành công thì cập nhật `last_login_at`.
+Từ A3, đăng nhập thành công cập nhật `last_login_at`.
 
 ### POST `/auth/refresh`
 
@@ -250,7 +254,7 @@ Với khách: `email = null`, `is_guest = true`, thêm `expires_at`.
 `{ "current_password": "...", "new_password": "..." }` → `204`.
 - Sai mật khẩu hiện tại: 400 `WRONG_PASSWORD`.
 - Mật khẩu mới trùng cũ: 400 `PASSWORD_UNCHANGED`.
-- Thành công: đặt `must_change_password = false`, **thu hồi mọi refresh token khác** (giữ phiên hiện tại bằng cách trả cặp token mới nếu cần), ngắt socket của các phiên khác.
+- Thành công: **thu hồi refresh token của các phiên khác**, giữ phiên theo `family_id` trong access token và trả `204`. Từ A3, đặt `must_change_password = false`. Từ A4, ngắt socket của các phiên khác.
 
 ## 6. Phòng
 
