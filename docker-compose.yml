@@ -25,6 +25,7 @@ services:
     command: ["alembic", "upgrade", "head"]
     environment:
       DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set MIGRATION_DATABASE_URL in .env}
+      POSTGRES_APP_USER: ${POSTGRES_APP_USER:?Set POSTGRES_APP_USER in .env}
     depends_on:
       db:
         condition: service_healthy
