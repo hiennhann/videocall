@@ -20,6 +20,7 @@ from app.core.security import (
 from app.models import RefreshToken, User
 from app.schemas.settings import SettingsSchema
 from app.services.account_events import AccountEvents
+from app.services.audit_service import AuditActor, record_audit
 from app.services.login_attempts import LoginAttempts
 from app.services.settings_service import SettingsService
 
@@ -88,7 +89,13 @@ class AuthService:
         return user
 
     async def login(
-        self, db: AsyncSession, email: str, password: str, client: ClientInfo
+        self,
+        db: AsyncSession,
+        email: str,
+        password: str,
+        client: ClientInfo,
+        *,
+        admin_only: bool = False,
     ) -> tuple[User, SessionTokens]:
         policy = await self.settings.get(db)
         ip = client.login_ip
@@ -109,14 +116,22 @@ class AuthService:
 
         if not user.is_active:
             raise AuthError(ErrorCode.ACCOUNT_DISABLED)
+        if admin_only and user.role != "admin":
+            raise AuthError(ErrorCode.FORBIDDEN)
         now = datetime.now(UTC)
         user.last_login_at = now
         _, tokens = self._new_session(db, user, uuid4(), now, client, policy)
+        if admin_only:
+            record_audit(
+                db, AuditActor(user.id, user.email, client.ip), "admin.login", "user", str(user.id)
+            )
         await db.commit()
         self._login_attempts.reset(email, ip)
         return user, tokens
 
-    async def refresh(self, db: AsyncSession, raw_token: str, client: ClientInfo) -> SessionTokens:
+    async def refresh(
+        self, db: AsyncSession, raw_token: str, client: ClientInfo, *, admin_only: bool = False
+    ) -> SessionTokens:
         policy = await self.settings.get(db)
         token_hash = hash_refresh_token(raw_token)
         user = await self._lock_token_owner(db, token_hash)
@@ -129,6 +144,8 @@ class AuthService:
             raise AuthError(ErrorCode.INVALID_REFRESH_TOKEN)
         if not user.is_active:
             raise AuthError(ErrorCode.ACCOUNT_DISABLED)
+        if admin_only and user.role != "admin":
+            raise AuthError(ErrorCode.FORBIDDEN)
 
         if token.revoked_at is not None:
             if token.replaced_by_id is not None and now - token.revoked_at > REFRESH_GRACE:
@@ -212,6 +229,20 @@ class AuthService:
         remaining = self._login_attempts.retry_after(email, ip)
         if remaining is not None:
             raise AuthError(ErrorCode.LOGIN_LOCKED, retry_after=remaining)
+
+    @staticmethod
+    async def has_active_session(db: AsyncSession, user_id: UUID, family_id: UUID) -> bool:
+        session_id = await db.scalar(
+            select(RefreshToken.id)
+            .where(
+                RefreshToken.user_id == user_id,
+                RefreshToken.family_id == family_id,
+                RefreshToken.revoked_at.is_(None),
+                RefreshToken.expires_at > datetime.now(UTC),
+            )
+            .limit(1)
+        )
+        return session_id is not None
 
     def _new_session(
         self,

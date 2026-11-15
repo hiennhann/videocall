@@ -1,0 +1,11 @@
+{% if total > page_size %}
+<nav class="pagination" aria-label="Phân trang">
+  {% if current_page > 1 %}
+    <a href="{{ request.url.include_query_params(page=current_page - 1).path }}?{{ request.url.include_query_params(page=current_page - 1).query }}">Trang trước</a>
+  {% endif %}
+  <span>Trang {{ current_page }} · {{ total }} kết quả</span>
+  {% if current_page * page_size < total %}
+    <a href="{{ request.url.include_query_params(page=current_page + 1).path }}?{{ request.url.include_query_params(page=current_page + 1).query }}">Trang sau</a>
+  {% endif %}
+</nav>
+{% endif %}

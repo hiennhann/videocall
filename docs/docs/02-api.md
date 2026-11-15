@@ -99,7 +99,7 @@ Khi `must_change_password = true`, đăng nhập vẫn thành công nhưng mọi
 
 ### 1.5 Xác thực cho trang admin web
 
-Trang admin (Jinja2 + HTMX) dùng cookie `httpOnly`, `Secure`, `SameSite=Strict`, `Path=/admin`, kèm CSRF token cho các request thay đổi dữ liệu. Chi tiết chốt ở bước A6 (xem `06-decisions.md`, câu hỏi mở Q2). API JSON `/api/v1/admin/*` chỉ chấp nhận Bearer token.
+Trang admin (Jinja2 + HTMX) dùng cookie access và refresh `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/admin`. Middleware làm mới access token khi hết hạn, xoay vòng refresh token và kiểm tra lại quyền admin trong DB. Biểu mẫu POST có CSRF token ký theo phiên quản trị. API JSON `/api/v1/admin/*` chỉ chấp nhận Bearer token.
 
 ## 2. Rate limit
 

@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
+from datetime import datetime
 from functools import partial
 from typing import Any
 from uuid import UUID, uuid4
@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.api.errors import AUTH_ERRORS
 from app.core.errors import AuthError, ErrorCode
 from app.core.security import decode_access_token
-from app.models import RefreshToken, Room
+from app.models import Room
 from app.realtime.state import Connection, RoomStateStore
 from app.schemas.rooms import JoinRoom, KickPeer, PeerTarget, SignalCandidate, SignalDescription
 from app.services.account_events import AccountEvents
@@ -96,17 +96,7 @@ class RealtimeServer(AccountEvents):
                         raise AuthError(ErrorCode.ACCOUNT_DISABLED)
                     if user.must_change_password:
                         raise AuthError(ErrorCode.PASSWORD_CHANGE_REQUIRED)
-                    family_exists = await db.scalar(
-                        select(RefreshToken.id)
-                        .where(
-                            RefreshToken.user_id == user.id,
-                            RefreshToken.family_id == identity.family_id,
-                            RefreshToken.revoked_at.is_(None),
-                            RefreshToken.expires_at > datetime.now(UTC),
-                        )
-                        .limit(1)
-                    )
-                    if family_exists is None:
+                    if not await AuthService.has_active_session(db, user.id, identity.family_id):
                         raise AuthError(ErrorCode.TOKEN_INVALID)
                     name, role = user.display_name, user.role
 

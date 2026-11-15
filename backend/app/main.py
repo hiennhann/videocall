@@ -35,6 +35,7 @@ from app.realtime.server import RealtimeServer
 from app.services.admin_service import AdminService
 from app.services.auth_service import AuthService
 from app.services.settings_service import SettingsService
+from app.web.routes import mount_admin
 
 
 def create_app() -> FastAPI:
@@ -82,6 +83,7 @@ def create_app() -> FastAPI:
     app.include_router(rooms_router, prefix="/api/v1")
     app.include_router(admin_rooms_router, prefix="/api/v1")
     mount_client(app)
+    mount_admin(app)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<form class="filter" action="/admin/users" method="get">
+  <label>Tìm theo email hoặc tên <input name="q" value="{{ q }}" maxlength="254"></label>
+  <label>Vai trò <select name="role"><option value="">Tất cả</option><option value="user"{% if role == 'user' %} selected{% endif %}>Người dùng</option><option value="admin"{% if role == 'admin' %} selected{% endif %}>Quản trị viên</option></select></label>
+  <label>Trạng thái <select name="status"><option value="">Tất cả</option><option value="active"{% if status_filter == 'active' %} selected{% endif %}>Hoạt động</option><option value="locked"{% if status_filter == 'locked' %} selected{% endif %}>Đã khóa</option></select></label>
+  <button>Lọc tài khoản</button>
+</form>
+<div class="panel table-scroll">
+  <table><thead><tr><th>Tài khoản</th><th>Vai trò</th><th>Trạng thái</th><th>Đăng nhập gần nhất</th></tr></thead>
+    <tbody>{% for user in users %}
+      <tr><td><a href="/admin/users/{{ user.id }}">{{ user.display_name }}</a><small>{{ user.email }}</small></td>
+        <td>{{ "Quản trị viên" if user.role == "admin" else "Người dùng" }}</td>
+        <td>{{ "Hoạt động" if user.is_active else "Đã khóa" }}</td>
+        <td>{{ user.last_login_at.strftime('%Y-%m-%d %H:%M UTC') if user.last_login_at else '—' }}</td></tr>
+    {% else %}<tr><td colspan="4">Không tìm thấy tài khoản.</td></tr>{% endfor %}</tbody>
+  </table>
+  {% include "_pagination.html" %}
+</div>
+{% endblock %}

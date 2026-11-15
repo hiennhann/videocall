@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<form class="filter" action="/admin/audit" method="get">
+  <label>Người thao tác <input name="actor" value="{{ by }}" maxlength="254"></label>
+  <label>Hành động <input name="action" value="{{ action }}" placeholder="user.lock" maxlength="64"></label>
+  <label>Đối tượng <input name="target_type" value="{{ target_type }}" placeholder="user" maxlength="32"></label>
+  <label>Từ (UTC) <input name="from" type="datetime-local" value="{{ date_from }}"></label>
+  <label>Đến (UTC) <input name="to" type="datetime-local" value="{{ date_to }}"></label>
+  <button>Lọc nhật ký</button>
+</form>
+<div class="panel table-scroll">
+  <table><thead><tr><th>Thời gian</th><th>Người thao tác</th><th>Hành động</th><th>Đối tượng</th></tr></thead>
+    <tbody>{% for entry in entries %}
+      <tr><td>{{ entry.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</td><td>{{ entry.actor_label }}</td>
+        <td>{{ entry.action }}</td><td>{{ entry.target_type or '—' }}<small>{{ entry.target_id or '' }}</small>
+          {% if entry.detail %}<details><summary>Chi tiết</summary><pre>{{ entry.detail | tojson(indent=2) }}</pre></details>{% endif %}</td></tr>
+    {% else %}<tr><td colspan="4">Không tìm thấy bản ghi.</td></tr>{% endfor %}</tbody>
+  </table>
+  {% include "_pagination.html" %}
+</div>
+{% endblock %}

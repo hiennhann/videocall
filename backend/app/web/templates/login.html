@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <form action="/admin/login" method="post">
+    {% include "_csrf.html" %}
+    <label>Email <input name="email" type="email" maxlength="254" autocomplete="username" required></label>
+    <label>Mật khẩu <input name="password" type="password" maxlength="128" autocomplete="current-password" required></label>
+    <button>Đăng nhập</button>
+  </form>
+</section>
+{% endblock %}

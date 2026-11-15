@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+{% for room in rooms %}
+<section class="panel room-listing">
+  <div class="heading-row">
+    <div><h2>{{ room.name or room.code }}</h2><p class="muted">{{ room.code }} · {{ room.host.display_name if room.host else 'Chưa có host' }}</p></div>
+    <form action="/admin/rooms/{{ room.code }}/close" method="post" hx-confirm="Đóng phòng và đưa mọi người ra khỏi phòng?">
+      {% include "_csrf.html" %}<button class="danger">Đóng phòng</button>
+    </form>
+  </div>
+  <ul class="participants">
+    {% for peer in room.participants %}
+      <li>{{ peer.display_name }}{% if peer.is_guest %} <small>Khách</small>{% endif %}
+        <form action="/admin/rooms/{{ room.code }}/kick" method="post" hx-confirm="Đưa người này ra khỏi phòng?">
+          {% include "_csrf.html" %}<input type="hidden" name="peer_id" value="{{ peer.peer_id }}"><button class="secondary">Mời ra</button>
+        </form>
+      </li>
+    {% else %}<li>Chưa có người tham gia.</li>{% endfor %}
+  </ul>
+</section>
+{% else %}<p class="panel">Hiện chưa có phòng đang mở.</p>{% endfor %}
+{% endblock %}

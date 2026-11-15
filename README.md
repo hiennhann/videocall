@@ -27,6 +27,8 @@ docker compose exec app python -m app.cli create-admin --email admin@example.com
 
 Ở A4, dùng `POST /api/v1/rooms` trong Swagger để tạo phòng. Client Socket.IO kết nối tới `http://localhost:8000` tại `/socket.io`, gửi `auth: { token: accessToken }` khi kết nối và gọi `join_room` với mã phòng. Giữ Uvicorn ở một worker để mọi kết nối dùng chung trạng thái phòng.
 
+Ở A6, mở [trang quản trị](http://localhost:8000/admin), rồi đăng nhập bằng tài khoản admin vừa tạo. Từ đây có thể quản lý người dùng, phòng, cấu hình và xem nhật ký. Trình duyệt tự làm mới phiên qua cookie giới hạn ở `/admin`. Khi triển khai ngoài localhost, dùng HTTPS.
+
 ```powershell
 docker compose ps -a
 docker compose logs migrate app

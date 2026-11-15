@@ -1,0 +1,32 @@
+.admin-layout { display: grid; grid-template-columns: 12rem minmax(0, 1fr); gap: 2rem; padding-block: 2rem; }
+.admin-layout.solo { display: block; width: min(100% - 2rem, 470px); padding-top: 7vh; }
+.admin-layout main { min-width: 0; }
+.admin-layout h1 { font-size: clamp(1.7rem, 4vw, 2.7rem); margin-bottom: 1.3rem; }
+.admin-nav { display: grid; gap: .4rem; align-content: start; }
+.admin-nav a { padding: .5rem .75rem; border-radius: 8px; text-decoration: none; }
+.admin-nav a[aria-current] { background: #dceddf; color: var(--ink); font-weight: 750; }
+.inline, .actions form, .participants form { display: inline-block; }
+.actions { display: flex; gap: .6rem; flex-wrap: wrap; }
+.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .65rem; }
+.metrics dd { margin: .2rem 0 0; font-size: 1.75rem; font-weight: 750; }
+.metrics dt, small { color: var(--muted); }
+small { display: block; overflow-wrap: anywhere; }
+table { border-collapse: collapse; width: 100%; text-align: left; }
+th, td { padding: .56rem .55rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+.table-scroll { overflow-x: auto; }
+.filter { display: flex; flex-wrap: wrap; align-items: end; gap: .7rem; margin-bottom: .9rem; }
+.filter label { width: auto; min-width: 9rem; flex: 1; }
+select { width: 100%; font: inherit; padding: .58rem .7rem; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--surface); }
+.participants { list-style: none; padding: 0; margin-bottom: 0; }
+.participants li { min-height: 2rem; display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .45rem; }
+.room-listing, .settings-group, .account-actions { margin-top: 1rem; }
+.setting-row { display: grid; grid-template-columns: minmax(13rem, 1fr) minmax(8rem, 1fr) auto auto; align-items: center; gap: .6rem; padding-block: .7rem; border-top: 1px solid var(--line); }
+.pagination { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: .8rem; }
+.temporary, pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.narrow { max-width: 500px; }
+@media (max-width: 790px) {
+  .admin-layout { grid-template-columns: 1fr; gap: .8rem; }
+  .admin-nav { display: flex; flex-wrap: wrap; }
+  .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .setting-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

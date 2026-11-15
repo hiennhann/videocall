@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+{% set labels = {"access": "Truy cập", "rooms": "Phòng và chat", "media": "Media", "turn": "TURN", "security": "Bảo mật"} %}
+{% for category, fields in groups.items() %}
+  <section class="panel settings-group"><h2>{{ labels[category] }}</h2>
+  {% for key, field in fields %}
+    <form action="/admin/settings/{{ key }}" method="post" class="setting-row">
+      {% include "_csrf.html" %}
+      <div><label for="setting-{{ key }}">{{ field.description }}</label><small>{{ key }}</small></div>
+      {% if field.type == 'bool' %}
+        <select name="value" id="setting-{{ key }}">
+          <option value="true"{% if field.value %} selected{% endif %}>Bật</option>
+          <option value="false"{% if not field.value %} selected{% endif %}>Tắt</option>
+        </select>
+      {% elif field.type == 'int' %}
+        <input type="number" name="value" id="setting-{{ key }}" value="{{ field.value }}" min="{{ field.min }}" max="{{ field.max }}">
+      {% elif field.type == 'enum' %}
+        <select name="value" id="setting-{{ key }}">
+          {% for option in field.options %}<option value="{{ option }}"{% if field.value == option %} selected{% endif %}>{{ option }}</option>{% endfor %}
+        </select>
+      {% else %}
+        <input name="value" id="setting-{{ key }}" value="{{ field.value }}"{% if field.max_length is defined %} maxlength="{{ field.max_length }}"{% endif %}>
+      {% endif %}
+      <button type="submit" name="operation" value="save">Lưu</button>
+      {% if not field.is_default %}<button class="secondary" type="submit" name="operation" value="reset" formnovalidate>Mặc định</button>{% endif %}
+    </form>
+  {% endfor %}
+  </section>
+{% endfor %}
+{% endblock %}

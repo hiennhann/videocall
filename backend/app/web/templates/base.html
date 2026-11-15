@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="htmx-config" content='{"allowEval":false,"allowScriptTags":false,"includeIndicatorStyles":false,"historyCacheSize":0,"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"[45]..","swap":true,"error":true}]}'>
+  <title>{{ title }} · Quản trị Videocall</title>
+  <link rel="stylesheet" href="/client/styles.css">
+  <link rel="stylesheet" href="/admin/static/admin.css">
+  <script src="/admin/static/htmx.min.js" defer></script>
+</head>
+<body hx-history="false">
+  <div id="layout" hx-boost="true" hx-target="#layout" hx-select="#layout" hx-swap="outerHTML">
+    <header class="topbar"><div class="shell">
+      <a class="brand" href="/admin">Quản trị Videocall</a>
+      {% if admin %}
+        <form class="inline" method="post" action="/admin/logout">
+          {% include "_csrf.html" %}<button class="secondary">Đăng xuất</button>
+        </form>
+      {% else %}<a href="/">Về trang gọi</a>{% endif %}
+    </div></header>
+    <div class="shell admin-layout {% if not admin %}solo{% endif %}">
+      {% if admin %}
+        <nav class="admin-nav" aria-label="Quản trị">
+          {% for name, label, path in (
+            ('dashboard', 'Tổng quan', '/admin'), ('users', 'Tài khoản', '/admin/users'),
+            ('rooms', 'Phòng', '/admin/rooms'), ('settings', 'Cấu hình', '/admin/settings'),
+            ('audit', 'Nhật ký', '/admin/audit')
+          ) %}
+            <a href="{{ path }}"{% if active == name %} aria-current="page"{% endif %}>{{ label }}</a>
+          {% endfor %}
+        </nav>
+      {% endif %}
+      <main>
+        <h1>{{ title }}</h1>
+        {% if error %}<p role="alert" class="notice error">{{ error }}</p>{% endif %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+</body>
+</html>
