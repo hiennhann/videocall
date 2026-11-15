@@ -67,9 +67,9 @@ def create_auth_router(limiter: Limiter) -> APIRouter:
     @router.post("/guest")
     @limiter.limit("10/minute")
     async def guest(
-        request: Request, response: Response, body: GuestRequest, auth: Auth
+        request: Request, response: Response, body: GuestRequest, auth: Auth, db: DB
     ) -> GuestResponse:
-        identity, token, ttl = auth.guest(body.display_name)
+        identity, token, ttl = await auth.guest(db, body.display_name)
         response.headers["Cache-Control"] = "no-store"
         return GuestResponse(
             access_token=token,

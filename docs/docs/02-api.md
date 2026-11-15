@@ -75,7 +75,7 @@ Lỗi validate (422) có `details.fields`:
 - `family_id` có trong token của tài khoản và định danh phiên đăng nhập. Endpoint đổi mật khẩu dùng claim đã ký này để giữ refresh token của phiên hiện tại.
 - Khách (guest): `sub = "guest:<uuid>"`, `role = "guest"`, không có dòng trong DB nên không kiểm tra DB; hết hạn theo `guest_ttl_minutes`.
 
-Ở A2, server đọc tài khoản từ DB và API dùng `role = "user"`, `must_change_password = false`. A3 bổ sung `role`, `is_active`, `must_change_password` và `last_login_at` qua migration `0003`. A4 tích hợp ngắt socket khi đăng xuất toàn bộ hoặc đổi mật khẩu.
+Từ A3, server đọc `role`, `is_active` và `must_change_password` từ DB khi xác thực tài khoản. Migration `0003` đặt giá trị mặc định cho các tài khoản A2. A4 tích hợp ngắt socket khi thu hồi phiên.
 
 ### 1.2 Refresh token
 
@@ -205,7 +205,7 @@ Từ A3, đăng nhập thành công cập nhật `last_login_at`.
 ### POST `/auth/refresh`
 
 Request: `{ "refresh_token": "Zk3..." }` → Response giống `/auth/login` (không có `user`).
-Lỗi: 401 `INVALID_REFRESH_TOKEN`, 403 `ACCOUNT_DISABLED`.
+Lỗi: 401 `INVALID_REFRESH_TOKEN`, 403 `ACCOUNT_DISABLED` hoặc `PASSWORD_CHANGE_REQUIRED`.
 
 ### POST `/auth/logout`
 
@@ -377,6 +377,8 @@ Mọi route `/admin/*` dùng dependency `require_admin`: đọc user từ DB, ki
 }
 ```
 `turn` (băng thông relay) chỉ có giá trị nếu cấu hình `PROMETHEUS_URL`; không thì `null` và xem ở Grafana.
+
+A3 báo số liệu tài khoản. A4 nối số liệu phòng và kết nối Socket.IO.
 
 ### 8.2 Người dùng
 

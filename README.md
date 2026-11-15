@@ -17,6 +17,12 @@ Invoke-RestMethod http://localhost:8000/ready
 
 Mở [Swagger UI](http://localhost:8000/docs) để gọi `POST /api/v1/auth/register` rồi `POST /api/v1/auth/login`. Dùng nút **Authorize** với `access_token` để gọi `GET /api/v1/me`.
 
+Tạo quản trị viên A3 bằng lệnh sau. Nhập mật khẩu hai lần khi được hỏi, rồi đăng nhập qua `/api/v1/auth/login` để dùng các API `/api/v1/admin`.
+
+```powershell
+docker compose exec app python -m app.cli create-admin --email admin@example.com
+```
+
 ```powershell
 docker compose ps -a
 docker compose logs migrate app

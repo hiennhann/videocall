@@ -4,9 +4,6 @@ from time import time
 
 from limits.storage import MemoryStorage
 
-MAX_ATTEMPTS = 5
-LOCKOUT_SECONDS = 15 * 60
-
 
 class LoginAttempts:
     def __init__(self) -> None:
@@ -18,15 +15,17 @@ class LoginAttempts:
             return max(1, ceil(self._storage.get_expiry(f"locked:{key}") - time()))
         return None
 
-    def record_failure(self, email: str, ip: str) -> int | None:
+    def record_failure(
+        self, email: str, ip: str, max_attempts: int, lockout_seconds: int
+    ) -> int | None:
         remaining = self.retry_after(email, ip)
         if remaining is not None:
             return remaining
         key = self._key(email, ip)
-        if self._storage.incr(key, LOCKOUT_SECONDS) >= MAX_ATTEMPTS:
-            self._storage.incr(f"locked:{key}", LOCKOUT_SECONDS)
+        if self._storage.incr(key, lockout_seconds) >= max_attempts:
+            self._storage.incr(f"locked:{key}", lockout_seconds)
             self._storage.clear(key)
-            return LOCKOUT_SECONDS
+            return lockout_seconds
         return None
 
     def reset(self, email: str, ip: str) -> None:

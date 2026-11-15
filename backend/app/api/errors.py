@@ -7,6 +7,15 @@ from slowapi.errors import RateLimitExceeded
 from app.core.errors import AuthError, ErrorCode
 
 AUTH_ERRORS = {
+    ErrorCode.ACCOUNT_DISABLED: (403, "Tài khoản đã bị khóa."),
+    ErrorCode.PASSWORD_CHANGE_REQUIRED: (403, "Bạn cần đổi mật khẩu trước."),
+    ErrorCode.FORBIDDEN: (403, "Bạn không có quyền thực hiện yêu cầu này."),
+    ErrorCode.LAST_ADMIN: (409, "Hệ thống cần ít nhất một admin đang hoạt động."),
+    ErrorCode.CANNOT_MODIFY_SELF: (409, "Không thể tự đổi quyền, trạng thái hoặc xóa tài khoản."),
+    ErrorCode.USER_NOT_FOUND: (404, "Không tìm thấy người dùng."),
+    ErrorCode.VALIDATION_ERROR: (422, "Dữ liệu không hợp lệ."),
+    ErrorCode.UNKNOWN_SETTING: (422, "Khóa cấu hình không tồn tại."),
+    ErrorCode.RATE_LIMITED: (429, "Bạn đã gửi quá nhiều yêu cầu."),
     ErrorCode.REGISTRATION_DISABLED: (403, "Tính năng đăng ký đang tắt."),
     ErrorCode.EMAIL_TAKEN: (409, "Email đã được sử dụng."),
     ErrorCode.INVALID_CREDENTIALS: (401, "Email hoặc mật khẩu không đúng."),
@@ -51,7 +60,8 @@ async def auth_error_handler(request: Request, exc: AuthError) -> JSONResponse:
         headers["Retry-After"] = str(exc.retry_after)
     if exc.code in {ErrorCode.UNAUTHENTICATED, ErrorCode.TOKEN_EXPIRED, ErrorCode.TOKEN_INVALID}:
         headers["WWW-Authenticate"] = "Bearer"
-    return error_response(status, exc.code, message, headers=headers)
+    details = {"fields": exc.fields} if exc.fields else None
+    return error_response(status, exc.code, message, details=details, headers=headers)
 
 
 async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:

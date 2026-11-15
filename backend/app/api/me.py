@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Response
 
-from app.api.deps import DB, Auth, CurrentMember, CurrentPrincipal
+from app.api.deps import DB, Auth, CurrentAccount, CurrentMember, CurrentPrincipal
 from app.schemas.auth import (
     ChangePasswordRequest,
     GuestProfile,
@@ -33,7 +33,7 @@ async def patch_me(body: UpdateProfileRequest, member: CurrentMember, db: DB) ->
 
 @router.post("/password", status_code=204)
 async def change_password(
-    body: ChangePasswordRequest, member: CurrentMember, db: DB, auth: Auth
+    body: ChangePasswordRequest, member: CurrentAccount, db: DB, auth: Auth
 ) -> Response:
     await auth.change_password(
         db,

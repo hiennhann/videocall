@@ -12,6 +12,8 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from app.api.admin import public_router
+from app.api.admin import router as admin_router
 from app.api.auth import create_auth_router
 from app.api.errors import (
     auth_error_handler,
@@ -25,7 +27,10 @@ from app.core.config import Settings
 from app.core.errors import AuthError
 from app.core.security import hash_password
 from app.db.session import migration_heads
+from app.services.account_events import AccountEvents
+from app.services.admin_service import AdminService
 from app.services.auth_service import AuthService
+from app.services.settings_service import SettingsService
 
 
 def create_app() -> FastAPI:
@@ -35,7 +40,12 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.migration_heads = await asyncio.to_thread(migration_heads)
         dummy_hash = await hash_password(secrets.token_urlsafe(32))
-        app.state.auth_service = AuthService(settings.jwt_secret.get_secret_value(), dummy_hash)
+        events = AccountEvents()
+        app.state.settings_service = SettingsService()
+        app.state.admin_service = AdminService(events)
+        app.state.auth_service = AuthService(
+            settings.jwt_secret.get_secret_value(), dummy_hash, app.state.settings_service, events
+        )
         engine = create_async_engine(
             settings.database_url.get_secret_value(), pool_pre_ping=True, hide_parameters=True
         )
@@ -56,10 +66,12 @@ def create_app() -> FastAPI:
     app.include_router(system_router)
     app.include_router(create_auth_router(limiter), prefix="/api/v1")
     app.include_router(me_router, prefix="/api/v1")
+    app.include_router(admin_router, prefix="/api/v1")
+    app.include_router(public_router, prefix="/api/v1")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[origin.strip() for origin in settings.allowed_origins.split(",")],
-        allow_methods=["GET", "POST", "PATCH"],
+        allow_methods=["GET", "POST", "PATCH", "DELETE"],
         allow_headers=["Authorization"],
         expose_headers=["X-Request-ID", "Retry-After"],
     )

@@ -12,7 +12,6 @@ from app.core.errors import AuthError, ErrorCode
 
 ACCESS_TTL = 15 * 60
 GUEST_TTL = 120 * 60
-REFRESH_TTL_DAYS = 7
 password_hasher = PasswordHash.recommended()
 
 
@@ -37,6 +36,7 @@ class Identity:
     id: UUID
     display_name: str
     family_id: UUID | None = None
+    role: str = "user"
 
     @property
     def subject(self) -> str:
@@ -50,15 +50,17 @@ class AccessToken:
     expires_at: datetime
 
 
-def issue_access_token(identity: Identity, secret: str, now: datetime) -> tuple[str, int]:
+def issue_access_token(
+    identity: Identity, secret: str, now: datetime, ttl_seconds: int | None = None
+) -> tuple[str, int]:
     is_guest = identity.family_id is None
-    ttl = GUEST_TTL if is_guest else ACCESS_TTL
+    ttl = ttl_seconds if ttl_seconds is not None else (GUEST_TTL if is_guest else ACCESS_TTL)
     issued_at = int(now.timestamp())
     claims = {
         "iss": "videocall",
         "typ": "access",
         "sub": identity.subject,
-        "role": "guest" if is_guest else "user",
+        "role": "guest" if is_guest else identity.role,
         "name": identity.display_name,
         "iat": issued_at,
         "exp": issued_at + ttl,

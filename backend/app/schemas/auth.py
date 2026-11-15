@@ -69,7 +69,7 @@ class LoginUser(BaseModel):
     id: UUID
     email: str
     display_name: str
-    role: Literal["user"] = "user"
+    role: Literal["user", "admin"] = "user"
     must_change_password: bool = False
 
 
@@ -79,7 +79,7 @@ class RegisteredUser(BaseModel):
     id: UUID
     email: str
     display_name: str
-    role: Literal["user"] = "user"
+    role: Literal["user", "admin"] = "user"
     created_at: datetime
 
 

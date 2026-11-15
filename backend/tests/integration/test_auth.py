@@ -12,7 +12,7 @@ from sqlalchemy import select, update
 
 from app.core.security import Identity, issue_access_token
 from app.models import RefreshToken, User
-from app.services.auth_service import AuthPolicy
+from app.schemas.settings import SettingsSchema
 
 
 @pytest.fixture
@@ -256,9 +256,9 @@ async def test_change_password_preserves_only_current_family(
 @pytest.mark.parametrize(
     ("path", "policy", "status", "code"),
     [
-        ("register", AuthPolicy(allow_registration=False), 403, "REGISTRATION_DISABLED"),
-        ("guest", AuthPolicy(allow_guest=False), 403, "GUEST_DISABLED"),
-        ("guest", AuthPolicy(maintenance_mode=True), 503, "MAINTENANCE_MODE"),
+        ("register", SettingsSchema(allow_registration=False), 403, "REGISTRATION_DISABLED"),
+        ("guest", SettingsSchema(allow_guest=False), 403, "GUEST_DISABLED"),
+        ("guest", SettingsSchema(maintenance_mode=True), 503, "MAINTENANCE_MODE"),
     ],
 )
 async def test_auth_policy(
@@ -266,11 +266,11 @@ async def test_auth_policy(
     app: FastAPI,
     signup: dict[str, str],
     path: str,
-    policy: AuthPolicy,
+    policy: SettingsSchema,
     status: int,
     code: str,
 ) -> None:
-    app.state.auth_service.policy = policy
+    app.state.settings_service._cached = policy
     assert_error(await client.post(f"auth/{path}", json=signup), status, code)
 
 
@@ -280,7 +280,7 @@ async def test_auth_policy(
 async def test_auth_ip_rate_limits(
     client: AsyncClient, app: FastAPI, signup: dict[str, str], path: str, limit: int
 ) -> None:
-    app.state.auth_service.policy = AuthPolicy(allow_registration=False)
+    app.state.settings_service._cached = SettingsSchema(allow_registration=False)
     payload = {**signup, "refresh_token": "unknown"}
     for _ in range(limit):
         response = await client.post(f"auth/{path}", json=payload)

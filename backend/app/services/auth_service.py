@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AuthError, ErrorCode
 from app.core.security import (
-    REFRESH_TTL_DAYS,
     Identity,
     hash_password,
     hash_refresh_token,
@@ -19,17 +18,13 @@ from app.core.security import (
     verify_password,
 )
 from app.models import RefreshToken, User
+from app.schemas.settings import SettingsSchema
+from app.services.account_events import AccountEvents
 from app.services.login_attempts import LoginAttempts
+from app.services.settings_service import SettingsService
 
 REFRESH_GRACE = timedelta(seconds=10)
 logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True, slots=True)
-class AuthPolicy:
-    allow_registration: bool = True
-    allow_guest: bool = True
-    maintenance_mode: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,20 +45,37 @@ class SessionTokens:
 
 
 class AuthService:
-    def __init__(self, secret: str, dummy_password_hash: str) -> None:
+    def __init__(
+        self,
+        secret: str,
+        dummy_password_hash: str,
+        settings: SettingsService,
+        events: AccountEvents,
+    ) -> None:
         self.secret = secret
-        self.policy = AuthPolicy()
+        self.settings = settings
+        self.events = events
         self._dummy_password_hash = dummy_password_hash
         self._login_attempts = LoginAttempts()
 
     async def register(
         self, db: AsyncSession, email: str, display_name: str, password: str
     ) -> User:
-        if not self.policy.allow_registration:
+        if not (await self.settings.get(db)).allow_registration:
             raise AuthError(ErrorCode.REGISTRATION_DISABLED)
+        return await self.create_account(db, email, display_name, password, role="user")
 
+    async def create_account(
+        self, db: AsyncSession, email: str, display_name: str, password: str, *, role: str
+    ) -> User:
+        self._check_password_length(
+            password, (await self.settings.get(db)).password_min_length, "password"
+        )
         user = User(
-            email=email, display_name=display_name, password_hash=await hash_password(password)
+            email=email,
+            display_name=display_name,
+            role=role,
+            password_hash=await hash_password(password),
         )
         db.add(user)
         try:
@@ -78,6 +90,7 @@ class AuthService:
     async def login(
         self, db: AsyncSession, email: str, password: str, client: ClientInfo
     ) -> tuple[User, SessionTokens]:
+        policy = await self.settings.get(db)
         ip = client.login_ip
         self._check_login_lock(email, ip)
         user = await db.scalar(
@@ -87,17 +100,24 @@ class AuthService:
         stored_hash = user.password_hash if user is not None else self._dummy_password_hash
         valid = await verify_password(password, stored_hash)
         if not valid or user is None:
-            remaining = self._login_attempts.record_failure(email, ip)
+            remaining = self._login_attempts.record_failure(
+                email, ip, policy.login_max_attempts, policy.login_lockout_minutes * 60
+            )
             if remaining is not None:
                 raise AuthError(ErrorCode.LOGIN_LOCKED, retry_after=remaining)
             raise AuthError(ErrorCode.INVALID_CREDENTIALS)
 
-        _, tokens = self._new_session(db, user, uuid4(), datetime.now(UTC), client)
+        if not user.is_active:
+            raise AuthError(ErrorCode.ACCOUNT_DISABLED)
+        now = datetime.now(UTC)
+        user.last_login_at = now
+        _, tokens = self._new_session(db, user, uuid4(), now, client, policy)
         await db.commit()
         self._login_attempts.reset(email, ip)
         return user, tokens
 
     async def refresh(self, db: AsyncSession, raw_token: str, client: ClientInfo) -> SessionTokens:
+        policy = await self.settings.get(db)
         token_hash = hash_refresh_token(raw_token)
         user = await self._lock_token_owner(db, token_hash)
         if user is None:
@@ -107,15 +127,22 @@ class AuthService:
         now = datetime.now(UTC)
         if token is None or token.expires_at <= now:
             raise AuthError(ErrorCode.INVALID_REFRESH_TOKEN)
+        if not user.is_active:
+            raise AuthError(ErrorCode.ACCOUNT_DISABLED)
 
         if token.revoked_at is not None:
             if token.replaced_by_id is not None and now - token.revoked_at > REFRESH_GRACE:
-                await self._revoke_sessions(db, user.id, now, only_family=token.family_id)
+                await self.revoke_sessions(db, user.id, now, only_family=token.family_id)
                 await db.commit()
+                await self.events.sessions_revoked(
+                    user.id, "SESSIONS_REVOKED", only_family=token.family_id
+                )
                 logger.warning("Refresh token bị dùng lại, đã thu hồi phiên.")
             raise AuthError(ErrorCode.INVALID_REFRESH_TOKEN)
 
-        replacement, tokens = self._new_session(db, user, token.family_id, now, client)
+        if user.must_change_password:
+            raise AuthError(ErrorCode.PASSWORD_CHANGE_REQUIRED)
+        replacement, tokens = self._new_session(db, user, token.family_id, now, client, policy)
         await db.flush()
         token.revoked_at = now
         token.replaced_by_id = replacement.id
@@ -130,38 +157,56 @@ class AuthService:
                 select(RefreshToken.family_id).where(RefreshToken.token_hash == token_hash)
             )
             if family is not None:
-                await self._revoke_sessions(db, user.id, datetime.now(UTC), only_family=family)
+                await self.revoke_sessions(db, user.id, datetime.now(UTC), only_family=family)
                 await db.commit()
+                await self.events.sessions_revoked(user.id, "SESSIONS_REVOKED", only_family=family)
 
     async def logout_all(self, db: AsyncSession, user_id: UUID) -> None:
-        await self._lock_user(db, user_id)
-        await self._revoke_sessions(db, user_id, datetime.now(UTC))
+        await self.lock_user(db, user_id)
+        await self.revoke_sessions(db, user_id, datetime.now(UTC))
         await db.commit()
+        await self.events.sessions_revoked(user_id, "SESSIONS_REVOKED")
 
-    def guest(self, display_name: str) -> tuple[Identity, str, int]:
-        if self.policy.maintenance_mode:
+    async def guest(self, db: AsyncSession, display_name: str) -> tuple[Identity, str, int]:
+        policy = await self.settings.get(db)
+        if policy.maintenance_mode:
             raise AuthError(ErrorCode.MAINTENANCE_MODE)
-        if not self.policy.allow_guest:
+        if not policy.allow_guest:
             raise AuthError(ErrorCode.GUEST_DISABLED)
 
         identity = Identity(uuid4(), display_name)
-        token, ttl = issue_access_token(identity, self.secret, datetime.now(UTC))
+        token, ttl = issue_access_token(
+            identity, self.secret, datetime.now(UTC), policy.guest_ttl_minutes * 60
+        )
         return identity, token, ttl
 
     async def change_password(
         self, db: AsyncSession, user_id: UUID, family_id: UUID, current: str, new: str
     ) -> None:
-        user = await self._lock_user(db, user_id)
+        policy = await self.settings.get(db)
+        user = await self.lock_user(db, user_id)
         if user is None:
             raise AuthError(ErrorCode.TOKEN_INVALID)
+        if not user.is_active:
+            raise AuthError(ErrorCode.ACCOUNT_DISABLED)
         if not await verify_password(current, user.password_hash):
             raise AuthError(ErrorCode.WRONG_PASSWORD)
         if current == new:
             raise AuthError(ErrorCode.PASSWORD_UNCHANGED)
 
+        self._check_password_length(new, policy.password_min_length, "new_password")
         user.password_hash = await hash_password(new)
-        await self._revoke_sessions(db, user_id, datetime.now(UTC), keep_family=family_id)
+        user.must_change_password = False
+        await self.revoke_sessions(db, user_id, datetime.now(UTC), keep_family=family_id)
         await db.commit()
+        await self.events.sessions_revoked(user_id, "SESSIONS_REVOKED", keep_family=family_id)
+
+    @staticmethod
+    def _check_password_length(password: str, minimum: int, field: str) -> None:
+        if len(password) < minimum:
+            raise AuthError(
+                ErrorCode.VALIDATION_ERROR, fields={field: f"Tối thiểu {minimum} ký tự."}
+            )
 
     def _check_login_lock(self, email: str, ip: str) -> None:
         remaining = self._login_attempts.retry_after(email, ip)
@@ -169,21 +214,30 @@ class AuthService:
             raise AuthError(ErrorCode.LOGIN_LOCKED, retry_after=remaining)
 
     def _new_session(
-        self, db: AsyncSession, user: User, family: UUID, now: datetime, client: ClientInfo
+        self,
+        db: AsyncSession,
+        user: User,
+        family: UUID,
+        now: datetime,
+        client: ClientInfo,
+        policy: SettingsSchema,
     ) -> tuple[RefreshToken, SessionTokens]:
         raw_token = new_refresh_token()
         refresh = RefreshToken(
             user_id=user.id,
             token_hash=hash_refresh_token(raw_token),
             family_id=family,
-            expires_at=now + timedelta(days=REFRESH_TTL_DAYS),
+            expires_at=now + timedelta(days=policy.refresh_token_ttl_days),
             created_at=now,
             ip=client.ip,
             user_agent=client.user_agent,
         )
         db.add(refresh)
         token, ttl = issue_access_token(
-            Identity(user.id, user.display_name, family), self.secret, now
+            Identity(user.id, user.display_name, family, user.role),
+            self.secret,
+            now,
+            policy.access_token_ttl_minutes * 60,
         )
         return refresh, SessionTokens(token, raw_token, ttl)
 
@@ -191,10 +245,10 @@ class AuthService:
         user_id = await db.scalar(
             select(RefreshToken.user_id).where(RefreshToken.token_hash == token_hash)
         )
-        return await self._lock_user(db, user_id) if user_id is not None else None
+        return await self.lock_user(db, user_id) if user_id is not None else None
 
     @staticmethod
-    async def _lock_user(db: AsyncSession, user_id: UUID) -> User | None:
+    async def lock_user(db: AsyncSession, user_id: UUID) -> User | None:
         # Dùng cùng một khóa cho mọi thao tác có thể cấp hoặc thu hồi phiên của người dùng.
         return await db.scalar(
             select(User)
@@ -204,7 +258,7 @@ class AuthService:
         )
 
     @staticmethod
-    async def _revoke_sessions(
+    async def revoke_sessions(
         db: AsyncSession,
         user_id: UUID,
         now: datetime,

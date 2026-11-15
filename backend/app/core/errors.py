@@ -2,6 +2,15 @@ from enum import StrEnum
 
 
 class ErrorCode(StrEnum):
+    ACCOUNT_DISABLED = "ACCOUNT_DISABLED"
+    PASSWORD_CHANGE_REQUIRED = "PASSWORD_CHANGE_REQUIRED"
+    FORBIDDEN = "FORBIDDEN"
+    LAST_ADMIN = "LAST_ADMIN"
+    CANNOT_MODIFY_SELF = "CANNOT_MODIFY_SELF"
+    USER_NOT_FOUND = "USER_NOT_FOUND"
+    VALIDATION_ERROR = "VALIDATION_ERROR"
+    UNKNOWN_SETTING = "UNKNOWN_SETTING"
+    RATE_LIMITED = "RATE_LIMITED"
     REGISTRATION_DISABLED = "REGISTRATION_DISABLED"
     EMAIL_TAKEN = "EMAIL_TAKEN"
     INVALID_CREDENTIALS = "INVALID_CREDENTIALS"
@@ -18,7 +27,14 @@ class ErrorCode(StrEnum):
 
 
 class AuthError(Exception):
-    def __init__(self, code: ErrorCode, *, retry_after: int | None = None) -> None:
+    def __init__(
+        self,
+        code: ErrorCode,
+        *,
+        retry_after: int | None = None,
+        fields: dict[str, str] | None = None,
+    ) -> None:
         super().__init__(code)
         self.code = code
         self.retry_after = retry_after
+        self.fields = fields
