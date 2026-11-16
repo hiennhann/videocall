@@ -2,6 +2,7 @@ import asyncio
 import base64
 import hmac
 import os
+import socket
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from ipaddress import IPv4Address
@@ -156,7 +157,9 @@ class Worker:
             25, lambda: asyncio.create_task(self.remove_if_current(room, peer_id, peer))
         )
         try:
-            await pc.setRemoteDescription(RTCSessionDescription(offer.sdp, "offer"))
+            await pc.setRemoteDescription(
+                RTCSessionDescription(await self.local_offer(offer.sdp), "offer")
+            )
             if publisher is not None:
                 for track in publisher.tracks.values():
                     proxy = publisher.relay.subscribe(track, buffered=False)
@@ -180,9 +183,41 @@ class Worker:
             if line.startswith("a=candidate:"):
                 fields = line.split()
                 if fields[7] == "host" and ":" not in fields[4]:
+                    if self.turn_url.startswith("turn:coturn:"):
+                        lines.append(line)
                     fields[4] = self.host
                     line = " ".join(fields)
             lines.append(line)
+        return "\r\n".join(lines) + "\r\n"
+
+    async def local_offer(self, sdp: str) -> str:
+        if not self.host or not self.turn_url.startswith("turn:coturn:"):
+            return sdp
+        lines = sdp.splitlines()
+        matches = []
+        for index, line in enumerate(lines):
+            if line.startswith("a=candidate:"):
+                fields = line.split()
+                if (
+                    len(fields) >= 8
+                    and fields[4] == self.host
+                    and fields[7] == "relay"
+                    and fields[5].isdigit()
+                    and 49152 <= int(fields[5]) <= 49162
+                ):
+                    matches.append((index, fields))
+        if not matches:
+            return sdp
+        addresses = await asyncio.get_running_loop().getaddrinfo(
+            "coturn",
+            None,
+            family=socket.AF_INET,
+            type=socket.SOCK_DGRAM,
+        )
+        # Coturn and the SFU share this bridge. Reach the local relay socket directly.
+        for index, fields in matches:
+            fields[4] = addresses[0][4][0]
+            lines[index] = " ".join(fields)
         return "\r\n".join(lines) + "\r\n"
 
 
