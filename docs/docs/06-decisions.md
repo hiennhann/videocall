@@ -150,8 +150,7 @@ Hệ điều hành windows
 middleware tự refresh
 | Q3 | **[CẦN CHỐT]** Khi bị kick, người dùng bị cấm vào lại **tới khi phòng đóng**. Bạn có muốn host "bỏ cấm" được không? | Chưa cần ở v1 | A4 |
 chưa cần thiết
-| Q4 | aiortc có giới hạn được dải cổng UDP không, và chịu được bao nhiêu subscriber? | Thử nghiệm sớm ở đầu A10, ghi kết quả vào báo cáo | A10 |
-ở mức mà cho webapp chạy tốt nhất không gây lag
+| Q4 | aiortc dùng dải cổng UDP nào và chịu được bao nhiêu viewer? | Xem [kết quả và đề xuất cấu hình](../../loadtest/README.md) | A10 |
 | Q5 | **[CẦN CHỐT]** Phòng có cho khách xem lịch sử chat không? Hiện tại: ai đang trong phòng hoặc host đều xem được | Giữ như hiện tại | A8 |
 cho xem lịch sử chat, kể cả người mới vào
 | Q6 | Bật TURNS (TURN qua TLS, cổng 5349 hoặc 443) cho mạng chặn UDP/cổng lạ? Cần chia sẻ chứng chỉ Caddy | Làm ở B3 nếu còn thời gian | B3 |
