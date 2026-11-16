@@ -1,6 +1,7 @@
 import secrets
 from datetime import UTC, datetime, timedelta
 from string import ascii_lowercase
+from time import monotonic
 from typing import Any, Literal, Protocol
 from uuid import UUID
 
@@ -14,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.errors import AuthError, ErrorCode
 from app.core.security import hash_password, verify_password
 from app.models import Room, User
-from app.realtime.state import Connection, Peer, RoomPresence, RoomStateStore
+from app.realtime.state import Connection, HeldSeat, Peer, RoomPresence, RoomStateStore
 from app.schemas.rooms import CreateRoom, MediaState, RoomCreated, RoomSummary
 from app.schemas.settings import SettingsSchema
 from app.services.audit_service import AuditActor, record_audit
@@ -23,6 +24,8 @@ from app.services.settings_service import SettingsService
 
 PASSWORD_FAILURES = parse("5/5 minute")
 ICE_LIMIT = parse("200/10 second")
+MESH_ROOM_LIMIT = 4
+REJOIN_GRACE_SECONDS = 10
 CODE_LETTERS = ascii_lowercase.translate(str.maketrans("", "", "ilo"))
 
 
@@ -37,7 +40,7 @@ class RoomEvents(Protocol):
 
 
 def capacity(room: Room, settings: SettingsSchema) -> int:
-    maximum = settings.max_participants_per_room
+    maximum = min(settings.max_participants_per_room, MESH_ROOM_LIMIT)
     return min(room.max_participants or maximum, maximum)
 
 
@@ -79,9 +82,8 @@ class RoomService:
             raise AuthError(ErrorCode.MAINTENANCE_MODE)
         if body.mode != "meeting":
             raise AuthError(ErrorCode.MODE_NOT_SUPPORTED)
-        if (
-            body.max_participants is not None
-            and body.max_participants > settings.max_participants_per_room
+        if body.max_participants is not None and body.max_participants > min(
+            settings.max_participants_per_room, MESH_ROOM_LIMIT
         ):
             raise AuthError(
                 ErrorCode.VALIDATION_ERROR,
@@ -187,14 +189,19 @@ class RoomService:
                 (peer for peer in presence.peers.values() if peer.user_id == connection.user_id),
                 None,
             )
-            if len(presence.peers) - int(previous is not None) >= capacity(room, settings):
+            presence.expire_seats(monotonic())
+            held = presence.held_seats.get(connection.user_id)
+            occupied = len(presence.peers) + len(presence.held_seats)
+            if previous is None and held is None and occupied >= capacity(room, settings):
                 raise AuthError(ErrorCode.ROOM_FULL)
 
             old_host = presence.host_id()
             if previous is not None:
                 await self.events.emit("kicked", {"reason": "SESSION_REPLACED"}, to=previous.id)
                 await self.remove(presence, previous, "session_replaced")
-            peer = Peer(connection, previous.joined_at if previous else datetime.now(UTC))
+            presence.held_seats.pop(connection.user_id, None)
+            prior = previous or held
+            peer = Peer(connection, prior.joined_at if prior else datetime.now(UTC))
             self.state.add_peer(presence, peer)
             if presence.owner_id == peer.user_id:
                 presence.preferred_host = None
@@ -258,13 +265,21 @@ class RoomService:
             "peer_left", {"peer_id": peer.id, "reason": reason}, to=presence.code
         )
 
-    async def leave(self, connection: Connection, reason: str = "left") -> None:
+    async def leave(
+        self, connection: Connection, reason: str = "left", *, reserve: bool = False
+    ) -> None:
         presence = self.state.get_room(connection.room_code or "")
         if presence is not None:
             async with presence.lock:
                 peer = presence.peers.get(connection.peer_id)
                 if peer is not None:
                     host = presence.host_id()
+                    if reserve:
+                        now = monotonic()
+                        presence.expire_seats(now)
+                        presence.held_seats[connection.user_id] = HeldSeat(
+                            peer.joined_at, now + REJOIN_GRACE_SECONDS
+                        )
                     await self.remove(presence, peer, reason)
                     await self.host_changed(presence, host)
 
@@ -448,6 +463,7 @@ class RoomService:
                 self.state.ensure_room(code, owner, now)
         deadline = now - timedelta(seconds=settings.room_empty_ttl_seconds)
         for presence in self.state.list_rooms():
+            presence.expire_seats(monotonic())
             if presence.empty_since is not None and presence.empty_since <= deadline:
                 async with sessions() as db:
                     await self.close(db, presence.code, "empty_timeout", idle_before=deadline)

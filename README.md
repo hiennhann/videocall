@@ -15,7 +15,7 @@ Invoke-RestMethod http://localhost:8000/ready
 
 `/health` kiểm tra process. `/ready` trả `200` khi kết nối được PostgreSQL và Alembic đã ở `head`, hoặc `503` nếu app chưa sẵn sàng. Compose chạy `migrate` trước `app`. Tài khoản ứng dụng và tài khoản migration dùng hai URL riêng. Các giá trị trong `.env.example` dành cho môi trường dev.
 
-Mở [Videocall](http://localhost:8000/) để tạo tài khoản, đăng nhập và tạo phòng gọi 1–1. Mở một cửa sổ ẩn danh hoặc trình duyệt khác, đăng nhập bằng tài khoản khác hoặc tên khách, rồi nhập mã phòng. Bấm **Vào phòng và bật camera** ở cả hai phiên. WebRTC có thể chọn relay TURN khi đường trực tiếp không thông.
+Mở [Videocall](http://localhost:8000/) để tạo tài khoản, đăng nhập và tạo phòng gọi tối đa bốn người. Dùng một phiên trình duyệt riêng cho mỗi tài khoản hoặc khách, rồi nhập mã phòng. Bấm **Vào phòng và bật camera** ở từng phiên. WebRTC có thể chọn relay TURN khi đường trực tiếp không thông. Trong phòng, bật **Chỉ số mạng** để xem RTT, jitter, mất gói, bitrate, FPS và đường kết nối của từng người.
 
 Nếu đang dùng `.env` từ A6, bỏ dòng mẫu `TURN_URLS=stun:turn.example.com:3478` để Compose dùng coturn cục bộ. Xem [cấu hình và cách kiểm tra relay](docs/docs/05-deployment.md#44-chạy-coturn-ở-môi-trường-dev).
 

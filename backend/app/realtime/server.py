@@ -144,7 +144,12 @@ class RealtimeServer(AccountEvents):
         if connection is not None:
             async with connection.lock:
                 try:
-                    await self.rooms.leave(connection, "disconnected")
+                    await self.rooms.leave(
+                        connection,
+                        "disconnected",
+                        reserve=reason
+                        in {self.sio.reason.TRANSPORT_CLOSE, self.sio.reason.PING_TIMEOUT},
+                    )
                 finally:
                     self.state.remove_connection(sid)
 

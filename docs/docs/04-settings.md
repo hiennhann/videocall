@@ -53,7 +53,7 @@ Cột "Áp dụng" cho biết thay đổi có tác dụng với đối tượng 
 
 | Khóa | Kiểu | Mặc định | Khoảng hợp lệ | Áp dụng | Mô tả |
 |---|---|---|---|---|---|
-| `max_participants_per_room` | int | `4` | 2-50 | Lượt vào mới | Trần số người của **mọi** phòng; phòng có `max_participants` riêng không được vượt giá trị này |
+| `max_participants_per_room` | int | `4` | 2-50 | Lượt vào mới | Trần cấu hình của mọi phòng. Với mesh, giới hạn thực dùng thêm mức tối đa 4 người |
 | `max_rooms_per_user` | int | `3` | 1-20 | Lần tạo mới | Số phòng đang mở tối đa của một user |
 | `room_empty_ttl_seconds` | int | `300` | 30-86400 | Ngay | Phòng trống quá thời gian này sẽ tự đóng |
 | `allow_screen_share` | bool | `true` | | Ngay (qua `features`) | Cho phép chia sẻ màn hình |

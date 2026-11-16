@@ -17,6 +17,7 @@ from httpx import AsyncClient
 
 from app.cli import create_admin
 from app.realtime.server import RealtimeServer
+from app.services import room_service
 
 
 @dataclass(slots=True)
@@ -130,6 +131,51 @@ async def peer(live: Server, stack: AsyncExitStack, user: dict[str, Any]) -> Soc
 
 def assert_socket_error(ack: dict[str, Any], code: str) -> None:
     assert ack["ok"] is False and ack["error"]["code"] == code, ack
+
+
+async def test_mesh_capacity_and_rejoin_after_transport_loss(
+    live: Server, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    now = 100.0
+    monkeypatch.setattr(room_service, "monotonic", lambda: now)
+    owner = await account(live)
+    entrants = [await guest(live) for _ in range(4)]
+    code = await room(live, owner, is_private=True, password="mesh-pass")
+    join = {"code": code, "password": "mesh-pass"}
+    async with AsyncExitStack() as stack:
+        host = await peer(live, stack, owner)
+        assert (await host.call("join_room", join))["ok"]
+        participants = [await peer(live, stack, token) for token in entrants]
+        for count, member in enumerate(participants[:3], 1):
+            ack = await member.call("join_room", join)
+            assert ack["ok"] and len(ack["data"]["peers"]) == count
+            assert ack["data"]["room"]["max_participants"] == 4
+        outsider = participants[3]
+        assert_socket_error(await outsider.call("join_room", join), "ROOM_FULL")
+
+        disconnected = participants[0]
+        old_id = disconnected.sid
+        await disconnected.client.eio.ws.close()
+        await host.event("peer_left", peer_id=old_id, reason="disconnected")
+        assert_socket_error(await outsider.call("join_room", join), "ROOM_FULL")
+
+        returned = await peer(live, stack, entrants[0])
+        assert_socket_error(
+            await returned.call("join_room", {**join, "password": "bad-password"}),
+            "WRONG_PASSWORD",
+        )
+        joined = await returned.call("join_room", join)
+        assert joined["ok"] and len(joined["data"]["peers"]) == 3
+        assert_socket_error(await outsider.call("join_room", join), "ROOM_FULL")
+
+        old_id = returned.sid
+        await returned.client.eio.ws.close()
+        await host.event("peer_left", peer_id=old_id, reason="disconnected")
+        now += 10
+        assert (await outsider.call("join_room", join))["ok"]
+        assert (await outsider.call("leave_room"))["ok"]
+        returned = await peer(live, stack, entrants[0])
+        assert (await returned.call("join_room", join))["ok"]
 
 
 async def test_chat_broadcast_history_cursor_and_membership(live: Server) -> None:

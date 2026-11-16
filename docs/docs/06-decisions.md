@@ -158,8 +158,7 @@ cho xem lịch sử chat, kể cả người mới vào
 tui chưa tìm hiểu cài này
 | Q7 | **[CẦN CHỐT]** Phòng đã đóng: `GET /rooms/{code}` trả 404 hay 200 với `status: closed`? | 404 (không lộ thông tin) | A4 |
 200
-| Q8 | Giữ chỗ khi rớt mạng (grace period): người rớt mạng 10 giây có được tự quay lại vị trí cũ không? | Ngoài phạm vi v1, ghi vào cải tiến | Sau A9 |
-có được quay lại ở v1
+| Q8 | Giữ chỗ khi rớt mạng | A9 giữ chỗ 10 giây sau khi server phát hiện mất transport hoặc hết ping timeout. Client xác thực lại rồi vào phòng | A9 |
 | Q9 | Ghi hình phòng (aiortc `MediaRecorder`): có làm không, lưu ở đâu, quyền xem? | Ngoài phạm vi trừ khi còn thời gian | Sau A10 |
 v2 sẽ làm
 | Q10 | **[CẦN CHỐT]** Làm một mình hay theo nhóm, bao nhiêu tuần? | Để chia lại mốc thời gian cho lộ trình ở README | Trước khi code |
@@ -175,7 +174,7 @@ giai đoạn 4: hoàn thiện
 - OAuth Google/GitHub, quên mật khẩu qua email, 2FA
 - Refresh token qua cookie cho toàn bộ client
 - Redis cho trạng thái phòng, rate limit, nhiều instance
-- Giữ chỗ khi rớt mạng; bỏ cấm người bị kick
+- Bỏ cấm người bị kick
 - Simulcast / SVC (cần SFU mạnh hơn aiortc, ví dụ mediasoup hoặc LiveKit)
 - Ghi hình phòng; phụ đề / chuyển giọng nói thành văn bản
 - Loki cho log tập trung; tracing (OpenTelemetry)

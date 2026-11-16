@@ -40,7 +40,11 @@ export class PeerCall {
   async setScreen(stream, track = null) {
     if (this.closed) return;
     if (this.screenSender) {
-      await this.screenSender.replaceTrack(track);
+      try {
+        await this.screenSender.replaceTrack(track);
+      } catch (error) {
+        if (!this.closed) throw error;
+      }
     } else if (track) {
       this.screenSender = this.pc.addTrack(track, stream);
     }

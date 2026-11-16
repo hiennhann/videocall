@@ -50,15 +50,27 @@ class Peer:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class HeldSeat:
+    joined_at: datetime
+    expires_at: float
+
+
 @dataclass(slots=True)
 class RoomPresence:
     code: str
     owner_id: str | None
     empty_since: datetime | None
     peers: dict[str, Peer] = field(default_factory=dict)
+    held_seats: dict[str, HeldSeat] = field(default_factory=dict)
     banned: set[str] = field(default_factory=set)
     preferred_host: str | None = None
     lock: Lock = field(default_factory=Lock)
+
+    def expire_seats(self, now: float) -> None:
+        for user_id, seat in list(self.held_seats.items()):
+            if seat.expires_at <= now:
+                del self.held_seats[user_id]
 
     def host(self) -> Peer | None:
         owner = next((peer for peer in self.peers.values() if peer.user_id == self.owner_id), None)

@@ -1,4 +1,5 @@
 import { accessToken, api, clearSession, requireSession } from "./api.js";
+import { PeerTile } from "./peer-tile.js";
 import { element, message, onForm } from "./ui.js";
 import { PeerCall } from "./webrtc.js";
 
@@ -14,7 +15,10 @@ class RoomCall {
     this.stopped = false;
     this.policy = {};
     this.features = {};
-    this.remoteStreams = new Map();
+    this.peers = new Map();
+    this.pendingEvents = [];
+    this.statsVisible = false;
+    element("stats-toggle").setAttribute("aria-pressed", "false");
     this.chatIds = new Set();
     element("chat-messages").replaceChildren();
     element("older-messages").hidden = true;
@@ -37,33 +41,29 @@ class RoomCall {
       if (!this.stopped) {
         this.joined = false;
         this.stopScreen();
-        this.resetPeer();
+        this.resetPeers();
         message("Mất kết nối. Đang nối lại…");
       }
     });
-    this.socket.on("peer_joined", ({peer}) => {
-      if (this.remoteId && this.remoteId !== peer.peer_id) return;
-      this.remoteId = peer.peer_id;
-      element("remote-name").textContent = peer.display_name;
-      this.setRemoteMedia(peer.media);
+    this.roomEvent("peer_joined", ({peer}) => {
+      this.makePeer(peer, false);
       this.renderControls();
+      message("");
     });
-    this.socket.on("peer_left", ({peer_id: id}) => {
-      if (id === this.remoteId) {
-        this.resetPeer();
-        message("Người kia đã rời phòng.");
-      }
+    this.roomEvent("peer_left", ({peer_id: id}) => {
+      this.removePeer(id);
+      if (!this.peers.size) message("Đang chờ người tham gia.");
     });
-    this.socket.on("offer", message => this.receive(message, "sdp"));
-    this.socket.on("answer", message => this.receive(message, "sdp"));
-    this.socket.on("ice_candidate", message => this.receive(message, "candidate"));
+    this.roomEvent("offer", ({from, sdp}) => this.peers.get(from)?.call.receiveDescription(sdp));
+    this.roomEvent("answer", ({from, sdp}) => this.peers.get(from)?.call.receiveDescription(sdp));
+    this.roomEvent("ice_candidate", ({from, candidate}) => this.peers.get(from)?.call.receiveCandidate(candidate));
     this.socket.on("chat_message", ({id, from, text}) => {
       this.addMessages([{id, sender_name: from.display_name, content: text}]);
     });
-    this.socket.on("media_state", media => {
-      if (media.peer_id === this.remoteId) this.setRemoteMedia(media);
+    this.roomEvent("media_state", media => {
+      this.peers.get(media.peer_id)?.tile.updateMedia(media);
     });
-    this.socket.on("host_changed", ({host_peer_id}) => {
+    this.roomEvent("host_changed", ({host_peer_id}) => {
       this.hostId = host_peer_id;
       this.renderControls();
     });
@@ -81,6 +81,14 @@ class RoomCall {
     });
   }
 
+  roomEvent(event, handler) {
+    this.socket.on(event, data => {
+      if (this.stopped) return;
+      if (this.joined) handler(data);
+      else if (this.pendingEvents.length < 800) this.pendingEvents.push(() => handler(data));
+    });
+  }
+
   async start() {
     if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) {
       throw new Error("Trình duyệt cần hỗ trợ camera và WebRTC tại localhost hoặc HTTPS.");
@@ -90,6 +98,10 @@ class RoomCall {
     this.local = await navigator.mediaDevices.getUserMedia({
       audio: true, video: {width: {ideal: 1280}, height: {ideal: 720}},
     });
+    if (this.stopped) {
+      this.local.getTracks().forEach(track => track.stop());
+      return;
+    }
     element("local").srcObject = this.local;
     const connected = new Promise((resolve, reject) => {
       this.firstJoin = {resolve, reject};
@@ -115,7 +127,7 @@ class RoomCall {
       iceServers.push({urls: turn, username: data.username, credential: data.credential});
     }
     this.iceServers = iceServers;
-    this.peer?.updateIceServers(iceServers);
+    for (const {call} of this.peers.values()) call.updateIceServers(iceServers);
     if (data.ttl > 0) {
       this.iceRefresh = setTimeout(() => this.refreshIceServers(), (data.ttl - 60) * 1000);
     }
@@ -139,12 +151,10 @@ class RoomCall {
   }
 
   async join() {
+    const sid = this.socket.id;
     try {
       const info = await this.emit("join_room", {code, password: this.password || null});
-      if (this.stopped) return;
-      if (info.peers.length > 1) {
-        throw new Error("Trình duyệt này hỗ trợ cuộc gọi một đối một.");
-      }
+      if (this.stopped || this.socket.id !== sid) return;
       this.policy = info.media_policy;
       this.features = info.features;
       this.hostId = info.room.host_peer_id;
@@ -162,27 +172,22 @@ class RoomCall {
           frameRate: {ideal: 30},
         }).catch(() => {});
       }
-      if (info.peers.length === 1) {
-        const other = info.peers[0];
-        this.remoteId = other.peer_id;
-        element("remote-name").textContent = other.display_name;
-        this.setRemoteMedia(other.media);
-        if (!this.peer) this.makePeer(other.peer_id, true);
-      }
+      for (const peer of info.peers) this.makePeer(peer, true);
+      for (const handle of this.pendingEvents.splice(0)) handle();
       this.renderControls();
       this.publishMedia().catch(error => message(error.message, true));
       this.loadHistory();
-      message(this.remoteId ? "Đang kết nối video…" : "Đang chờ người tham gia.");
+      message(this.peers.size ? "" : "Đang chờ người tham gia.");
       this.firstJoin?.resolve();
       this.firstJoin = null;
     } catch (error) {
-      this.fail(error);
+      if (this.socket.id === sid) this.fail(error);
     }
   }
 
   renderControls() {
-    const canMute = this.joined && this.remoteId && this.hostId === this.socket.id;
-    for (const kind of Object.keys(mediaButtons)) element("mute-peer-" + kind).hidden = !canMute;
+    const canMute = this.joined && this.hostId === this.socket.id;
+    for (const {tile} of this.peers.values()) tile.mute.hidden = !canMute;
     element("screen").hidden = !this.joined || !this.features.screen_share;
     element("chat-form").hidden = !this.joined || !this.features.chat;
   }
@@ -230,7 +235,7 @@ class RoomCall {
     try {
       await this.publishMedia();
       if (this.screen !== stream) return;
-      await this.peer?.setScreen(this.screenStream, track);
+      await this.setPeerScreens(track);
       if (this.screen === stream) this.renderLocalScreen();
     } catch (error) {
       if (this.screen === stream) this.stopScreen();
@@ -242,7 +247,7 @@ class RoomCall {
     if (!this.screen) return;
     this.screen.getTracks().forEach(track => track.stop());
     this.screen = null;
-    this.peer?.setScreen(null).catch(error => message(error.message, true));
+    this.setPeerScreens(null).catch(error => message(error.message, true));
     this.renderLocalScreen();
     this.publishMedia().catch(error => message(error.message, true));
   }
@@ -255,28 +260,8 @@ class RoomCall {
     button.textContent = this.screen ? "Dừng chia sẻ" : "Chia sẻ màn hình";
   }
 
-  setRemoteMedia(media) {
-    this.remoteMedia = media;
-    element("remote-media").textContent = [
-      media.audio ? "Mic bật" : "Mic tắt",
-      media.video ? "Camera bật" : "Camera tắt",
-      ...(media.screen ? ["Đang chia sẻ màn hình"] : []),
-    ].join(" · ");
-    this.renderRemote();
-  }
-
-  renderRemote() {
-    const camera = [...this.remoteStreams.values()].find(stream => stream.getAudioTracks().length);
-    const remote = element("remote");
-    if (camera && remote.srcObject !== camera) {
-      remote.srcObject = camera;
-      playRemote();
-    }
-    const screen = this.remoteStreams.get(this.remoteMedia?.screen_stream_id);
-    element("remote-screen-panel").hidden = !screen;
-    if (element("remote-screen").srcObject !== (screen ?? null)) {
-      element("remote-screen").srcObject = screen ?? null;
-    }
+  setPeerScreens(track) {
+    return Promise.all([...this.peers.values()].map(({call}) => call.setScreen(this.screenStream, track)));
   }
 
   addMessages(entries, older = false) {
@@ -316,9 +301,13 @@ class RoomCall {
     }
   }
 
-  makePeer(id, initiates) {
-    this.remoteId = id;
-    this.peer = new PeerCall({
+  makePeer(peer, initiates) {
+    const id = peer.peer_id;
+    if (this.peers.has(id)) return;
+    const tile = new PeerTile(peer, kind => {
+      this.emit("mute_peer", {peer_id: id, kind}).catch(error => message(error.message, true));
+    });
+    const call = new PeerCall({
       id,
       initiates,
       polite: this.socket.id > id,
@@ -326,42 +315,51 @@ class RoomCall {
       policy: this.policy,
       iceServers: this.iceServers,
       signal: (event, payload) => this.emit(event, {to: id, ...payload}),
-      showStream: stream => {
-        this.remoteStreams.set(stream.id, stream);
-        this.renderRemote();
-      },
-      showState: state => {
-        if (state === "connected") message("Đã kết nối video.");
-        if (state === "failed") message("Không kết nối được luồng video. Thử rời phòng rồi vào lại.", true);
-      },
+      showStream: stream => tile.addStream(stream),
+      showState: state => tile.setState(state),
       showError: error => message(error.message || "Kết nối video gặp lỗi.", true),
     });
+    this.peers.set(id, {tile, call});
+    tile.showStats(this.statsVisible);
     if (this.screen) {
-      this.peer.setScreen(this.screenStream, this.screen.getVideoTracks()[0])
+      call.setScreen(this.screenStream, this.screen.getVideoTracks()[0])
         .catch(error => message(error.message, true));
     }
-    return this.peer;
   }
 
-  receive({from, ...payload}, kind) {
-    if (this.stopped || !this.local || (this.remoteId && from !== this.remoteId)) return;
-    const peer = this.peer || this.makePeer(from, false);
-    if (kind === "sdp") peer.receiveDescription(payload.sdp);
-    else peer.receiveCandidate(payload.candidate);
+  removePeer(id) {
+    const peer = this.peers.get(id);
+    if (!peer) return;
+    peer.call.close();
+    peer.tile.close();
+    this.peers.delete(id);
   }
 
-  resetPeer() {
-    this.peer?.close();
-    this.peer = null;
-    this.remoteId = null;
-    this.remoteMedia = null;
-    this.remoteStreams.clear();
-    element("remote").srcObject = null;
-    element("remote-media").textContent = "";
-    this.renderRemote();
-    element("play-remote").hidden = true;
-    element("remote-name").textContent = "Đang chờ người tham gia";
+  resetPeers() {
+    for (const id of this.peers.keys()) this.removePeer(id);
+    this.pendingEvents.length = 0;
     this.renderControls();
+  }
+
+  toggleStats() {
+    this.statsVisible = !this.statsVisible;
+    element("stats-toggle").setAttribute("aria-pressed", String(this.statsVisible));
+    for (const {tile} of this.peers.values()) tile.showStats(this.statsVisible);
+    clearInterval(this.statsTimer);
+    if (this.statsVisible) {
+      this.statsTimer = setInterval(() => this.sampleStats(), 1000);
+      this.sampleStats();
+    }
+  }
+
+  async sampleStats() {
+    if (this.sampling) return;
+    this.sampling = true;
+    try {
+      await Promise.allSettled([...this.peers.values()].map(({call, tile}) => tile.sample(call.pc)));
+    } finally {
+      this.sampling = false;
+    }
   }
 
   stop() {
@@ -369,9 +367,10 @@ class RoomCall {
     this.stopped = true;
     this.joined = false;
     clearTimeout(this.iceRefresh);
+    clearInterval(this.statsTimer);
     this.socket.disconnect();
     this.stopScreen();
-    this.resetPeer();
+    this.resetPeers();
     this.local?.getTracks().forEach(track => track.stop());
     element("local").srcObject = null;
     this.password = null;
@@ -431,15 +430,8 @@ onForm("enter-form", async (fields, form) => {
 
 for (const [kind, [button]] of Object.entries(mediaButtons)) {
   element(button).addEventListener("click", () => active?.setTrack(kind));
-  element("mute-peer-" + kind).addEventListener("click", async () => {
-    if (!active?.remoteId) return;
-    try {
-      await active.emit("mute_peer", {peer_id: active.remoteId, kind});
-    } catch (error) {
-      message(error.message, true);
-    }
-  });
 }
+element("stats-toggle").addEventListener("click", () => active?.toggleStats());
 element("screen").addEventListener("click", async event => {
   const button = event.currentTarget;
   button.disabled = true;
@@ -469,19 +461,7 @@ function chatError(text = "") {
 }
 
 element("leave").addEventListener("click", () => active?.leave().catch(() => {}));
-element("play-remote").addEventListener("click", playRemote);
 window.addEventListener("pagehide", () => active?.stop());
-
-async function playRemote() {
-  const video = element("remote");
-  const stream = video.srcObject;
-  try {
-    await video.play();
-    element("play-remote").hidden = true;
-  } catch {
-    if (stream && video.srcObject === stream) element("play-remote").hidden = false;
-  }
-}
 
 element("copy-code").addEventListener("click", async () => {
   try {

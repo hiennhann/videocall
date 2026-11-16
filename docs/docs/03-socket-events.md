@@ -101,7 +101,7 @@ Server (trong `room.lock`):
 2. Phòng không có trong DB → `ROOM_NOT_FOUND`; `status = closed` → `ROOM_CLOSED`.
 3. `user_id` nằm trong `banned_user_ids` → `BANNED`.
 4. Phòng có mật khẩu: kiểm tra (argon2 verify). Sai → `WRONG_PASSWORD`. Giới hạn **5 lần sai / 5 phút / user+IP** → `RATE_LIMITED`.
-5. Số peer ≥ `min(room.max_participants, max_participants_per_room)` → `ROOM_FULL`. Khi thay tab của cùng người dùng, chỗ của tab cũ được dùng lại.
+5. Với phòng mesh, sức chứa là giá trị nhỏ nhất giữa giới hạn phòng, giới hạn cấu hình và 4. Người đang nối lại có chỗ đã giữ trong 10 giây. Khi thay tab của cùng người dùng, chỗ của tab cũ được dùng lại.
 6. Cùng `user_id` đã ở phòng này bằng `sid` khác (mở hai tab) → **tab cũ bị đá** (`kicked` với `reason = "SESSION_REPLACED"`), tab mới vào.
 7. Một socket chỉ ở **một phòng tại một thời điểm**; đang ở phòng khác → `ALREADY_IN_ROOM`.
 8. Thành công: `sio.enter_room(sid, code)`, thêm `Peer`, xóa `empty_since`.
@@ -244,11 +244,11 @@ Client giữ nguyên ID của luồng màn hình trong cuộc gọi và dùng `R
 | Tình huống | Server làm |
 |---|---|
 | `leave_room` | Gỡ peer, phát `peer_left (left)` |
-| Socket ngắt (đóng tab, rớt mạng quá `ping_timeout`) | Handler `disconnect` gỡ peer khỏi mọi phòng, phát `peer_left (disconnected)` |
+| Mất transport hoặc hết `ping_timeout` | Gỡ peer, phát `peer_left (disconnected)`, giữ chỗ phòng trong 10 giây kể từ khi server phát hiện |
 | Đổi mạng ngắn (Wi-Fi → 4G) nhưng socket vẫn sống | Client gọi `pc.restartIce()`, gửi `offer` mới với `iceRestart` qua cùng luồng |
 | Socket kết nối lại (sid mới) | Với server đây là **người mới**: client phải `join_room` lại và dựng lại các `RTCPeerConnection` |
 
-Tham số Socket.io: `ping_interval = 25s`, `ping_timeout = 20s` (mặc định). Chưa làm "thời gian chờ nối lại giữ chỗ"; ghi vào danh sách cải tiến.
+Tham số Socket.io là `ping_interval = 25s` và `ping_timeout = 20s`. Khi quay lại, socket vẫn phải xác thực và cung cấp mật khẩu phòng nếu có. Hết thời hạn giữ chỗ hoặc rời phòng chủ động thì slot được trả lại.
 
 Khi phòng hết người: đặt `empty_since = now`. Nếu không ai vào lại trong `room_empty_ttl_seconds` → đóng phòng (`closed_reason = empty_timeout`), cập nhật DB, xóa khỏi RAM. Một tác vụ nền quét mỗi 30 giây.
 
