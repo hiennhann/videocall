@@ -357,7 +357,9 @@ Cách sinh (khớp với `use-auth-secret` của coturn):
 
 (coturn quy định dùng HMAC-SHA1; đây không phải điểm yếu vì khóa là bí mật phía server.)
 
-Client dùng làm `iceServers` của `RTCPeerConnection` và **lấy lại trước khi hết `ttl`** nếu cuộc gọi kéo dài. Lỗi: 401, 403 `TURN_DISABLED` (khi `turn_enabled = false`, endpoint chỉ trả STUN) / `GUEST_NOT_ALLOWED`.
+Client dùng kết quả làm `iceServers` của `RTCPeerConnection` và lấy lại trước khi hết `ttl` nếu cuộc gọi kéo dài. Phản hồi thành công có `Cache-Control: no-store`.
+
+Khi `turn_enabled = false` hoặc cấu hình chỉ có STUN, endpoint trả HTTP 200 với các URL STUN, `username: null`, `credential: null` và `ttl: 0`. Khi TURN được bật và cấm khách lấy thông tin xác thực TURN, endpoint trả 403 `GUEST_NOT_ALLOWED`. Token thiếu hoặc không hợp lệ trả 401. Vượt giới hạn trả 429 kèm `Retry-After`.
 
 ## 8. Admin
 
@@ -491,7 +493,7 @@ Danh sách `action` chuẩn:
 | 401 | `INVALID_CREDENTIALS`, `INVALID_REFRESH_TOKEN` | |
 | 403 | `FORBIDDEN` | Không đủ quyền |
 | 403 | `ACCOUNT_DISABLED` | Tài khoản bị khóa |
-| 403 | `REGISTRATION_DISABLED`, `GUEST_DISABLED`, `TURN_DISABLED` | Tính năng bị admin tắt |
+| 403 | `REGISTRATION_DISABLED`, `GUEST_DISABLED` | Tính năng bị admin tắt |
 | 403 | `GUEST_NOT_ALLOWED` | Khách không được làm việc này |
 | 403 | `PASSWORD_CHANGE_REQUIRED` | Phải đổi mật khẩu trước |
 | 403 | `NOT_ROOM_HOST`, `NOT_IN_ROOM` | |

@@ -20,7 +20,8 @@
 | `DATABASE_URL` | Có | `postgresql+asyncpg://user:pass@db:5432/videocall` |
 | `JWT_SECRET` | Có | ≥ 32 byte ngẫu nhiên. Đổi giá trị này sẽ làm mọi access token đang có mất hiệu lực |
 | `TURN_SECRET` | Có | Dùng chung với `static-auth-secret` của coturn |
-| `TURN_URLS` | Có | Danh sách URL STUN/TURN trả cho client |
+| `TURN_URLS` | Có trong app | Danh sách URL STUN/TURN cách nhau bằng dấu phẩy. Compose mặc định sinh từ `TURN_HOST` |
+| `TURN_HOST` | Không | Địa chỉ IPv4 của máy dev để Compose ánh xạ cổng và coturn công bố địa chỉ relay. Mặc định `127.0.0.1` |
 | `PUBLIC_BASE_URL` | Prod | `https://app.example.com` |
 | `ALLOWED_ORIGINS` | Có | Danh sách origin cho CORS và Socket.io, phân tách bằng dấu phẩy |
 | `FORWARDED_ALLOW_IPS` | Prod | IP của reverse proxy được tin cậy khi đọc `X-Forwarded-For` |

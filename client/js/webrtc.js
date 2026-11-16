@@ -1,5 +1,5 @@
 export class PeerCall {
-  constructor({id, polite, initiates, local, signal, showStream, showState, showError, policy}) {
+  constructor({id, polite, initiates, local, signal, showStream, showState, showError, policy, iceServers}) {
     this.id = id;
     this.polite = polite;
     this.canOffer = initiates;
@@ -11,7 +11,7 @@ export class PeerCall {
     this.ignoreOffer = false;
     this.closed = false;
 
-    const pc = this.pc = new RTCPeerConnection({iceServers: []});
+    const pc = this.pc = new RTCPeerConnection({iceServers});
     const remote = new MediaStream();
     pc.ontrack = event => {
       remote.addTrack(event.track);
@@ -44,6 +44,12 @@ export class PeerCall {
         }
       }
     }
+  }
+
+  updateIceServers(iceServers) {
+    const pc = this.pc;
+    pc.setConfiguration({...pc.getConfiguration(), iceServers});
+    pc.restartIce();
   }
 
   enqueue(work) {

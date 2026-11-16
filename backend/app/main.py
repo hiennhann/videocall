@@ -27,6 +27,7 @@ from app.api.me import router as me_router
 from app.api.rooms import admin_router as admin_rooms_router
 from app.api.rooms import router as rooms_router
 from app.api.system import router as system_router
+from app.api.turn import router as turn_router
 from app.core.config import Settings
 from app.core.errors import AuthError
 from app.core.security import hash_password
@@ -35,6 +36,7 @@ from app.realtime.server import RealtimeServer
 from app.services.admin_service import AdminService
 from app.services.auth_service import AuthService
 from app.services.settings_service import SettingsService
+from app.services.turn_service import TurnService
 from app.web.routes import mount_admin
 
 
@@ -69,6 +71,9 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title="Video Call / Livestream", lifespan=lifespan)
     app.state.realtime = realtime
+    app.state.turn_service = TurnService(
+        settings.turn_secret.get_secret_value(), settings.turn_urls
+    )
     limiter = Limiter(key_func=get_remote_address, storage_uri="memory://", headers_enabled=True)
     app.state.limiter = limiter
     app.add_exception_handler(AuthError, auth_error_handler)
@@ -82,6 +87,7 @@ def create_app() -> FastAPI:
     app.include_router(public_router, prefix="/api/v1")
     app.include_router(rooms_router, prefix="/api/v1")
     app.include_router(admin_rooms_router, prefix="/api/v1")
+    app.include_router(turn_router, prefix="/api/v1")
     mount_client(app)
     mount_admin(app)
     app.add_middleware(

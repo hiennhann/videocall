@@ -217,7 +217,7 @@ Mới (N)               Server                      Cũ (E)
 
 Lưu ý khi viết client:
 - ICE candidate có thể đến **trước** khi `setRemoteDescription` xong: bỏ vào hàng đợi, nạp sau.
-- A5 kiểm thử đường kết nối trực tiếp trên localhost. Từ A7, client lấy `iceServers` từ `/turn-credentials` trước khi tạo `RTCPeerConnection`.
+- Client lấy `iceServers` từ `/turn-credentials` trước khi tạo `RTCPeerConnection`. Khi làm mới thông tin xác thực TURN, client cập nhật `iceServers` và khởi động lại ICE.
 - Áp dụng `media_policy` bằng `RTCRtpSender.setParameters()` (`maxBitrate`) và `getUserMedia` constraints.
 
 ### 7.2 Đàm phán lại (bật chia sẻ màn hình, đổi camera)

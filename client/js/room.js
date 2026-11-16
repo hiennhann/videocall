@@ -59,6 +59,8 @@ class RoomCall {
     if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) {
       throw new Error("Trình duyệt cần hỗ trợ camera và WebRTC tại localhost hoặc HTTPS.");
     }
+    await this.loadIceServers();
+    if (this.stopped) return;
     this.local = await navigator.mediaDevices.getUserMedia({
       audio: true, video: {width: {ideal: 1280}, height: {ideal: 720}},
     });
@@ -68,6 +70,39 @@ class RoomCall {
     });
     this.socket.connect();
     return connected;
+  }
+
+  async loadIceServers() {
+    let data;
+    try {
+      data = await api("/turn-credentials", {authenticated: true});
+    } catch (error) {
+      if (error.code !== "GUEST_NOT_ALLOWED") throw error;
+      data = {urls: [], ttl: 0};
+    }
+    if (this.stopped) return;
+
+    const stun = data.urls.filter(url => /^stuns?:/.test(url));
+    const turn = data.urls.filter(url => /^turns?:/.test(url));
+    const iceServers = stun.length ? [{urls: stun}] : [];
+    if (turn.length && data.username && data.credential) {
+      iceServers.push({urls: turn, username: data.username, credential: data.credential});
+    }
+    this.iceServers = iceServers;
+    this.peer?.updateIceServers(iceServers);
+    if (data.ttl > 0) {
+      this.iceRefresh = setTimeout(() => this.refreshIceServers(), (data.ttl - 60) * 1000);
+    }
+  }
+
+  async refreshIceServers() {
+    try {
+      await this.loadIceServers();
+    } catch (error) {
+      if (!this.stopped && (!error.status || error.status === 429 || error.status >= 500)) {
+        this.iceRefresh = setTimeout(() => this.refreshIceServers(), 30000);
+      }
+    }
   }
 
   async emit(event, payload) {
@@ -119,6 +154,7 @@ class RoomCall {
       polite: this.socket.id > id,
       local: this.local,
       policy: this.policy,
+      iceServers: this.iceServers,
       signal: (event, payload) => this.emit(event, {to: id, ...payload}),
       showStream: stream => {
         const video = element("remote");
@@ -153,6 +189,7 @@ class RoomCall {
   stop() {
     if (this.stopped) return;
     this.stopped = true;
+    clearTimeout(this.iceRefresh);
     this.socket.disconnect();
     this.resetPeer();
     this.local?.getTracks().forEach(track => track.stop());

@@ -40,7 +40,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       TURN_SECRET: ${TURN_SECRET:?Set TURN_SECRET in .env}
-      TURN_URLS: ${TURN_URLS:?Set TURN_URLS in .env}
+      TURN_URLS: "${TURN_URLS:-stun:${TURN_HOST:-127.0.0.1}:3478,turn:${TURN_HOST:-127.0.0.1}:3478?transport=udp,turn:${TURN_HOST:-127.0.0.1}:3478?transport=tcp}"
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS in .env}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
@@ -59,6 +59,35 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  coturn:
+    image: coturn/coturn:4.19.0-r0
+    environment:
+      TURN_SECRET: ${TURN_SECRET:?Set TURN_SECRET in .env}
+      TURN_HOST: ${TURN_HOST:-127.0.0.1}
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - >-
+        relay_ip="$$(hostname -i)" &&
+        exec turnserver -n --realm=videocall.local --use-auth-secret
+        --static-auth-secret="$$TURN_SECRET" --external-ip="$$TURN_HOST/$$relay_ip"
+        --listening-ip=0.0.0.0 --relay-ip="$$relay_ip" --min-port=49152 --max-port=49162
+        --fingerprint --no-tls --no-tcp-relay --no-multicast-peers
+        --user-quota=4 --total-quota=10 --log-file=stdout
+    ports:
+      - "${TURN_HOST:-127.0.0.1}:3478:3478/udp"
+      - "${TURN_HOST:-127.0.0.1}:3478:3478/tcp"
+      - "${TURN_HOST:-127.0.0.1}:49152-49162:49152-49162/udp"
+    networks:
+      - turn
+    healthcheck:
+      test: ["CMD", "turnutils_stunclient", "-p", "3478", "127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  turn:
 
 volumes:
   pgdata:

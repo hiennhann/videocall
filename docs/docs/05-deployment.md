@@ -154,9 +154,11 @@ Map một dải UDP lớn qua Docker bridge tốn tài nguyên (mỗi cổng m�
 | Hệ điều hành | Cách làm |
 |---|---|
 | Linux | `network_mode: host`, giống production |
-| Windows / macOS (Docker Desktop) | Host network **không** hoạt động như Linux. Dùng map cổng với dải relay nhỏ (ví dụ 49152-49162) và `external-ip=<IP LAN của máy>`; hoặc ở dev chỉ dùng STUN công cộng và test TURN thật trên VPS |
+| Windows / macOS (Docker Desktop) | Compose A7 dùng mạng bridge, ánh xạ `3478/udp`, `3478/tcp` và `49152–49162/udp`. Compose truyền `TURN_HOST` cho `--external-ip` của coturn |
 
-Test trên `localhost` hai tab cùng máy không cần TURN. TURN thực sự được kiểm chứng khi test **hai thiết bị khác mạng**.
+Mặc định `TURN_HOST=127.0.0.1` giới hạn các cổng trên máy dev để gọi trực tiếp. Khi thử ép relay trong Chrome, đặt `TURN_HOST` thành địa chỉ IPv4 LAN của máy chạy Docker Desktop và dùng `TURN_SECRET` ngẫu nhiên, rồi chạy lại `docker compose up --build --wait`. Coturn dùng cặp `--external-ip=<IP LAN>/<IP container>` để chuyển tiếp giữa các allocation trên cùng máy chủ. Trong bản dev, cổng HTTP của ứng dụng vẫn ở localhost.
+
+Compose dùng image `coturn/coturn:4.19.0-r0`. Health check dùng `turnutils_stunclient` để kiểm tra listener. Kiểm thử trên hai mạng thật cần một TURN server mà cả hai thiết bị đều truy cập được.
 
 ### 4.5 Kiểm thử TURN
 
