@@ -93,6 +93,9 @@ class Socket:
             "offer",
             "answer",
             "ice_candidate",
+            "chat_message",
+            "media_state",
+            "force_mute",
             "kicked",
             "room_closed",
             "force_disconnect",
@@ -127,6 +130,153 @@ async def peer(live: Server, stack: AsyncExitStack, user: dict[str, Any]) -> Soc
 
 def assert_socket_error(ack: dict[str, Any], code: str) -> None:
     assert ack["ok"] is False and ack["error"]["code"] == code, ack
+
+
+async def test_chat_broadcast_history_cursor_and_membership(live: Server) -> None:
+    owner = await account(live)
+    visitor = await guest(live)
+    outsider = await guest(live)
+    code = await room(live, owner, is_private=True, password="private-chat")
+    another = await room(live, owner)
+    path = f"rooms/{code}/messages"
+    assert (await live.http.get(path)).status_code == 401
+    empty = await live.http.get(path, headers=bearer(owner))
+    assert empty.status_code == 200 and empty.json() == {"items": [], "next_before": None}
+    denied = await live.http.get(path, headers=bearer(visitor))
+    assert denied.status_code == 403 and denied.json()["error"]["code"] == "NOT_IN_ROOM"
+
+    async with AsyncExitStack() as stack:
+        host = await peer(live, stack, owner)
+        sender = await peer(live, stack, visitor)
+        other_room = await peer(live, stack, outsider)
+        assert (await host.call("join_room", {"code": code, "password": "private-chat"}))["ok"]
+        assert (await sender.call("join_room", {"code": code, "password": "private-chat"}))["ok"]
+        assert (await other_room.call("join_room", {"code": another}))["ok"]
+        assert_socket_error(await sender.call("chat_message", {"text": " "}), "INVALID_PAYLOAD")
+        assert_socket_error(
+            await sender.call("chat_message", {"text": "a" * 2001}), "INVALID_PAYLOAD"
+        )
+        text = "<b>literal message</b>"
+        sent = await sender.call("chat_message", {"text": f"  {text} "})
+        assert sent["ok"], sent
+        first = await sender.event("chat_message", text=text)
+        assert await host.event("chat_message", text=text) == first
+        assert first["id"] == sent["data"]["id"]
+        assert first["from"] == {"peer_id": sender.sid, "user_id": None, "display_name": "Visitor"}
+        assert other_room.events["chat_message"].empty()
+
+        sent = await host.call("chat_message", {"text": "second"})
+        assert sent["ok"], sent
+        newest = await sender.event("chat_message", text="second")
+        await asyncio.wait_for(live.realtime.chat.pending.join(), timeout=4)
+        result = await live.http.get(path, headers=bearer(visitor), params={"limit": 1})
+        assert result.status_code == 200, result.text
+        assert result.headers["cache-control"] == "no-store"
+        latest = result.json()
+        assert latest["items"][0]["id"] == latest["next_before"] == newest["id"]
+        assert latest["items"][0]["content"] == "second"
+        assert latest["items"][0]["user_id"] == owner["user"]["id"]
+        earlier = await live.http.get(
+            path, headers=bearer(visitor), params={"limit": 1, "before": latest["next_before"]}
+        )
+        assert earlier.status_code == 200, earlier.text
+        item = earlier.json()["items"][0]
+        assert (item["id"], item["user_id"], item["content"]) == (first["id"], None, text)
+        assert earlier.json()["next_before"] is None
+        assert (
+            await live.http.get(path, headers=bearer(owner), params={"limit": 101})
+        ).status_code == 422
+        assert (await sender.call("leave_room"))["ok"]
+        assert_socket_error(await sender.call("chat_message", {"text": "outside"}), "NOT_IN_ROOM")
+        assert (await live.http.get(path, headers=bearer(visitor))).status_code == 403
+        assert (await host.call("leave_room"))["ok"]
+        owner_history = await live.http.get(path, headers=bearer(owner))
+        assert [item["id"] for item in owner_history.json()["items"]] == [newest["id"], first["id"]]
+
+
+async def test_a8_live_policies_rate_limit_and_host_mute(live: Server) -> None:
+    owner = await account(live, admin=True)
+    visitor = await guest(live)
+    code = await room(live, owner)
+    auth = bearer(owner)
+    active_screen = {"audio": False, "video": True, "screen": True, "screen_stream_id": "display-1"}
+    try:
+        async with AsyncExitStack() as stack:
+            host = await peer(live, stack, owner)
+            guest_socket = await peer(live, stack, visitor)
+            assert (await host.call("join_room", {"code": code}))["ok"]
+            assert (await guest_socket.call("join_room", {"code": code}))["ok"]
+            assert_socket_error(
+                await guest_socket.call("mute_peer", {"peer_id": host.sid, "kind": "audio"}),
+                "NOT_ROOM_HOST",
+            )
+            assert_socket_error(
+                await host.call("mute_peer", {"peer_id": "other-room", "kind": "audio"}),
+                "PEER_NOT_FOUND",
+            )
+            for kind in ("audio", "video"):
+                assert (await host.call("mute_peer", {"peer_id": guest_socket.sid, "kind": kind}))[
+                    "ok"
+                ]
+                assert await guest_socket.event("force_mute", kind=kind) == {
+                    "kind": kind,
+                    "by_peer_id": host.sid,
+                }
+            assert host.events["force_mute"].empty()
+
+            assert_socket_error(
+                await host.call("media_state", {**active_screen, "screen_stream_id": None}),
+                "INVALID_PAYLOAD",
+            )
+            assert (await host.call("media_state", active_screen))["ok"]
+            assert await guest_socket.event("media_state", peer_id=host.sid) == {
+                "peer_id": host.sid,
+                **active_screen,
+            }
+            rejoined = await guest_socket.call("join_room", {"code": code})
+            assert rejoined["data"]["peers"][0]["media"] == active_screen
+            assert host.events["media_state"].empty()
+
+            updated = await live.http.patch(
+                "admin/settings",
+                headers=auth,
+                json={"chat_history_enabled": False, "allow_screen_share": False},
+            )
+            assert updated.status_code == 200, updated.text
+            assert_socket_error(
+                await guest_socket.call("media_state", active_screen), "SCREEN_SHARE_DISABLED"
+            )
+            assert (await host.call("media_state", {**active_screen, "video": False}))["ok"]
+            stopped = {**active_screen, "screen": False, "screen_stream_id": None}
+            assert (await host.call("media_state", stopped))["ok"]
+
+            for i in range(5):
+                assert (await guest_socket.call("chat_message", {"text": f"message {i}"}))["ok"]
+            assert_socket_error(
+                await guest_socket.call("chat_message", {"text": "sixth"}), "RATE_LIMITED"
+            )
+            assert (await host.event("chat_message", text="message 4"))["text"] == "message 4"
+            history = await live.http.get(f"rooms/{code}/messages", headers=auth)
+            assert history.json() == {"items": [], "next_before": None}
+
+            updated = await live.http.patch(
+                "admin/settings",
+                headers=auth,
+                json={"chat_enabled": False, "chat_history_enabled": None},
+            )
+            assert updated.status_code == 200, updated.text
+            assert_socket_error(
+                await host.call("chat_message", {"text": "disabled"}), "CHAT_DISABLED"
+            )
+            history = await live.http.get(f"rooms/{code}/messages", headers=auth)
+            assert history.json() == {"items": [], "next_before": None}
+    finally:
+        reset = await live.http.patch(
+            "admin/settings",
+            headers=auth,
+            json={"chat_enabled": None, "chat_history_enabled": None, "allow_screen_share": None},
+        )
+        assert reset.status_code == 200, reset.text
 
 
 async def test_room_http_limits_and_closed_status(live: Server) -> None:

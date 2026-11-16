@@ -19,9 +19,19 @@ from app.core.errors import AuthError, ErrorCode
 from app.core.security import decode_access_token
 from app.models import Room
 from app.realtime.state import Connection, RoomStateStore
-from app.schemas.rooms import JoinRoom, KickPeer, PeerTarget, SignalCandidate, SignalDescription
+from app.schemas.chat import SendMessage
+from app.schemas.rooms import (
+    JoinRoom,
+    KickPeer,
+    MediaState,
+    MutePeer,
+    PeerTarget,
+    SignalCandidate,
+    SignalDescription,
+)
 from app.services.account_events import AccountEvents
 from app.services.auth_service import AuthService
+from app.services.chat_service import ChatService
 from app.services.room_service import RoomService
 from app.services.settings_service import SettingsService
 
@@ -45,13 +55,18 @@ class RealtimeServer(AccountEvents):
         )
         self.state = RoomStateStore()
         self.rooms = RoomService(settings, self.state, self)
+        self.chat = ChatService(self.rooms)
         self._sweeper: asyncio.Task[None] | None = None
+        self._chat_writer: asyncio.Task[None] | None = None
         self.sio.on("connect", self.connect)
         self.sio.on("disconnect", self.disconnect)
         self._bind("join_room", self.join)
         self._bind("leave_room", self.leave_room)
         for event in ("offer", "answer", "ice_candidate"):
             self._bind(event, partial(self.signal, event))
+        self._bind("chat_message", self.chat_message)
+        self._bind("media_state", self.media_state)
+        self._bind("mute_peer", self.mute_peer)
         self._bind("kick", self.kick)
         self._bind("transfer_host", self.transfer)
         self._bind("close_room", self.close_room)
@@ -60,12 +75,17 @@ class RealtimeServer(AccountEvents):
         self.sessions = sessions
         self.auth = auth
         self._sweeper = asyncio.create_task(self.sweep())
+        self._chat_writer = asyncio.create_task(self.chat.store(sessions))
 
     async def stop(self) -> None:
         if self._sweeper is not None:
             self._sweeper.cancel()
             await asyncio.gather(self._sweeper, return_exceptions=True)
         await self.sio.shutdown()
+        if self._chat_writer is not None:
+            await self.chat.pending.join()
+            self._chat_writer.cancel()
+            await asyncio.gather(self._chat_writer, return_exceptions=True)
 
     async def sweep(self) -> None:
         while True:
@@ -209,6 +229,19 @@ class RealtimeServer(AccountEvents):
                 connection=connection,
                 reason=request.reason,
             )
+
+    async def chat_message(self, connection: Connection, data: Any) -> dict[str, Any]:
+        request = SendMessage.model_validate(data)
+        return await self.chat.send(self.sessions, connection, request.text)
+
+    async def media_state(self, connection: Connection, data: Any) -> None:
+        request = MediaState.model_validate(data)
+        async with self.sessions() as db:
+            await self.rooms.update_media(db, connection, request)
+
+    async def mute_peer(self, connection: Connection, data: Any) -> None:
+        request = MutePeer.model_validate(data)
+        await self.rooms.mute_peer(connection, request.peer_id, request.kind)
 
     async def transfer(self, connection: Connection, data: Any) -> None:
         request = PeerTarget.model_validate(data)

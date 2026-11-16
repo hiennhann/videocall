@@ -63,6 +63,25 @@ class KickPeer(PeerTarget):
     reason: Annotated[str, Field(max_length=200)] | None = None
 
 
+class MutePeer(PeerTarget):
+    kind: Literal["audio", "video"]
+
+
+class MediaState(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    audio: bool
+    video: bool
+    screen: bool
+    screen_stream_id: Annotated[str, Field(min_length=1, max_length=128)] | None = None
+
+    @model_validator(mode="after")
+    def check_screen(self) -> Self:
+        if self.screen != (self.screen_stream_id is not None):
+            raise ValueError("Cần ID luồng khi đang chia sẻ màn hình.")
+        return self
+
+
 class AdminKick(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

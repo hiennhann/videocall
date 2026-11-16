@@ -16,6 +16,8 @@ AUTH_ERRORS = {
     ErrorCode.ALREADY_IN_ROOM: (409, "Kết nối đã ở một phòng khác."),
     ErrorCode.NOT_IN_ROOM: (403, "Bạn chưa vào phòng."),
     ErrorCode.NOT_ROOM_HOST: (403, "Thao tác này cần quyền host."),
+    ErrorCode.CHAT_DISABLED: (403, "Chat trong phòng đang tắt."),
+    ErrorCode.SCREEN_SHARE_DISABLED: (403, "Chia sẻ màn hình đang tắt."),
     ErrorCode.PEER_NOT_FOUND: (404, "Không tìm thấy người tham gia trong phòng."),
     ErrorCode.INVALID_PAYLOAD: (422, "Dữ liệu sự kiện không hợp lệ."),
     ErrorCode.ACCOUNT_DISABLED: (403, "Tài khoản đã bị khóa."),

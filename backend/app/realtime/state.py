@@ -4,6 +4,8 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+from app.schemas.rooms import MediaState
+
 
 @dataclass(slots=True)
 class Connection:
@@ -25,6 +27,9 @@ class Connection:
 class Peer:
     connection: Connection
     joined_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    media: MediaState = field(
+        default_factory=lambda: MediaState(audio=True, video=True, screen=False)
+    )
 
     @property
     def id(self) -> str:
@@ -40,7 +45,7 @@ class Peer:
             "user_id": self.user_id,
             "display_name": self.connection.display_name,
             "is_guest": self.connection.is_guest,
-            "media": {"audio": True, "video": True, "screen": False},
+            "media": self.media.model_dump(),
             "hand_raised": False,
         }
 

@@ -15,7 +15,7 @@ from app.core.errors import AuthError, ErrorCode
 from app.core.security import hash_password, verify_password
 from app.models import Room, User
 from app.realtime.state import Connection, Peer, RoomPresence, RoomStateStore
-from app.schemas.rooms import CreateRoom, RoomCreated, RoomSummary
+from app.schemas.rooms import CreateRoom, MediaState, RoomCreated, RoomSummary
 from app.schemas.settings import SettingsSchema
 from app.services.audit_service import AuditActor, record_audit
 from app.services.auth_service import AuthService
@@ -292,6 +292,39 @@ class RoomService:
                 raise AuthError(ErrorCode.PEER_NOT_FOUND)
             presence.preferred_host = peer.user_id
             await self.host_changed(presence, old_host)
+
+    async def update_media(
+        self, db: AsyncSession, connection: Connection, media: MediaState
+    ) -> None:
+        presence = self.joined_room(connection)
+        async with presence.lock:
+            self.joined_room(connection)
+            peer = presence.peers[connection.peer_id]
+            new_share = media.screen and media.screen_stream_id != peer.media.screen_stream_id
+            if new_share and not (await self.settings.get(db)).allow_screen_share:
+                raise AuthError(ErrorCode.SCREEN_SHARE_DISABLED)
+            if peer.media != media:
+                peer.media = media
+                await self.events.emit(
+                    "media_state",
+                    {"peer_id": peer.id, **media.model_dump()},
+                    to=presence.code,
+                    skip=peer.id,
+                )
+
+    async def mute_peer(
+        self, connection: Connection, target: str, kind: Literal["audio", "video"]
+    ) -> None:
+        presence = self.joined_room(connection)
+        async with presence.lock:
+            self.joined_room(connection)
+            if presence.host_id() != connection.peer_id:
+                raise AuthError(ErrorCode.NOT_ROOM_HOST)
+            if target == connection.peer_id or target not in presence.peers:
+                raise AuthError(ErrorCode.PEER_NOT_FOUND)
+            await self.events.emit(
+                "force_mute", {"kind": kind, "by_peer_id": connection.peer_id}, to=target
+            )
 
     async def kick(
         self,

@@ -1,12 +1,14 @@
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from limits import parse
 from slowapi.util import get_remote_address
 
 from app.api.deps import DB, CurrentAdmin, CurrentMember, CurrentPrincipal, enforce_rate_limit
 from app.core.errors import AuthError, ErrorCode
+from app.schemas.chat import ChatHistory
 from app.schemas.rooms import AdminKick, CreateRoom, RoomCreated, RoomSummary
+from app.services.chat_service import ChatService
 from app.services.room_service import RoomService
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
@@ -43,6 +45,23 @@ async def room_detail(
         raise AuthError(ErrorCode.PASSWORD_CHANGE_REQUIRED)
     enforce_rate_limit(request, LOOKUP_LIMIT, "rooms.detail", get_remote_address(request))
     return await rooms.detail(db, code)
+
+
+@router.get("/{code}/messages")
+async def room_messages(
+    request: Request,
+    response: Response,
+    code: str,
+    principal: CurrentPrincipal,
+    db: DB,
+    before: Annotated[int | None, Query(ge=1, le=2**63 - 1)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> ChatHistory:
+    if principal.user is not None and principal.user.must_change_password:
+        raise AuthError(ErrorCode.PASSWORD_CHANGE_REQUIRED)
+    response.headers["Cache-Control"] = "no-store"
+    chat: ChatService = request.app.state.realtime.chat
+    return await chat.history(db, code, principal.access.identity.subject, before, limit)
 
 
 @router.delete("/{code}", status_code=204)
