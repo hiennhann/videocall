@@ -3,6 +3,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from datetime import datetime
 from functools import partial
+from time import perf_counter
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -13,10 +14,12 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from structlog.contextvars import bound_contextvars
 
 from app.api.errors import AUTH_ERRORS
 from app.core.errors import AuthError, ErrorCode
 from app.core.security import decode_access_token
+from app.metrics import Metrics
 from app.models import Room
 from app.realtime.state import Connection, RoomStateStore
 from app.schemas.chat import SendMessage
@@ -48,7 +51,7 @@ def error_payload(code: ErrorCode) -> dict[str, str]:
 
 class RealtimeServer(AccountEvents):
     def __init__(
-        self, origins: list[str], settings: SettingsService, sfu: SfuClient | None = None
+        self, origins: list[str], settings: SettingsService, sfu: SfuClient | None, metrics: Metrics
     ) -> None:
         self.sio = socketio.AsyncServer(
             async_mode="asgi",
@@ -58,7 +61,8 @@ class RealtimeServer(AccountEvents):
             max_http_buffer_size=32 * 1024,
         )
         self.state = RoomStateStore()
-        self.rooms = RoomService(settings, self.state, self, sfu)
+        self.metrics = metrics
+        self.rooms = RoomService(settings, self.state, self, metrics, sfu)
         self.chat = ChatService(self.rooms)
         self._sweeper: asyncio.Task[None] | None = None
         self._chat_writer: asyncio.Task[None] | None = None
@@ -106,6 +110,8 @@ class RealtimeServer(AccountEvents):
                 logger.warning("Chưa thể kiểm tra phòng trống.", extra={"request_id": str(uuid4())})
 
     async def connect(self, sid: str, environ: dict[str, Any], auth: object = None) -> None:
+        request_id = str(uuid4())
+        self.metrics.socket_events.labels("connect").inc()
         try:
             token = auth.get("token") if isinstance(auth, dict) else None
             if not isinstance(token, str) or not token or len(token) > 4096:
@@ -133,13 +139,17 @@ class RealtimeServer(AccountEvents):
                 self.state.add_connection(
                     Connection(sid, identity.subject, name, role, identity.family_id, peer_ip)
                 )
+            logger.info(
+                "socket_connected", extra={"request_id": request_id, "user_id": identity.subject}
+            )
         except AuthError as exc:
+            self.record_socket_error("connect", exc.code, request_id)
             payload = error_payload(exc.code)
+            payload["request_id"] = request_id
             raise socketio.exceptions.ConnectionRefusedError(payload["message"], payload) from None
         except (OSError, PostgresError, SQLAlchemyError):
             self.state.remove_connection(sid)
-            request_id = str(uuid4())
-            logger.warning("Không thể xác thực kết nối realtime.", extra={"request_id": request_id})
+            self.record_socket_error("connect", "INTERNAL_ERROR", request_id)
             raise socketio.exceptions.ConnectionRefusedError(
                 "Không thể xác thực kết nối.",
                 {
@@ -150,6 +160,7 @@ class RealtimeServer(AccountEvents):
             ) from None
 
     async def disconnect(self, sid: str, reason: str) -> None:
+        self.metrics.socket_events.labels("disconnect").inc()
         connection = self.state.get_connection(sid)
         if connection is not None:
             async with connection.lock:
@@ -162,9 +173,21 @@ class RealtimeServer(AccountEvents):
                     )
                 finally:
                     self.state.remove_connection(sid)
+                    logger.info(
+                        "socket_disconnected",
+                        extra={"request_id": str(uuid4()), "user_id": connection.user_id},
+                    )
+
+    def record_socket_error(self, name: str, code: str, request_id: str) -> None:
+        self.metrics.socket_errors.labels(code).inc()
+        logger.log(
+            logging.ERROR if code == "INTERNAL_ERROR" else logging.WARNING,
+            "socket_error",
+            extra={"socket_event": name, "code": code, "request_id": request_id},
+        )
 
     def _bind(self, name: str, handler: Handler) -> None:
-        async def event(sid: str, data: Any = None, *extra: Any) -> dict[str, Any]:
+        async def dispatch(sid: str, data: Any, extra: tuple[Any, ...]) -> dict[str, Any]:
             connection = self.state.get_connection(sid)
             if connection is None:
                 return {"ok": False, "error": error_payload(ErrorCode.UNAUTHENTICATED)}
@@ -185,18 +208,34 @@ class RealtimeServer(AccountEvents):
                     self.sio.start_background_task(self.sio.disconnect, sid)
                 return {"ok": False, "error": error_payload(exc.code)}
             except Exception:
-                request_id = str(uuid4())
-                logger.error(
-                    "Lỗi xử lý sự kiện realtime %s.", name, extra={"request_id": request_id}
-                )
                 return {
                     "ok": False,
                     "error": {
                         "code": "INTERNAL_ERROR",
                         "message": "Không thể xử lý sự kiện.",
-                        "request_id": request_id,
                     },
                 }
+
+        async def event(sid: str, data: Any = None, *extra: Any) -> dict[str, Any]:
+            request_id = str(uuid4())
+            connection = self.state.get_connection(sid)
+            self.metrics.socket_events.labels(name).inc()
+            started = perf_counter()
+            with bound_contextvars(
+                request_id=request_id, user_id=connection.user_id if connection else None
+            ):
+                try:
+                    result = await dispatch(sid, data, extra)
+                    if not result["ok"]:
+                        error = result["error"]
+                        error["request_id"] = request_id
+                        self.record_socket_error(name, error["code"], request_id)
+                    elif name in {"join_room", "leave_room", "kick", "close_room"}:
+                        logger.info("socket_event", extra={"socket_event": name})
+                    return result
+                finally:
+                    if name == "join_room":
+                        self.metrics.join_latency.observe(perf_counter() - started)
 
         self.sio.on(name, event)
 

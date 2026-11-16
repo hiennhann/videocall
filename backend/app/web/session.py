@@ -190,6 +190,7 @@ def install_admin_sessions(app: FastAPI) -> None:
             if admin is None:
                 response = redirect(request, "/admin/login")
             else:
+                request.state.user_id = str(admin.user.id)
                 scope = str(admin.family_id)
                 csrf = (
                     prior_csrf if valid_csrf(secret, prior_csrf, scope) else new_csrf(secret, scope)

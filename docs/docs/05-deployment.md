@@ -276,7 +276,7 @@ Dùng **image gắn tag SHA**, không dùng `latest` để triển khai, để b
 ## 9. Giám sát (observability)
 
 ### 9.1 Log
-- App ghi **JSON ra stdout** (`structlog`), mỗi dòng có `request_id`, `user_id` (nếu có), `event`, mức log.
+- App ghi JSON ra stdout bằng `structlog`. Log HTTP và thao tác Socket.IO có `request_id`, `user_id` khi đã xác thực, tên sự kiện và mức log. Header `X-Request-ID` dùng để đối chiếu với log HTTP.
 - Không ghi mật khẩu, token, SDP đầy đủ.
 - Docker: `logging: { driver: json-file, options: { max-size: "10m", max-file: "5" } }` để log không ăn hết đĩa.
 - (Sau này) Loki + Grafana nếu muốn tìm log tập trung.
@@ -289,6 +289,8 @@ Dùng **image gắn tag SHA**, không dùng `latest` để triển khai, để b
 | coturn | Số allocation, băng thông gửi/nhận |
 | node-exporter | CPU, RAM, đĩa, băng thông mạng của VPS |
 | postgres (tùy chọn) | `postgres-exporter` |
+
+HTTP dùng `http_requests_total{method,route,status}` và `http_request_duration_seconds{method,route}`. `route` là mẫu tuyến như `/api/v1/rooms/{code}`. Request chưa khớp tuyến dùng `unmatched`.
 
 ### 9.3 Dashboard Grafana (xuất ra JSON, commit vào `deploy/grafana/`)
 1. **Tổng quan:** người online, phòng đang mở, request/giây, tỷ lệ lỗi

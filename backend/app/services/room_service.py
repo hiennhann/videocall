@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.errors import AuthError, ErrorCode
 from app.core.security import hash_password, verify_password
+from app.metrics import Metrics
 from app.models import Room, User
 from app.realtime.state import Connection, HeldSeat, Peer, RoomPresence, RoomStateStore
 from app.schemas.rooms import CreateRoom, MediaState, RoomCreated, RoomSummary, SessionDescription
@@ -82,11 +83,13 @@ class RoomService:
         settings: SettingsService,
         state: RoomStateStore,
         events: RoomEvents,
+        metrics: Metrics,
         sfu: SfuClient | None = None,
     ) -> None:
         self.settings = settings
         self.state = state
         self.events = events
+        self.metrics = metrics
         self.sfu = sfu
         self.limiter = FixedWindowRateLimiter(MemoryStorage())
 
@@ -142,6 +145,7 @@ class RoomService:
             if room is not None:
                 await db.commit()
                 self.state.ensure_room(room.code, room.host_id, room.created_at, room.mode)
+                self.metrics.rooms_created.inc()
                 return room_result(room, settings)
         raise RuntimeError("Không thể tạo mã phòng duy nhất.")
 
@@ -224,6 +228,7 @@ class RoomService:
             await self.events.enter(peer.id, code)
             await self.events.emit("peer_joined", {"peer": peer.public()}, to=code, skip=peer.id)
             await self.host_changed(presence, old_host)
+            self.metrics.room_joins.inc()
             return self._join_result(room, presence, peer, settings)
 
     @staticmethod
@@ -500,6 +505,7 @@ class RoomService:
             presence.banned.add(target.user_id)
             await self.events.emit("kicked", {"reason": reason or "KICKED"}, to=target.id)
             await self.remove(presence, target, "kicked")
+            self.metrics.room_kicks.inc()
             await self.host_changed(presence, old_host)
 
     async def close(

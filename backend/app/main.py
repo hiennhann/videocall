@@ -1,11 +1,10 @@
 import asyncio
 import secrets
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from uuid import uuid4
 
 import socketio
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter
@@ -30,8 +29,10 @@ from app.api.system import router as system_router
 from app.api.turn import router as turn_router
 from app.core.config import Settings
 from app.core.errors import AuthError
+from app.core.logging import configure_logging
 from app.core.security import hash_password
 from app.db.session import migration_heads
+from app.metrics import HttpObservability, Metrics
 from app.realtime.server import RealtimeServer
 from app.services.admin_service import AdminService
 from app.services.auth_service import AuthService
@@ -43,6 +44,9 @@ from app.web.routes import mount_admin
 
 def create_app() -> FastAPI:
     settings = Settings()
+    if settings.env != "test":
+        configure_logging(settings.log_level)
+    metrics = Metrics()
     origins = [origin.strip() for origin in settings.allowed_origins.split(",")]
     operational_settings = SettingsService()
     sfu = (
@@ -50,7 +54,7 @@ def create_app() -> FastAPI:
         if settings.sfu_url
         else None
     )
-    realtime = RealtimeServer(origins, operational_settings, sfu)
+    realtime = RealtimeServer(origins, operational_settings, sfu, metrics)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -77,6 +81,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title="Video Call / Livestream", lifespan=lifespan)
     app.state.realtime = realtime
+    app.state.metrics = metrics
     app.state.turn_service = TurnService(
         settings.turn_secret.get_secret_value(), settings.turn_urls
     )
@@ -104,15 +109,7 @@ def create_app() -> FastAPI:
         expose_headers=["X-Request-ID", "Retry-After"],
     )
 
-    @app.middleware("http")
-    async def add_request_id(
-        request: Request, call_next: Callable[[Request], Awaitable[Response]]
-    ) -> Response:
-        request.state.request_id = str(uuid4())
-        response = await call_next(request)
-        response.headers["X-Request-ID"] = request.state.request_id
-        return response
-
+    app.add_middleware(HttpObservability, metrics=metrics)
     return app
 
 

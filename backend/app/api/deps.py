@@ -60,6 +60,7 @@ class Principal:
 
 
 async def current_principal(
+    request: Request,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
     auth: Auth,
     db: DB,
@@ -70,6 +71,7 @@ async def current_principal(
     user = await get_user(db, access.identity.id) if access.identity.family_id is not None else None
     if user is not None and not user.is_active:
         raise AuthError(ErrorCode.ACCOUNT_DISABLED)
+    request.state.user_id = access.identity.subject
     return Principal(access, user)
 
 

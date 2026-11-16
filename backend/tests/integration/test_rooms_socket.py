@@ -14,6 +14,7 @@ import socketio
 import uvicorn
 from fastapi import FastAPI
 from httpx import AsyncClient, MockTransport, Request, Response
+from prometheus_client.parser import text_string_to_metric_families
 
 from app.cli import create_admin
 from app.realtime.server import RealtimeServer
@@ -135,6 +136,64 @@ async def peer(live: Server, stack: AsyncExitStack, user: dict[str, Any]) -> Soc
 
 def assert_socket_error(ack: dict[str, Any], code: str) -> None:
     assert ack["ok"] is False and ack["error"]["code"] == code, ack
+
+
+async def test_metrics_capture_room_activity_with_bounded_labels(live: Server) -> None:
+    async def scrape() -> dict[tuple[str, tuple[tuple[str, str], ...]], float]:
+        response = await live.http.get(f"{live.url}/metrics")
+        assert response.status_code == 200, response.text
+        assert response.headers["content-type"].startswith("text/plain")
+        assert response.headers.get("x-request-id")
+        assert "raw-route-test" not in response.text
+        return {
+            (sample.name, tuple(sorted(sample.labels.items()))): sample.value
+            for family in text_string_to_metric_families(response.text)
+            for sample in family.samples
+        }
+
+    baseline = await scrape()
+    owner = await account(live)
+    visitor = await guest(live)
+    code = await room(live, owner)
+    lookup = await live.http.get(f"rooms/{code}", headers=bearer(owner))
+    assert lookup.status_code == 200 and lookup.headers["x-request-id"]
+    assert (await live.http.get(f"{live.url}/raw-route-test")).status_code == 404
+    async with AsyncExitStack() as stack:
+        host = await peer(live, stack, owner)
+        other = await peer(live, stack, visitor)
+        for socket_client in (host, other):
+            assert (await socket_client.call("join_room", {"code": code}))["ok"]
+        forbidden = await other.call("kick", {"peer_id": host.sid})
+        assert_socket_error(forbidden, "NOT_ROOM_HOST")
+        assert forbidden["error"]["request_id"]
+        point = await scrape()
+        assert point["socket_connections", ()] == 2
+        assert point["room_participants", ()] == 2
+        assert point["rooms_active", ()] == baseline["rooms_active", ()] + 1
+        assert point["rooms_created_total", ()] == 1
+        assert point["room_joins_total", ()] == 2
+        assert point["socket_events_total", (("event", "join_room"),)] == 2
+        assert point["socket_errors_total", (("code", "NOT_ROOM_HOST"),)] == 1
+        assert point["join_room_duration_seconds_count", ()] == 2
+        assert (
+            point[
+                "http_requests_total",
+                (("method", "GET"), ("route", "/api/v1/rooms/{code}"), ("status", "200")),
+            ]
+            == 1
+        )
+        assert (
+            point[
+                "http_requests_total",
+                (("method", "GET"), ("route", "unmatched"), ("status", "404")),
+            ]
+            == 1
+        )
+        assert not any(code in value for _, labels in point for _, value in labels)
+        assert (await host.call("kick", {"peer_id": other.sid}))["ok"]
+        kicked = await scrape()
+        assert kicked["room_kicks_total", ()] == 1
+        assert kicked["room_participants", ()] == 1
 
 
 async def test_mesh_capacity_and_rejoin_after_transport_loss(
