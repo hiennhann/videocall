@@ -16,16 +16,29 @@
     <section id="join-panel" class="panel" hidden>
       <form id="enter-form">
         <label id="password-label" hidden>Mật khẩu phòng <input name="password" type="password" maxlength="64" autocomplete="off"></label>
-        <button type="submit">Vào phòng và bật camera</button>
+        <button id="enter-room" type="submit">Vào phòng và bật camera</button>
       </form>
     </section>
     <section id="call-panel" hidden aria-label="Cuộc gọi">
       <div id="video-grid" class="video-grid">
-        <figure><video id="local" autoplay muted playsinline></video><figcaption>Bạn</figcaption></figure>
+        <figure id="local-panel"><video id="local" autoplay muted playsinline></video><figcaption>Bạn</figcaption></figure>
         <figure id="local-screen-panel" class="shared-screen" hidden>
           <video id="local-screen" autoplay muted playsinline></video><figcaption>Màn hình của bạn</figcaption>
         </figure>
       </div>
+      <section id="live-panel" class="panel" hidden aria-label="Livestream">
+        <p id="live-status" role="status">Đang chờ người phát.</p>
+        <video id="live-video" autoplay playsinline hidden></video>
+        <button id="live-play" class="secondary" type="button" hidden>Phát video</button>
+        <div class="controls">
+          <button id="live-start" type="button" hidden>Bắt đầu phát</button>
+          <button id="live-retry" type="button" class="secondary" hidden>Kết nối lại video</button>
+        </div>
+        <form id="live-speaker-form" hidden>
+          <label>Người được phát <select name="peer_id"></select></label>
+          <button type="submit">Cập nhật quyền phát</button>
+        </form>
+      </section>
       <div class="controls">
         <button id="mic" type="button" class="secondary" aria-pressed="true">Mic bật</button>
         <button id="camera" type="button" class="secondary" aria-pressed="true">Camera bật</button>

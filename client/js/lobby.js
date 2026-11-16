@@ -15,7 +15,7 @@ onForm("create-form", async fields => {
   const password = fields.password || null;
   const room = await api("/rooms", {
     method: "POST", authenticated,
-    body: {name: fields.name.trim() || null, is_private: Boolean(password), password},
+    body: {name: fields.name.trim() || null, mode: fields.mode, is_private: Boolean(password), password},
   });
   location.assign(roomUrl(room.code));
 });

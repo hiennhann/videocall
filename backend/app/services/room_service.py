@@ -16,15 +16,18 @@ from app.core.errors import AuthError, ErrorCode
 from app.core.security import hash_password, verify_password
 from app.models import Room, User
 from app.realtime.state import Connection, HeldSeat, Peer, RoomPresence, RoomStateStore
-from app.schemas.rooms import CreateRoom, MediaState, RoomCreated, RoomSummary
+from app.schemas.rooms import CreateRoom, MediaState, RoomCreated, RoomSummary, SessionDescription
 from app.schemas.settings import SettingsSchema
 from app.services.audit_service import AuditActor, record_audit
 from app.services.auth_service import AuthService
 from app.services.settings_service import SettingsService
+from app.sfu.control import Mode, SfuClient
 
 PASSWORD_FAILURES = parse("5/5 minute")
 ICE_LIMIT = parse("200/10 second")
 MESH_ROOM_LIMIT = 4
+LIVE_ROOM_LIMIT = 5
+LIVE_OFFERS = parse("8/minute")
 REJOIN_GRACE_SECONDS = 10
 CODE_LETTERS = ascii_lowercase.translate(str.maketrans("", "", "ilo"))
 
@@ -39,8 +42,14 @@ class RoomEvents(Protocol):
     async def leave(self, peer_id: str, code: str) -> None: ...
 
 
+def capacity_for_mode(mode: str, settings: SettingsSchema) -> int:
+    if mode == "livestream":
+        return LIVE_ROOM_LIMIT
+    return min(settings.max_participants_per_room, MESH_ROOM_LIMIT)
+
+
 def capacity(room: Room, settings: SettingsSchema) -> int:
-    maximum = min(settings.max_participants_per_room, MESH_ROOM_LIMIT)
+    maximum = capacity_for_mode(room.mode, settings)
     return min(room.max_participants or maximum, maximum)
 
 
@@ -69,21 +78,26 @@ async def find_room(db: AsyncSession, code: str, *, locked: bool = False) -> Roo
 
 class RoomService:
     def __init__(
-        self, settings: SettingsService, state: RoomStateStore, events: RoomEvents
+        self,
+        settings: SettingsService,
+        state: RoomStateStore,
+        events: RoomEvents,
+        sfu: SfuClient | None = None,
     ) -> None:
         self.settings = settings
         self.state = state
         self.events = events
+        self.sfu = sfu
         self.limiter = FixedWindowRateLimiter(MemoryStorage())
 
     async def create(self, db: AsyncSession, owner_id: UUID, body: CreateRoom) -> RoomCreated:
         settings = await self.settings.get(db)
         if settings.maintenance_mode:
             raise AuthError(ErrorCode.MAINTENANCE_MODE)
-        if body.mode != "meeting":
+        if body.mode == "livestream" and self.sfu is None:
             raise AuthError(ErrorCode.MODE_NOT_SUPPORTED)
-        if body.max_participants is not None and body.max_participants > min(
-            settings.max_participants_per_room, MESH_ROOM_LIMIT
+        if body.max_participants is not None and body.max_participants > capacity_for_mode(
+            body.mode, settings
         ):
             raise AuthError(
                 ErrorCode.VALIDATION_ERROR,
@@ -127,7 +141,7 @@ class RoomService:
             room = await db.scalar(statement)
             if room is not None:
                 await db.commit()
-                self.state.ensure_room(room.code, room.host_id, room.created_at)
+                self.state.ensure_room(room.code, room.host_id, room.created_at, room.mode)
                 return room_result(room, settings)
         raise RuntimeError("Không thể tạo mã phòng duy nhất.")
 
@@ -161,9 +175,11 @@ class RoomService:
         room = await find_room(db, code)
         if room.status != "active":
             raise AuthError(ErrorCode.ROOM_CLOSED)
+        if room.mode == "livestream" and self.sfu is None:
+            raise AuthError(ErrorCode.MODE_NOT_SUPPORTED)
         if connection.room_code is not None and connection.room_code != code:
             raise AuthError(ErrorCode.ALREADY_IN_ROOM)
-        presence = self.state.ensure_room(code, room.host_id, datetime.now(UTC))
+        presence = self.state.ensure_room(code, room.host_id, datetime.now(UTC), room.mode)
 
         async with presence.lock:
             # Một thao tác đóng phòng có thể đã hoàn tất trong lúc chờ khóa.
@@ -222,6 +238,8 @@ class RoomService:
                 "mode": room.mode,
                 "max_participants": capacity(room, settings),
                 "host_peer_id": host,
+                "speaker_peer_id": presence.live_speaker() if room.mode == "livestream" else None,
+                "publisher_peer_id": presence.published_by,
             },
             "you": {
                 "peer_id": peer.id,
@@ -241,7 +259,7 @@ class RoomService:
             },
             "features": {
                 "chat": settings.chat_enabled,
-                "screen_share": settings.allow_screen_share,
+                "screen_share": settings.allow_screen_share and room.mode == "meeting",
             },
         }
 
@@ -255,8 +273,19 @@ class RoomService:
         host = presence.host_id()
         if host != previous and presence.peers:
             await self.events.emit("host_changed", {"host_peer_id": host}, to=presence.code)
+            if presence.mode == "livestream":
+                await self.sync_speaker(presence)
 
     async def remove(self, presence: RoomPresence, peer: Peer, reason: str) -> None:
+        old_host = presence.host_id()
+        speaker_left = presence.speaker_id == peer.id
+        if presence.mode == "livestream" and self.sfu is not None:
+            if presence.published_by == peer.id:
+                await self.stop_publisher(presence)
+            else:
+                await self.sfu.remove(presence.code, peer.id)
+            if speaker_left:
+                presence.speaker_id = None
         self.state.remove_peer(presence, peer)
         if presence.preferred_host == peer.user_id and reason != "session_replaced":
             presence.preferred_host = None
@@ -264,6 +293,8 @@ class RoomService:
         await self.events.emit(
             "peer_left", {"peer_id": peer.id, "reason": reason}, to=presence.code
         )
+        if speaker_left and presence.host_id() == old_host:
+            await self.sync_speaker(presence)
 
     async def leave(
         self, connection: Connection, reason: str = "left", *, reserve: bool = False
@@ -289,6 +320,8 @@ class RoomService:
         presence = self.joined_room(connection)
         async with presence.lock:
             self.joined_room(connection)
+            if presence.mode == "livestream":
+                raise AuthError(ErrorCode.INVALID_PAYLOAD)
             if target == connection.peer_id or target not in presence.peers:
                 raise AuthError(ErrorCode.PEER_NOT_FOUND)
             if event == "ice_candidate" and not self.limiter.hit(ICE_LIMIT, connection.peer_id):
@@ -308,6 +341,80 @@ class RoomService:
             presence.preferred_host = peer.user_id
             await self.host_changed(presence, old_host)
 
+    async def stop_publisher(self, presence: RoomPresence) -> None:
+        assert self.sfu is not None
+        publisher = presence.published_by
+        if publisher is not None:
+            presence.published_by = None
+            await self.sfu.remove(presence.code)
+            await self.events.emit("track_unpublished", {"peer_id": publisher}, to=presence.code)
+
+    async def sync_speaker(self, presence: RoomPresence) -> None:
+        speaker = presence.live_speaker()
+        if presence.published_by is not None and presence.published_by != speaker:
+            await self.stop_publisher(presence)
+        await self.events.emit(
+            "live_speaker_changed", {"speaker_peer_id": speaker}, to=presence.code
+        )
+
+    def live_room(self, connection: Connection) -> RoomPresence:
+        presence = self.joined_room(connection)
+        if presence.mode != "livestream" or self.sfu is None:
+            raise AuthError(ErrorCode.MODE_NOT_SUPPORTED)
+        return presence
+
+    async def select_speaker(self, connection: Connection, target: str | None) -> None:
+        presence = self.live_room(connection)
+        async with presence.lock:
+            self.joined_room(connection)
+            if presence.host_id() != connection.peer_id:
+                raise AuthError(ErrorCode.NOT_ROOM_HOST)
+            if target is not None and target not in presence.peers:
+                raise AuthError(ErrorCode.PEER_NOT_FOUND)
+            presence.speaker_id = target
+            await self.sync_speaker(presence)
+
+    async def live_offer(
+        self, connection: Connection, mode: Mode, sdp: SessionDescription
+    ) -> SessionDescription:
+        presence = self.live_room(connection)
+        async with presence.lock:
+            self.joined_room(connection)
+            if mode == "publish" and presence.live_speaker() != connection.peer_id:
+                raise AuthError(ErrorCode.NOT_LIVE_SPEAKER)
+            if mode == "view" and (
+                presence.published_by is None or presence.published_by == connection.peer_id
+            ):
+                raise AuthError(ErrorCode.STREAM_NOT_READY)
+            if not self.limiter.hit(LIVE_OFFERS, "livestream", connection.peer_id):
+                raise AuthError(ErrorCode.RATE_LIMITED)
+            assert self.sfu is not None
+            if mode == "publish":
+                await self.stop_publisher(presence)
+            try:
+                answer = await self.sfu.offer(presence.code, connection.peer_id, mode, sdp)
+            except AuthError as error:
+                if error.code == ErrorCode.STREAM_NOT_READY:
+                    await self.stop_publisher(presence)
+                raise
+            if mode == "publish":
+                presence.published_by = connection.peer_id
+                await self.events.emit(
+                    "track_published",
+                    {"peer_id": connection.peer_id, "tracks": ["audio", "video"]},
+                    to=presence.code,
+                )
+            return answer
+
+    async def leave_stream(self, connection: Connection) -> None:
+        presence = self.live_room(connection)
+        async with presence.lock:
+            self.joined_room(connection)
+            if presence.published_by == connection.peer_id:
+                await self.stop_publisher(presence)
+            elif self.sfu is not None:
+                await self.sfu.remove(presence.code, connection.peer_id)
+
     async def update_media(
         self, db: AsyncSession, connection: Connection, media: MediaState
     ) -> None:
@@ -316,7 +423,10 @@ class RoomService:
             self.joined_room(connection)
             peer = presence.peers[connection.peer_id]
             new_share = media.screen and media.screen_stream_id != peer.media.screen_stream_id
-            if new_share and not (await self.settings.get(db)).allow_screen_share:
+            if new_share and (
+                presence.mode == "livestream"
+                or not (await self.settings.get(db)).allow_screen_share
+            ):
                 raise AuthError(ErrorCode.SCREEN_SHARE_DISABLED)
             if peer.media != media:
                 peer.media = media
@@ -411,7 +521,7 @@ class RoomService:
             ):
                 raise AuthError(ErrorCode.NOT_ROOM_HOST)
             return
-        presence = self.state.ensure_room(code, room.host_id, datetime.now(UTC))
+        presence = self.state.ensure_room(code, room.host_id, datetime.now(UTC), room.mode)
         async with presence.lock:
             room = await find_room(db, code, locked=True)
             if reason == "host":
@@ -438,6 +548,8 @@ class RoomService:
             await self.finish_close(presence, room.closed_reason or reason)
 
     async def finish_close(self, presence: RoomPresence, reason: str) -> None:
+        if presence.mode == "livestream" and self.sfu is not None:
+            await self.sfu.remove(presence.code)
         await self.events.emit("room_closed", {"reason": reason}, to=presence.code)
         for peer in list(presence.peers.values()):
             await self.events.leave(peer.id, presence.code)
@@ -458,9 +570,11 @@ class RoomService:
         now = datetime.now(UTC)
         async with sessions() as db:
             settings = await self.settings.get(db)
-            rows = await db.execute(select(Room.code, Room.host_id).where(Room.status == "active"))
-            for code, owner in rows.tuples():
-                self.state.ensure_room(code, owner, now)
+            rows = await db.execute(
+                select(Room.code, Room.host_id, Room.mode).where(Room.status == "active")
+            )
+            for code, owner, mode in rows.tuples():
+                self.state.ensure_room(code, owner, now, mode)
         deadline = now - timedelta(seconds=settings.room_empty_ttl_seconds)
         for presence in self.state.list_rooms():
             presence.expire_seats(monotonic())

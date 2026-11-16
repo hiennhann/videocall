@@ -47,8 +47,12 @@ services:
       FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-}
       ADMIN_ALLOWED_IPS: ${ADMIN_ALLOWED_IPS:-}
       PROMETHEUS_URL: ${PROMETHEUS_URL:-}
+      SFU_URL: http://sfu:8080
     ports:
       - "127.0.0.1:8000:8000"
+    networks:
+      - default
+      - turn
     depends_on:
       db:
         condition: service_healthy
@@ -82,6 +86,30 @@ services:
       - turn
     healthcheck:
       test: ["CMD", "turnutils_stunclient", "-p", "3478", "127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  sfu:
+    image: videocall-sfu:dev
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: sfu
+    environment:
+      TURN_SECRET: ${TURN_SECRET:?Set TURN_SECRET in .env}
+      SFU_HOST: ${SFU_HOST:-127.0.0.1}
+      SFU_TURN_URL: ${SFU_TURN_URL:-}
+    sysctls:
+      net.ipv4.ip_local_port_range: "40000 40127"
+    ports:
+      - "${SFU_HOST:-127.0.0.1}:40000-40127:40000-40127/udp"
+    networks:
+      - turn
+    cpus: 1.0
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=4).close()"]
       interval: 10s
       timeout: 5s
       retries: 5

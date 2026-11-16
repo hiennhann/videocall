@@ -21,6 +21,8 @@ Nếu đang dùng `.env` từ A6, bỏ dòng mẫu `TURN_URLS=stun:turn.example.
 
 Ở A8, gửi tin trong mục **Tin nhắn** và chọn **Tin nhắn cũ hơn** nếu phòng có thêm lịch sử. Dùng **Chia sẻ màn hình** để gửi thêm một luồng bên cạnh camera. Host thấy nút tắt mic và camera của người đang gọi cùng.
 
+Để phát **livestream**, chọn loại phòng **Livestream** trong lobby. Host bấm **Bắt đầu phát** rồi gửi mã phòng cho tối đa bốn người xem. Trình duyệt chỉ xin quyền camera và mic khi người được chọn bấm phát. Host có thể đổi người phát trong mục **Người được phát**. [Cấu hình SFU dev](docs/docs/05-deployment.md#46-sfu-livestream-trong-compose)
+
 Swagger vẫn có tại [`/docs`](http://localhost:8000/docs) để thử API.
 
 Tạo quản trị viên A3 bằng lệnh sau. Nhập mật khẩu hai lần khi được hỏi, rồi đăng nhập qua `/api/v1/auth/login` để dùng các API `/api/v1/admin`.

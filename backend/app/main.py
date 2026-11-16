@@ -37,6 +37,7 @@ from app.services.admin_service import AdminService
 from app.services.auth_service import AuthService
 from app.services.settings_service import SettingsService
 from app.services.turn_service import TurnService
+from app.sfu.control import SfuClient
 from app.web.routes import mount_admin
 
 
@@ -44,7 +45,12 @@ def create_app() -> FastAPI:
     settings = Settings()
     origins = [origin.strip() for origin in settings.allowed_origins.split(",")]
     operational_settings = SettingsService()
-    realtime = RealtimeServer(origins, operational_settings)
+    sfu = (
+        SfuClient(settings.sfu_url, settings.turn_secret.get_secret_value())
+        if settings.sfu_url
+        else None
+    )
+    realtime = RealtimeServer(origins, operational_settings, sfu)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:

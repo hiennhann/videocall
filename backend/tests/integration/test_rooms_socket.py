@@ -13,11 +13,12 @@ import pytest_asyncio
 import socketio
 import uvicorn
 from fastapi import FastAPI
-from httpx import AsyncClient
+from httpx import AsyncClient, MockTransport, Request, Response
 
 from app.cli import create_admin
 from app.realtime.server import RealtimeServer
 from app.services import room_service
+from app.sfu.control import SfuClient
 
 
 @dataclass(slots=True)
@@ -97,6 +98,9 @@ class Socket:
             "chat_message",
             "media_state",
             "force_mute",
+            "track_published",
+            "track_unpublished",
+            "live_speaker_changed",
             "kicked",
             "room_closed",
             "force_disconnect",
@@ -176,6 +180,58 @@ async def test_mesh_capacity_and_rejoin_after_transport_loss(
         assert (await outsider.call("leave_room"))["ok"]
         returned = await peer(live, stack, entrants[0])
         assert (await returned.call("join_room", join))["ok"]
+
+
+async def test_livestream_enforces_speaker_permissions_and_capacity(live: Server) -> None:
+    requests: list[tuple[str, str]] = []
+
+    def control(request: Request) -> Response:
+        requests.append((request.method, request.url.path))
+        if request.method == "PUT":
+            return Response(200, json={"type": "answer", "sdp": "v=0\r\n"})
+        return Response(204)
+
+    sfu = SfuClient("http://sfu", "test-control-secret")
+    await sfu.http.aclose()
+    sfu.http = AsyncClient(base_url="http://sfu", transport=MockTransport(control))
+    live.realtime.rooms.sfu = sfu
+    owner = await account(live)
+    entrants = [await guest(live) for _ in range(5)]
+    code = await room(live, owner, mode="livestream")
+    description = {"type": "offer", "sdp": "v=0\r\n"}
+    publish = {"to": "sfu", "sdp": description}
+    async with AsyncExitStack() as stack:
+        host = await peer(live, stack, owner)
+        viewers = [await peer(live, stack, token) for token in entrants]
+        joined = await host.call("join_room", {"code": code})
+        assert joined["data"]["room"]["speaker_peer_id"] == host.sid
+        assert joined["data"]["room"]["max_participants"] == 5
+        for viewer in viewers[:4]:
+            assert (await viewer.call("join_room", {"code": code}))["ok"]
+        assert_socket_error(await viewers[4].call("join_room", {"code": code}), "ROOM_FULL")
+
+        viewer = viewers[0]
+        assert_socket_error(await viewer.call("offer", publish), "NOT_LIVE_SPEAKER")
+        assert_socket_error(await viewer.call("subscribe", description), "STREAM_NOT_READY")
+        assert_socket_error(
+            await viewer.call("promote_speaker", {"peer_id": viewer.sid}), "NOT_ROOM_HOST"
+        )
+        assert requests == []
+        assert (await host.call("offer", publish))["data"]["type"] == "answer"
+        await viewer.event("track_published", peer_id=host.sid)
+        assert (await viewer.call("subscribe", description))["ok"]
+        assert (await host.call("promote_speaker", {"peer_id": viewer.sid}))["ok"]
+        await viewer.event("track_unpublished", peer_id=host.sid)
+        await viewer.event("live_speaker_changed", speaker_peer_id=viewer.sid)
+        assert_socket_error(await host.call("offer", publish), "NOT_LIVE_SPEAKER")
+        assert (await viewer.call("offer", publish))["ok"]
+        await host.event("track_published", peer_id=viewer.sid)
+        assert (await host.call("subscribe", description))["ok"]
+        assert (await host.call("demote_speaker"))["ok"]
+        await host.event("track_unpublished", peer_id=viewer.sid)
+        assert_socket_error(await viewer.call("offer", publish), "NOT_LIVE_SPEAKER")
+        assert (await host.call("close_room"))["ok"]
+        assert requests.count(("DELETE", f"/rooms/{code}")) == 3
 
 
 async def test_chat_broadcast_history_cursor_and_membership(live: Server) -> None:

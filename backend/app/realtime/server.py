@@ -26,6 +26,7 @@ from app.schemas.rooms import (
     MediaState,
     MutePeer,
     PeerTarget,
+    SessionDescription,
     SignalCandidate,
     SignalDescription,
 )
@@ -34,6 +35,7 @@ from app.services.auth_service import AuthService
 from app.services.chat_service import ChatService
 from app.services.room_service import RoomService
 from app.services.settings_service import SettingsService
+from app.sfu.control import SfuClient
 
 logger = logging.getLogger(__name__)
 RATE_VIOLATIONS = parse("4/minute")
@@ -45,7 +47,9 @@ def error_payload(code: ErrorCode) -> dict[str, str]:
 
 
 class RealtimeServer(AccountEvents):
-    def __init__(self, origins: list[str], settings: SettingsService) -> None:
+    def __init__(
+        self, origins: list[str], settings: SettingsService, sfu: SfuClient | None = None
+    ) -> None:
         self.sio = socketio.AsyncServer(
             async_mode="asgi",
             cors_allowed_origins=origins,
@@ -54,7 +58,7 @@ class RealtimeServer(AccountEvents):
             max_http_buffer_size=32 * 1024,
         )
         self.state = RoomStateStore()
-        self.rooms = RoomService(settings, self.state, self)
+        self.rooms = RoomService(settings, self.state, self, sfu)
         self.chat = ChatService(self.rooms)
         self._sweeper: asyncio.Task[None] | None = None
         self._chat_writer: asyncio.Task[None] | None = None
@@ -67,6 +71,10 @@ class RealtimeServer(AccountEvents):
         self._bind("chat_message", self.chat_message)
         self._bind("media_state", self.media_state)
         self._bind("mute_peer", self.mute_peer)
+        self._bind("subscribe", self.subscribe)
+        self._bind("unsubscribe", self.unsubscribe)
+        self._bind("promote_speaker", self.promote_speaker)
+        self._bind("demote_speaker", self.demote_speaker)
         self._bind("kick", self.kick)
         self._bind("transfer_host", self.transfer)
         self._bind("close_room", self.close_room)
@@ -86,6 +94,8 @@ class RealtimeServer(AccountEvents):
             await self.chat.pending.join()
             self._chat_writer.cancel()
             await asyncio.gather(self._chat_writer, return_exceptions=True)
+        if self.rooms.sfu is not None:
+            await self.rooms.sfu.http.aclose()
 
     async def sweep(self) -> None:
         while True:
@@ -202,7 +212,7 @@ class RealtimeServer(AccountEvents):
         self.rooms.joined_room(connection)
         await self.rooms.leave(connection)
 
-    async def signal(self, event: str, connection: Connection, data: Any) -> None:
+    async def signal(self, event: str, connection: Connection, data: Any) -> dict[str, Any] | None:
         if event == "ice_candidate":
             ice = SignalCandidate.model_validate(data)
             value = ice.candidate
@@ -219,9 +229,35 @@ class RealtimeServer(AccountEvents):
             key = "sdp"
         if len(value.model_dump_json(exclude_unset=True).encode()) > max_bytes:
             raise AuthError(ErrorCode.INVALID_PAYLOAD)
+        if target == "sfu":
+            if event != "offer":
+                raise AuthError(ErrorCode.INVALID_PAYLOAD)
+            answer = await self.rooms.live_offer(connection, "publish", description.sdp)
+            return answer.model_dump()
         await self.rooms.signal(
             connection, target, event, {key: value.model_dump(exclude_unset=True)}
         )
+        return None
+
+    async def subscribe(self, connection: Connection, data: Any) -> dict[str, Any]:
+        sdp = SessionDescription.model_validate(data)
+        if sdp.type != "offer" or len(sdp.sdp.encode()) > 20 * 1024:
+            raise AuthError(ErrorCode.INVALID_PAYLOAD)
+        return (await self.rooms.live_offer(connection, "view", sdp)).model_dump()
+
+    async def unsubscribe(self, connection: Connection, data: Any) -> None:
+        if data not in (None, {}):
+            raise AuthError(ErrorCode.INVALID_PAYLOAD)
+        await self.rooms.leave_stream(connection)
+
+    async def promote_speaker(self, connection: Connection, data: Any) -> None:
+        request = PeerTarget.model_validate(data)
+        await self.rooms.select_speaker(connection, request.peer_id)
+
+    async def demote_speaker(self, connection: Connection, data: Any) -> None:
+        if data not in (None, {}):
+            raise AuthError(ErrorCode.INVALID_PAYLOAD)
+        await self.rooms.select_speaker(connection, None)
 
     async def kick(self, connection: Connection, data: Any) -> None:
         request = KickPeer.model_validate(data)

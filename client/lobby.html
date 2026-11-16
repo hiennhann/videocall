@@ -22,6 +22,9 @@
       </section>
       <section class="panel" id="create-panel" hidden><h2>Tạo phòng</h2>
         <form id="create-form">
+          <label>Loại phòng
+            <select name="mode"><option value="meeting">Gọi nhóm</option><option value="livestream">Livestream</option></select>
+          </label>
           <label>Tên phòng <input name="name" maxlength="100"></label>
           <label>Mật khẩu phòng <input name="password" type="password" minlength="4" maxlength="64" autocomplete="new-password"></label>
           <button>Tạo phòng</button>

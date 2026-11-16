@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     admin_allowed_ips: str = ""
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     prometheus_url: str = ""
+    sfu_url: str = ""
 
     @field_validator("database_url")
     @classmethod

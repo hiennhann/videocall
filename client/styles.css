@@ -13,7 +13,7 @@
 body { margin: 0; background: var(--bg); color: var(--ink); }
 [hidden] { display: none !important; }
 a { color: var(--accent); }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 button { cursor: pointer; border: 1px solid transparent; border-radius: 9px; padding: .66rem 1rem; background: var(--accent); color: white; font-weight: 650; }
 button:disabled { opacity: .62; cursor: wait; }
 button.secondary { background: transparent; color: var(--ink); border-color: var(--line); }
@@ -33,7 +33,7 @@ h2 { font-size: 1.3rem; margin-bottom: .9rem; }
 .panel { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: clamp(1rem, 3vw, 1.65rem); }
 form { display: grid; gap: .85rem; justify-items: start; }
 label { display: grid; gap: .32rem; width: 100%; font-weight: 600; }
-input { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: .58rem .72rem; color: var(--ink); background: var(--surface); }
+input, select { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: .58rem .72rem; color: var(--ink); background: var(--surface); }
 details { margin-top: 1.1rem; border-top: 1px solid var(--line); padding-top: .85rem; }
 details form { margin-top: .8rem; }
 summary { cursor: pointer; color: var(--accent); }

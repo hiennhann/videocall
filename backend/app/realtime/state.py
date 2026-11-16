@@ -66,6 +66,14 @@ class RoomPresence:
     banned: set[str] = field(default_factory=set)
     preferred_host: str | None = None
     lock: Lock = field(default_factory=Lock)
+    mode: str = "meeting"
+    speaker_id: str | None = None
+    published_by: str | None = None
+
+    def live_speaker(self) -> str | None:
+        if self.speaker_id in self.peers:
+            return self.speaker_id
+        return self.host_id()
 
     def expire_seats(self, now: float) -> None:
         for user_id, seat in list(self.held_seats.items()):
@@ -125,10 +133,14 @@ class RoomStateStore:
     def connection_count(self) -> int:
         return len(self._connections)
 
-    def ensure_room(self, code: str, owner_id: UUID | None, empty_since: datetime) -> RoomPresence:
+    def ensure_room(
+        self, code: str, owner_id: UUID | None, empty_since: datetime, mode: str = "meeting"
+    ) -> RoomPresence:
         presence = self.get_room(code)
         if presence is None:
-            presence = RoomPresence(code, str(owner_id) if owner_id else None, empty_since)
+            presence = RoomPresence(
+                code, str(owner_id) if owner_id else None, empty_since, mode=mode
+            )
             self._rooms[code] = presence
         return presence
 

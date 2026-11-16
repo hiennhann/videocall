@@ -1,4 +1,5 @@
 import { accessToken, api, clearSession, requireSession } from "./api.js";
+import { LiveConnection } from "./live.js";
 import { PeerTile } from "./peer-tile.js";
 import { element, message, onForm } from "./ui.js";
 import { PeerCall } from "./webrtc.js";
@@ -6,10 +7,13 @@ import { PeerCall } from "./webrtc.js";
 const code = new URLSearchParams(location.search).get("code") || "";
 const mediaButtons = {audio: ["mic", "Mic"], video: ["camera", "Camera"]};
 let active;
+let roomMode;
 
 class RoomCall {
   constructor(password) {
     this.password = password;
+    this.mode = roomMode;
+    this.liveMembers = new Map();
     this.accepted = false;
     this.joined = false;
     this.stopped = false;
@@ -41,18 +45,32 @@ class RoomCall {
       if (!this.stopped) {
         this.joined = false;
         this.stopScreen();
+        this.closeLive();
+        this.liveMembers.clear();
         this.resetPeers();
         message("Mất kết nối. Đang nối lại…");
       }
     });
     this.roomEvent("peer_joined", ({peer}) => {
-      this.makePeer(peer, false);
+      if (this.mode === "livestream") this.liveMembers.set(peer.peer_id, peer);
+      else this.makePeer(peer, false);
       this.renderControls();
       message("");
     });
     this.roomEvent("peer_left", ({peer_id: id}) => {
+      this.liveMembers.delete(id);
       this.removePeer(id);
-      if (!this.peers.size) message("Đang chờ người tham gia.");
+      if (this.mode === "livestream") this.renderControls();
+      else if (!this.peers.size) message("Đang chờ người tham gia.");
+    });
+    this.roomEvent("live_speaker_changed", ({speaker_peer_id: id}) => {
+      this.speaker = id;
+      if (id !== this.socket.id && this.local) this.closeLive();
+      this.renderControls();
+    });
+    this.roomEvent("track_published", ({peer_id: id}) => this.livePublisher(id));
+    this.roomEvent("track_unpublished", ({peer_id: id}) => {
+      if (id === this.publisher) this.livePublisher(null);
     });
     this.roomEvent("offer", ({from, sdp}) => this.peers.get(from)?.call.receiveDescription(sdp));
     this.roomEvent("answer", ({from, sdp}) => this.peers.get(from)?.call.receiveDescription(sdp));
@@ -95,14 +113,16 @@ class RoomCall {
     }
     await this.loadIceServers();
     if (this.stopped) return;
-    this.local = await navigator.mediaDevices.getUserMedia({
-      audio: true, video: {width: {ideal: 1280}, height: {ideal: 720}},
-    });
+    if (this.mode !== "livestream") {
+      this.local = await navigator.mediaDevices.getUserMedia({
+        audio: true, video: {width: {ideal: 1280}, height: {ideal: 720}},
+      });
+    }
     if (this.stopped) {
-      this.local.getTracks().forEach(track => track.stop());
+      this.local?.getTracks().forEach(track => track.stop());
       return;
     }
-    element("local").srcObject = this.local;
+    element("local").srcObject = this.local ?? null;
     const connected = new Promise((resolve, reject) => {
       this.firstJoin = {resolve, reject};
     });
@@ -143,9 +163,9 @@ class RoomCall {
     }
   }
 
-  async emit(event, payload) {
+  async emit(event, payload, timeout = 6000) {
     if (!this.socket.connected) throw new Error("Kết nối phòng đang gián đoạn.");
-    const result = await this.socket.timeout(6000).emitWithAck(event, payload);
+    const result = await this.socket.timeout(timeout).emitWithAck(event, payload);
     if (!result?.ok) throw new Error(result?.error?.message || "Không thể xử lý sự kiện phòng.");
     return result.data;
   }
@@ -158,11 +178,13 @@ class RoomCall {
       this.policy = info.media_policy;
       this.features = info.features;
       this.hostId = info.room.host_peer_id;
+      this.speaker = info.room.speaker_peer_id;
       this.accepted = true;
       this.joined = true;
       element("join-panel").hidden = true;
       element("call-panel").hidden = false;
-      const track = this.local.getVideoTracks()[0];
+      element("live-panel").hidden = this.mode !== "livestream";
+      const track = this.local?.getVideoTracks()[0];
       const maxHeight = parseInt(this.policy.max_video_resolution, 10);
       if (track && Number.isFinite(maxHeight)) {
         const height = Math.min(maxHeight, 720);
@@ -172,12 +194,17 @@ class RoomCall {
           frameRate: {ideal: 30},
         }).catch(() => {});
       }
-      for (const peer of info.peers) this.makePeer(peer, true);
+      if (this.mode === "livestream") {
+        this.liveMembers = new Map(info.peers.map(peer => [peer.peer_id, peer]));
+        this.livePublisher(info.room.publisher_peer_id);
+      } else {
+        for (const peer of info.peers) this.makePeer(peer, true);
+      }
       for (const handle of this.pendingEvents.splice(0)) handle();
       this.renderControls();
       this.publishMedia().catch(error => message(error.message, true));
       this.loadHistory();
-      message(this.peers.size ? "" : "Đang chờ người tham gia.");
+      message(this.mode === "livestream" || this.peers.size ? "" : "Đang chờ người tham gia.");
       this.firstJoin?.resolve();
       this.firstJoin = null;
     } catch (error) {
@@ -186,14 +213,31 @@ class RoomCall {
   }
 
   renderControls() {
+    const live = this.mode === "livestream";
     const canMute = this.joined && this.hostId === this.socket.id;
     for (const {tile} of this.peers.values()) tile.mute.hidden = !canMute;
     element("screen").hidden = !this.joined || !this.features.screen_share;
     element("chat-form").hidden = !this.joined || !this.features.chat;
+    element("stats-toggle").hidden = live;
+    element("local-panel").hidden = live && !this.local;
+    for (const [button] of Object.values(mediaButtons)) element(button).hidden = live && !this.local;
+    element("live-start").hidden = !live || !this.joined || this.speaker !== this.socket.id;
+    element("live-start").textContent = this.local ? "Dừng phát" : "Bắt đầu phát";
+    const form = element("live-speaker-form");
+    form.hidden = !live || !canMute;
+    if (!form.hidden) {
+      const select = form.elements.peer_id;
+      const selected = select.value || this.speaker;
+      select.replaceChildren(
+        new Option("Host", this.socket.id),
+        ...[...this.liveMembers.values()].map(peer => new Option(peer.display_name, peer.peer_id)),
+      );
+      if ([...select.options].some(option => option.value === selected)) select.value = selected;
+    }
   }
 
   publishMedia() {
-    if (!this.joined) return Promise.resolve();
+    if (!this.joined || !this.local) return Promise.resolve();
     return this.emit("media_state", {
       audio: Boolean(this.local.getAudioTracks()[0]?.enabled),
       video: Boolean(this.local.getVideoTracks()[0]?.enabled),
@@ -258,6 +302,81 @@ class RoomCall {
     element("local-screen-panel").hidden = !this.screen;
     button.setAttribute("aria-pressed", String(Boolean(this.screen)));
     button.textContent = this.screen ? "Dừng chia sẻ" : "Chia sẻ màn hình";
+  }
+
+  livePublisher(id) {
+    if (id === this.publisher && this.liveConnection) return;
+    this.publisher = id;
+    element("live-retry").hidden = true;
+    if (id === this.socket.id) return;
+    this.closeLive();
+    element("live-status").textContent = id ? "Đang kết nối livestream…" : "Đang chờ người phát.";
+    if (id && this.joined) this.connectLive(false);
+  }
+
+  async connectLive(publishing) {
+    const live = new LiveConnection(this.iceServers, publishing ? this.local : null, stream => {
+      const video = element("live-video");
+      video.srcObject = stream;
+      video.hidden = false;
+      playLive();
+    }, state => {
+      if (state === "connected") element("live-status").textContent = publishing ? "Đang phát." : "Đang xem livestream.";
+      if (state === "failed" && this.liveConnection === live) {
+        this.liveFailed(publishing, "Kết nối livestream thất bại.");
+      }
+    });
+    this.liveConnection = live;
+    try {
+      await live.connect(sdp => publishing
+        ? this.emit("offer", {to: "sfu", sdp}, 10000)
+        : this.emit("subscribe", sdp, 10000));
+    } catch (error) {
+      if (live === this.liveConnection) this.liveFailed(publishing, error.message);
+    }
+  }
+
+  liveFailed(publishing, description) {
+    this.closeLive();
+    if (publishing && this.joined) this.emit("unsubscribe").catch(() => {});
+    element("live-status").textContent = description;
+    element("live-retry").hidden = publishing || !this.publisher;
+  }
+
+  async toggleLive() {
+    if (!this.joined || this.speaker !== this.socket.id) return;
+    if (this.local) {
+      this.closeLive();
+      await this.emit("unsubscribe");
+      return;
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true, video: {width: {ideal: 640}, height: {ideal: 360}, frameRate: {ideal: 15, max: 15}},
+    });
+    if (!this.joined || this.speaker !== this.socket.id) {
+      stream.getTracks().forEach(track => track.stop());
+      return;
+    }
+    this.closeLive();
+    this.local = stream;
+    element("local").srcObject = stream;
+    this.renderControls();
+    element("live-status").textContent = "Đang bắt đầu phát…";
+    await this.connectLive(true);
+  }
+
+  closeLive() {
+    if (this.mode !== "livestream") return;
+    this.liveConnection?.close();
+    this.liveConnection = null;
+    const video = element("live-video");
+    video.srcObject = null;
+    video.hidden = true;
+    element("live-play").hidden = true;
+    this.local?.getTracks().forEach(track => track.stop());
+    this.local = null;
+    element("local").srcObject = null;
+    this.renderControls();
   }
 
   setPeerScreens(track) {
@@ -370,6 +489,7 @@ class RoomCall {
     clearInterval(this.statsTimer);
     this.socket.disconnect();
     this.stopScreen();
+    this.closeLive();
     this.resetPeers();
     this.local?.getTracks().forEach(track => track.stop());
     element("local").srcObject = null;
@@ -432,6 +552,38 @@ for (const [kind, [button]] of Object.entries(mediaButtons)) {
   element(button).addEventListener("click", () => active?.setTrack(kind));
 }
 element("stats-toggle").addEventListener("click", () => active?.toggleStats());
+element("live-start").addEventListener("click", async event => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  try {
+    await active?.toggleLive();
+  } catch (error) {
+    element("live-status").textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+});
+element("live-retry").addEventListener("click", () => {
+  if (active?.joined && active.publisher && !active.liveConnection) {
+    element("live-retry").hidden = true;
+    active.connectLive(false);
+  }
+});
+async function playLive() {
+  const video = element("live-video");
+  const stream = video.srcObject;
+  try {
+    await video.play();
+    element("live-play").hidden = true;
+  } catch {
+    if (stream && video.srcObject === stream) element("live-play").hidden = false;
+  }
+}
+element("live-play").addEventListener("click", playLive);
+onForm("live-speaker-form", async ({peer_id}) => {
+  if (peer_id === active.socket.id) await active.emit("demote_speaker");
+  else await active.emit("promote_speaker", {peer_id});
+});
 element("screen").addEventListener("click", async event => {
   const button = event.currentTarget;
   button.disabled = true;
@@ -476,6 +628,8 @@ if (requireSession()) {
   try {
     if (!/^[a-z]{3}-[a-z]{4}-[a-z]{3}$/.test(code)) throw new Error("Mã phòng không hợp lệ.");
     const room = await api("/rooms/" + code, {authenticated: true});
+    roomMode = room.mode;
+    if (roomMode === "livestream") element("enter-room").textContent = "Vào livestream";
     element("room-name").textContent = room.name || "Phòng gọi";
     element("room-code").textContent = "Mã phòng " + room.code;
     if (room.status === "closed") throw new Error("Phòng đã đóng.");

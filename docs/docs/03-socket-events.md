@@ -300,13 +300,20 @@ Admin (HTTP) PATCH /admin/users/{id} {is_active:false}
 
 Lặp lại vi phạm rate limit nhiều lần liên tiếp (ví dụ 5 lần trong 1 phút) → server ngắt kết nối socket đó.
 
-## 9. Giai đoạn SFU và livestream (A10, phác thảo)
+## 9. SFU và livestream (A10)
 
-Giữ nguyên các sự kiện ở trên, thay đổi chính:
-- Thay vì mesh, mỗi client chỉ có **một** `RTCPeerConnection` tới server (SFU). `offer/answer/ice_candidate` dùng `to: "sfu"`.
-- Thêm `track_published` / `track_unpublished` (server → client) để client biết có luồng mới cần subscribe; thêm `subscribe` / `unsubscribe` (client → server).
-- Phòng `mode = livestream`: chỉ host (và người được `promote_speaker`) được publish; người xem chỉ nhận. Thêm `promote_speaker` / `demote_speaker` (host).
-- Chi tiết sẽ viết thêm khi bắt đầu A10, sau khi đã chạy được mesh. Cần kiểm chứng giới hạn của aiortc (xem `06-decisions.md` Q4).
+Mỗi client livestream dùng một `RTCPeerConnection` tới SFU. Phòng có một suất phát và tối đa bốn người xem. SFU chuyển tiếp audio và video VP8, giới hạn khung video trong 640×360 ở khoảng 15 FPS. Meeting tiếp tục dùng mesh.
+
+| Sự kiện | Hướng | Dữ liệu |
+| --- | --- | --- |
+| `offer` | Người phát → app | `{to:"sfu",sdp:{type:"offer",sdp}}` với audio và video `sendonly`. Ack chứa SDP answer |
+| `subscribe` | Người xem → app | SDP offer audio và video `recvonly`. Ack chứa SDP answer |
+| `unsubscribe` | Client → app | Dừng xem hoặc dừng phát |
+| `promote_speaker` / `demote_speaker` | Host → app | Chuyển suất phát sang `{peer_id}` hoặc thu hồi về host |
+| `live_speaker_changed` | App → phòng | `{speaker_peer_id}` |
+| `track_published` / `track_unpublished` | App → phòng | `{peer_id, tracks}` khi có luồng hoặc `{peer_id}` khi dừng |
+
+Offer và answer mang các ICE candidate đã thu thập. Client tạo lại PC khi đổi nguồn. Khi mất hoặc kết thúc quyền phát, app đóng các kết nối media của nguồn cũ. `join_room` trả `speaker_peer_id` và `publisher_peer_id` để người vào sau cùng nhận đúng trạng thái. [Thử nghiệm Q4](../../loadtest/README.md)
 
 ## 10. Chỉ số theo dõi (cho `/metrics`)
 

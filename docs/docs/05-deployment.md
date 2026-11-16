@@ -166,6 +166,12 @@ Compose dùng image `coturn/coturn:4.19.0-r0`. Health check dùng `turnutils_stu
 - Chrome: `chrome://webrtc-internals`, xem cặp ICE được chọn.
 - Ép dùng relay để kiểm tra: `new RTCPeerConnection({ iceServers, iceTransportPolicy: "relay" })`.
 
+### 4.6 SFU livestream trong Compose
+
+Dịch vụ `sfu` chạy aiortc trong container riêng với ngân sách dev 1 CPU và 512 MiB RAM. App gọi cổng HTTP điều khiển 8080 qua mạng nội bộ và xác thực bằng khóa dẫn xuất từ `TURN_SECRET`. Media trực tiếp dùng dải UDP 40000–40127 của namespace container. `SFU_HOST` là địa chỉ Windows dùng để ánh xạ UDP và công bố ICE, mặc định `127.0.0.1`.
+
+Khi thử buộc TURN qua Docker Desktop, đặt `TURN_HOST` và `SFU_HOST` bằng IPv4 LAN của máy, đặt `SFU_TURN_URL=turn:coturn:3478?transport=udp` và dùng một `TURN_SECRET` ngẫu nhiên. Khi có cấu hình này, SFU tạo thêm ICE relay qua coturn trên mạng Docker. [Thử nghiệm cổng và tài nguyên](../../loadtest/README.md)
+
 ## 5. Caddy (reverse proxy + HTTPS)
 
 ```caddy
