@@ -10,13 +10,10 @@ export class PeerCall {
     this.makingOffer = false;
     this.ignoreOffer = false;
     this.closed = false;
+    this.policy = policy;
 
     const pc = this.pc = new RTCPeerConnection({iceServers});
-    const remote = new MediaStream();
-    pc.ontrack = event => {
-      remote.addTrack(event.track);
-      showStream(remote);
-    };
+    pc.ontrack = event => event.streams.forEach(showStream);
     pc.onconnectionstatechange = () => showState(pc.connectionState);
     pc.onicecandidate = event => {
       if (event.candidate && !this.closed) {
@@ -36,14 +33,18 @@ export class PeerCall {
     });
     for (const track of local.getTracks()) {
       const sender = pc.addTrack(track, local);
-      if (track.kind === "video" && policy.max_video_bitrate_kbps) {
-        const parameters = sender.getParameters();
-        if (parameters.encodings?.length) {
-          parameters.encodings[0].maxBitrate = policy.max_video_bitrate_kbps * 1000;
-          sender.setParameters(parameters).catch(() => {});
-        }
-      }
+      if (track.kind === "video") limitBitrate(sender, policy.max_video_bitrate_kbps);
     }
+  }
+
+  async setScreen(stream, track = null) {
+    if (this.closed) return;
+    if (this.screenSender) {
+      await this.screenSender.replaceTrack(track);
+    } else if (track) {
+      this.screenSender = this.pc.addTrack(track, stream);
+    }
+    if (track && !this.closed) limitBitrate(this.screenSender, this.policy.max_screen_bitrate_kbps);
   }
 
   updateIceServers(iceServers) {
@@ -106,4 +107,12 @@ export class PeerCall {
     this.pc.onconnectionstatechange = null;
     this.pc.close();
   }
+}
+
+function limitBitrate(sender, kbps) {
+  if (!kbps) return;
+  const parameters = sender.getParameters();
+  if (!parameters.encodings?.length) return;
+  parameters.encodings[0].maxBitrate = kbps * 1000;
+  sender.setParameters(parameters).catch(() => {});
 }

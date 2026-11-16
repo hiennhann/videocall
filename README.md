@@ -19,6 +19,8 @@ Mở [Videocall](http://localhost:8000/) để tạo tài khoản, đăng nhập
 
 Nếu đang dùng `.env` từ A6, bỏ dòng mẫu `TURN_URLS=stun:turn.example.com:3478` để Compose dùng coturn cục bộ. Xem [cấu hình và cách kiểm tra relay](docs/docs/05-deployment.md#44-chạy-coturn-ở-môi-trường-dev).
 
+Ở A8, gửi tin trong mục **Tin nhắn** và chọn **Tin nhắn cũ hơn** nếu phòng có thêm lịch sử. Dùng **Chia sẻ màn hình** để gửi thêm một luồng bên cạnh camera. Host thấy nút tắt mic và camera của người đang gọi cùng.
+
 Swagger vẫn có tại [`/docs`](http://localhost:8000/docs) để thử API.
 
 Tạo quản trị viên A3 bằng lệnh sau. Nhập mật khẩu hai lần khi được hỏi, rồi đăng nhập qua `/api/v1/auth/login` để dùng các API `/api/v1/admin`.

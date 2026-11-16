@@ -50,6 +50,9 @@ figure { margin: 0; overflow: hidden; border: 1px solid var(--line); border-radi
 video { display: block; width: 100%; aspect-ratio: 4/3; object-fit: contain; background: #0a1713; }
 figcaption { padding: .55rem .8rem; }
 .controls { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1rem; }
+.room-chat { margin-top: 1rem; }
+.room-chat ol { list-style: none; padding: 0; max-height: 16rem; overflow: auto; display: grid; gap: .45rem; }
+.room-chat li { overflow-wrap: anywhere; white-space: pre-wrap; }
 @media (max-width: 690px) {
   .auth-layout, .grid, .video-grid { grid-template-columns: 1fr; }
   .auth-layout { min-height: 0; gap: 1rem; }

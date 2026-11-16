@@ -21,15 +21,37 @@
     </section>
     <section id="call-panel" hidden aria-label="Cuộc gọi">
       <div class="video-grid">
-        <figure><video id="remote" autoplay playsinline></video><figcaption id="remote-name">Đang chờ người tham gia</figcaption></figure>
+        <figure>
+          <video id="remote" autoplay playsinline></video>
+          <figcaption><span id="remote-name">Đang chờ người tham gia</span> <small id="remote-media" class="muted"></small></figcaption>
+        </figure>
         <figure><video id="local" autoplay muted playsinline></video><figcaption>Bạn</figcaption></figure>
+        <figure id="remote-screen-panel" hidden>
+          <video id="remote-screen" autoplay muted playsinline></video><figcaption>Màn hình người tham gia</figcaption>
+        </figure>
+        <figure id="local-screen-panel" hidden>
+          <video id="local-screen" autoplay muted playsinline></video><figcaption>Màn hình của bạn</figcaption>
+        </figure>
       </div>
       <div class="controls">
         <button id="play-remote" class="secondary" type="button" hidden>Phát luồng video</button>
         <button id="mic" type="button" class="secondary" aria-pressed="true">Mic bật</button>
         <button id="camera" type="button" class="secondary" aria-pressed="true">Camera bật</button>
+        <button id="screen" type="button" class="secondary" aria-pressed="false" hidden>Chia sẻ màn hình</button>
+        <button id="mute-peer-audio" type="button" class="secondary" hidden>Tắt mic người tham gia</button>
+        <button id="mute-peer-video" type="button" class="secondary" hidden>Tắt camera người tham gia</button>
         <button id="leave" type="button" class="danger">Rời phòng</button>
       </div>
+      <section class="panel room-chat" aria-labelledby="chat-title">
+        <h2 id="chat-title">Tin nhắn</h2>
+        <button id="older-messages" type="button" class="secondary" hidden>Tin nhắn cũ hơn</button>
+        <ol id="chat-messages" aria-label="Tin nhắn trong phòng"></ol>
+        <p id="chat-error" class="notice error" role="status" hidden></p>
+        <form id="chat-form" hidden>
+          <label>Tin nhắn <input name="text" maxlength="2000" required autocomplete="off"></label>
+          <button type="submit">Gửi</button>
+        </form>
+      </section>
     </section>
   </main>
 </body>

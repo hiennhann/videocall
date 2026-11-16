@@ -195,7 +195,7 @@ Vòng đời: `active` → `closed` (khi host đóng, admin đóng, hoặc phòn
 
 Index: `ix_messages_room_id_id` (`room_id`, `id` DESC).
 
-Ghi tin nhắn **không chặn** luồng gửi realtime: broadcast trước, lưu DB bằng tác vụ nền. Dọn dẹp: job xóa tin nhắn của phòng đã đóng quá `chat_retention_days` ngày.
+Server lấy ID từ sequence để sự kiện realtime và lịch sử dùng cùng một mã tin nhắn. Server broadcast trước, sau đó ghi tin nhắn vào DB bằng tác vụ nền. Job xóa tin nhắn của phòng đã đóng quá `chat_retention_days` ngày nằm trong kế hoạch vận hành.
 
 ### 3.5 `settings`
 

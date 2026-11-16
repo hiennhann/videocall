@@ -149,13 +149,13 @@ Server gửi cho `to` cùng sự kiện, thay `to` bằng `from`: `{ "from": "<p
 ```
 Thông báo trạng thái bật/tắt của chính mình để UI người khác hiển thị icon. Đây chỉ là **thông tin hiển thị**; việc tắt thật là do client ngừng gửi track.
 
-`screen_stream_id`: id của `MediaStream` chia sẻ màn hình, để bên nhận phân biệt luồng màn hình với luồng camera.
+`screen_stream_id` định danh `MediaStream` chia sẻ màn hình để bên nhận phân biệt luồng màn hình với luồng camera. Trường này bắt buộc khi `screen = true` và có giá trị `null` khi dừng chia sẻ. Sự kiện `join_room` trả về trạng thái media hiện tại của các peer.
 
 ### 5.5 `chat_message`
 ```json
 { "text": "Chào mọi người" }
 ```
-- Kiểm tra: `chat_enabled`, độ dài 1-2000 sau khi trim, **không HTML** (client tự `textContent`, không `innerHTML`).
+- Kiểm tra: `chat_enabled`, độ dài 1-2000 sau khi trim. Client hiển thị nội dung dưới dạng văn bản thuần.
 - Rate limit: 5 tin / 3 giây / socket.
 - Server gán `id`, `ts`, tên người gửi rồi broadcast `chat_message` cho **cả phòng (kể cả người gửi)**, rồi lưu DB bằng tác vụ nền nếu `chat_history_enabled`.
 
@@ -237,6 +237,8 @@ Share màn hình (A):
   A -- media_state {screen:true, screen_stream_id} --> cả phòng
 ```
 
+Client giữ nguyên ID của luồng màn hình trong cuộc gọi và dùng `RTCRtpSender.replaceTrack()` khi bật hoặc tắt chia sẻ lần tiếp theo.
+
 ### 7.3 Rời phòng và mất kết nối
 
 | Tình huống | Server làm |
@@ -292,6 +294,7 @@ Admin (HTTP) PATCH /admin/users/{id} {is_active:false}
 | `PEER_NOT_FOUND` | `to` không ở cùng phòng |
 | `NOT_ROOM_HOST` | Dùng lệnh đặc quyền không phải host |
 | `CHAT_DISABLED` | `chat_enabled = false` |
+| `SCREEN_SHARE_DISABLED` | `allow_screen_share = false` khi bắt đầu chia sẻ màn hình |
 | `RATE_LIMITED` | Gửi quá nhanh |
 | `INTERNAL_ERROR` | Lỗi server (có `request_id`) |
 

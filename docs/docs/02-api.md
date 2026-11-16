@@ -329,7 +329,7 @@ Lịch sử chat, mới nhất trước, phân trang theo con trỏ (`limit` t�
   "next_before": 1180
 }
 ```
-Quyền: người **đang ở trong phòng** hoặc host. Khác → 403 `NOT_IN_ROOM`. Trả rỗng nếu `chat_history_enabled = false`.
+Người đang trong phòng, kể cả khách, và chủ phòng có quyền đọc lịch sử. Người khác nhận 403 `NOT_IN_ROOM`. Trả rỗng nếu `chat_history_enabled = false`. Tin nhắn mới xuất hiện trong lịch sử sau khi tác vụ nền ghi xong. `next_before` là `null` ở trang cuối.
 
 ## 7. TURN
 
