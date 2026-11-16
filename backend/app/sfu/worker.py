@@ -70,12 +70,13 @@ class Worker:
     def __init__(self, host: str, turn_url: str, secret: str) -> None:
         self.host = host
         self.turn_url = turn_url
+        self.shared_turn_bridge = turn_url.startswith("turn:coturn:")
         self.secret = secret
         self.rooms: dict[str, dict[str, LivePeer]] = {}
         self.lock = asyncio.Lock()
 
     def ice_servers(self, peer_id: str) -> list[RTCIceServer]:
-        if not self.turn_url:
+        if not self.turn_url or self.shared_turn_bridge:
             return []
         username = f"{int(time()) + 86400}:sfu-{peer_id}"
         digest = hmac.digest(self.secret.encode(), username.encode(), "sha1")
@@ -183,7 +184,7 @@ class Worker:
             if line.startswith("a=candidate:"):
                 fields = line.split()
                 if fields[7] == "host" and ":" not in fields[4]:
-                    if self.turn_url.startswith("turn:coturn:"):
+                    if self.shared_turn_bridge:
                         lines.append(line)
                     fields[4] = self.host
                     line = " ".join(fields)
@@ -191,7 +192,7 @@ class Worker:
         return "\r\n".join(lines) + "\r\n"
 
     async def local_offer(self, sdp: str) -> str:
-        if not self.host or not self.turn_url.startswith("turn:coturn:"):
+        if not self.host or not self.shared_turn_bridge:
             return sdp
         lines = sdp.splitlines()
         matches = []
