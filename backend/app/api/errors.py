@@ -36,6 +36,8 @@ AUTH_ERRORS = {
     ErrorCode.EMAIL_TAKEN: (409, "Email đã được sử dụng."),
     ErrorCode.INVALID_CREDENTIALS: (401, "Email hoặc mật khẩu không đúng."),
     ErrorCode.INVALID_REFRESH_TOKEN: (401, "Refresh token không hợp lệ."),
+    ErrorCode.DEVICE_TRANSFER_REQUIRED: (409, "Tài khoản đang đăng nhập trên thiết bị khác."),
+    ErrorCode.DEVICE_TRANSFER_INVALID: (409, "Yêu cầu chuyển thiết bị đã hết hiệu lực."),
     ErrorCode.LOGIN_LOCKED: (429, "Bạn đã thử đăng nhập quá nhiều lần."),
     ErrorCode.GUEST_DISABLED: (403, "Tính năng đăng nhập khách đang tắt."),
     ErrorCode.MAINTENANCE_MODE: (503, "Hệ thống đang bảo trì."),
@@ -76,7 +78,9 @@ async def auth_error_handler(request: Request, exc: AuthError) -> JSONResponse:
         headers["Retry-After"] = str(exc.retry_after)
     if exc.code in {ErrorCode.UNAUTHENTICATED, ErrorCode.TOKEN_EXPIRED, ErrorCode.TOKEN_INVALID}:
         headers["WWW-Authenticate"] = "Bearer"
-    details = {"fields": exc.fields} if exc.fields else None
+    if exc.code == ErrorCode.DEVICE_TRANSFER_REQUIRED:
+        headers["Cache-Control"] = "no-store"
+    details = {"fields": exc.fields} if exc.fields else exc.details
     return error_response(status, exc.code, message, details=details, headers=headers)
 
 

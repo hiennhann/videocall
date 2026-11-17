@@ -31,6 +31,8 @@ class ErrorCode(StrEnum):
     EMAIL_TAKEN = "EMAIL_TAKEN"
     INVALID_CREDENTIALS = "INVALID_CREDENTIALS"
     INVALID_REFRESH_TOKEN = "INVALID_REFRESH_TOKEN"
+    DEVICE_TRANSFER_REQUIRED = "DEVICE_TRANSFER_REQUIRED"
+    DEVICE_TRANSFER_INVALID = "DEVICE_TRANSFER_INVALID"
     LOGIN_LOCKED = "LOGIN_LOCKED"
     GUEST_DISABLED = "GUEST_DISABLED"
     MAINTENANCE_MODE = "MAINTENANCE_MODE"
@@ -49,8 +51,10 @@ class AuthError(Exception):
         *,
         retry_after: int | None = None,
         fields: dict[str, str] | None = None,
+        details: dict[str, str] | None = None,
     ) -> None:
         super().__init__(code)
         self.code = code
         self.retry_after = retry_after
         self.fields = fields
+        self.details = details

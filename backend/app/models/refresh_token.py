@@ -16,6 +16,7 @@ class RefreshToken(Base):
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     token_hash: Mapped[str] = mapped_column(CHAR(64), unique=True)
     family_id: Mapped[UUID] = mapped_column(index=True)
+    scope: Mapped[str] = mapped_column(String(5), server_default="user")
     replaced_by_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("refresh_tokens.id", ondelete="SET NULL")
     )

@@ -112,7 +112,7 @@ class AdminSessions:
             user = await db.get(User, access.identity.id)
             if user is None or not user.is_active or user.role != "admin":
                 return None
-            if not await AuthService.has_active_session(db, user.id, family):
+            if not await AuthService.has_active_session(db, user.id, family, scope="admin"):
                 return None
             return WebAdmin(user, family)
 

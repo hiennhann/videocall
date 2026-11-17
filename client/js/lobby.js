@@ -1,7 +1,8 @@
-import { api, logout, requireSession } from "./api.js";
+import { accessToken, api, logout, requireSession, sessionEnded } from "./api.js";
 import { element, message, onForm, roomUrl } from "./ui.js";
 
 const authenticated = true;
+let presence;
 
 onForm("join-form", async fields => {
   const code = fields.code.trim().toLowerCase();
@@ -40,6 +41,19 @@ async function load() {
   element("password-panel").hidden = !profile.must_change_password;
   element("join-form").closest("section").hidden = profile.must_change_password;
   if (profile.is_guest || profile.must_change_password) return;
+  if (!presence) {
+    presence = window.io({
+      transports: ["websocket"],
+      auth: done => accessToken().then(token => done({token}), () => done({})),
+    });
+    presence.on("force_disconnect", ({reason}) => {
+      presence.disconnect();
+      sessionEnded(reason === "DEVICE_SESSION_REPLACED"
+        ? "Tài khoản đã được chuyển sang thiết bị khác."
+        : "Phiên đã bị thu hồi. Vui lòng đăng nhập lại.");
+    });
+    window.addEventListener("pagehide", () => presence.disconnect());
+  }
   element("create-panel").hidden = false;
   const rooms = await api("/rooms/mine", { authenticated });
   const list = element("mine");
@@ -55,7 +69,7 @@ async function load() {
   element("mine-panel").hidden = rooms.length === 0;
 }
 
-if (requireSession()) {
+if (await requireSession()) {
   try {
     await load();
   } catch (error) {

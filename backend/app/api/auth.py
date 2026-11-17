@@ -1,8 +1,13 @@
+from urllib.parse import urlsplit
+
 from fastapi import APIRouter, Request, Response
 from slowapi import Limiter
 
 from app.api.deps import DB, Auth, CurrentMember, client_info
+from app.core.errors import AuthError, ErrorCode
+from app.models import User
 from app.schemas.auth import (
+    DeviceTransferRequest,
     GuestRequest,
     GuestResponse,
     GuestUser,
@@ -14,6 +19,48 @@ from app.schemas.auth import (
     RegisteredUser,
     RegisterRequest,
 )
+from app.services.auth_service import SessionTokens
+
+REFRESH_COOKIE = "vc_user_refresh"
+COOKIE_FLAGS = {"path": "/api/v1/auth", "httponly": True, "secure": True, "samesite": "strict"}
+
+
+def require_same_origin(request: Request) -> None:
+    try:
+        origin = urlsplit(request.headers.get("origin", ""))
+        if origin.scheme in {"http", "https"} and origin.netloc == request.url.netloc:
+            return
+    except ValueError:
+        pass
+    raise AuthError(ErrorCode.FORBIDDEN)
+
+
+async def refresh_value(
+    response: Response, tokens: SessionTokens, db: DB, auth: Auth, *, use_cookie: bool
+) -> str | None:
+    response.headers["Cache-Control"] = "no-store"
+    if not use_cookie:
+        return tokens.refresh_token
+    policy = await auth.settings.get(db)
+    response.set_cookie(
+        REFRESH_COOKIE,
+        tokens.refresh_token,
+        max_age=policy.refresh_token_ttl_days * 86400,
+        **COOKIE_FLAGS,
+    )
+    return None
+
+
+async def login_response(
+    response: Response, result: tuple[User, SessionTokens], db: DB, auth: Auth, *, use_cookie: bool
+) -> LoginResponse:
+    user, tokens = result
+    return LoginResponse(
+        access_token=tokens.access_token,
+        refresh_token=await refresh_value(response, tokens, db, auth, use_cookie=use_cookie),
+        expires_in=tokens.expires_in,
+        user=LoginUser.model_validate(user),
+    )
 
 
 def create_auth_router(limiter: Limiter) -> APIRouter:
@@ -29,35 +76,81 @@ def create_auth_router(limiter: Limiter) -> APIRouter:
         )
         return RegisteredUser.model_validate(user)
 
-    @router.post("/login")
+    @router.post("/login", response_model_exclude_none=True)
     @limiter.limit("20/minute")
     async def login(
         request: Request, response: Response, body: LoginRequest, db: DB, auth: Auth
     ) -> LoginResponse:
-        user, tokens = await auth.login(
-            db, body.email, body.password.get_secret_value(), client_info(request)
+        use_cookie = body.client_type == "web"
+        if use_cookie:
+            require_same_origin(request)
+        result = await auth.login(
+            db,
+            body.email,
+            body.password.get_secret_value(),
+            client_info(request),
+            use_cookie=use_cookie,
         )
-        response.headers["Cache-Control"] = "no-store"
-        return LoginResponse(
-            access_token=tokens.access_token,
-            refresh_token=tokens.refresh_token,
-            expires_in=tokens.expires_in,
-            user=LoginUser.model_validate(user),
-        )
+        return await login_response(response, result, db, auth, use_cookie=use_cookie)
 
-    @router.post("/refresh")
+    @router.post("/device-transfer/confirm", response_model_exclude_none=True)
+    @limiter.limit("20/minute")
+    async def confirm_transfer(
+        request: Request, response: Response, body: DeviceTransferRequest, db: DB, auth: Auth
+    ) -> LoginResponse:
+        use_cookie = body.client_type == "web"
+        if use_cookie:
+            require_same_origin(request)
+        result = await auth.confirm_device_transfer(
+            db, body.transfer_token.get_secret_value(), client_info(request), use_cookie=use_cookie
+        )
+        return await login_response(response, result, db, auth, use_cookie=use_cookie)
+
+    @router.post("/device-transfer/cancel", status_code=204)
+    @limiter.limit("20/minute")
+    async def cancel_transfer(
+        request: Request, body: DeviceTransferRequest, db: DB, auth: Auth
+    ) -> Response:
+        if body.client_type == "web":
+            require_same_origin(request)
+        await auth.cancel_device_transfer(db, body.transfer_token.get_secret_value())
+        return Response(status_code=204)
+
+    @router.post("/refresh", response_model_exclude_none=True)
     @limiter.limit("30/minute")
     async def refresh(
-        request: Request, response: Response, body: RefreshRequest, db: DB, auth: Auth
+        request: Request, response: Response, db: DB, auth: Auth, body: RefreshRequest | None = None
     ) -> RefreshResponse:
-        tokens = await auth.refresh(db, body.refresh_token.get_secret_value(), client_info(request))
-        response.headers["Cache-Control"] = "no-store"
-        return RefreshResponse.model_validate(tokens)
+        use_cookie = body is None
+        if use_cookie:
+            require_same_origin(request)
+        token = (
+            body.refresh_token.get_secret_value() if body else request.cookies.get(REFRESH_COOKIE)
+        )
+        if not token or len(token) > 256:
+            raise AuthError(ErrorCode.INVALID_REFRESH_TOKEN)
+        tokens = await auth.refresh(db, token, client_info(request))
+        return RefreshResponse(
+            access_token=tokens.access_token,
+            refresh_token=await refresh_value(response, tokens, db, auth, use_cookie=use_cookie),
+            expires_in=tokens.expires_in,
+        )
 
     @router.post("/logout", status_code=204)
-    async def logout(body: RefreshRequest, db: DB, auth: Auth) -> Response:
-        await auth.logout(db, body.refresh_token.get_secret_value())
-        return Response(status_code=204)
+    async def logout(
+        request: Request, db: DB, auth: Auth, body: RefreshRequest | None = None
+    ) -> Response:
+        if body is None:
+            require_same_origin(request)
+        token = (
+            body.refresh_token.get_secret_value() if body else request.cookies.get(REFRESH_COOKIE)
+        )
+        if token and len(token) <= 256:
+            await auth.logout(db, token)
+        response = Response(status_code=204)
+        if body is None:
+            response.delete_cookie(REFRESH_COOKIE, **COOKIE_FLAGS)
+        return response
 
     @router.post("/logout-all", status_code=204)
     async def logout_all(member: CurrentMember, db: DB, auth: Auth) -> Response:

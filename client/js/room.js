@@ -1,4 +1,4 @@
-import { accessToken, api, clearSession, requireSession } from "./api.js";
+import { accessToken, api, requireSession, sessionEnded } from "./api.js";
 import { LiveConnection } from "./live.js";
 import { PeerTile } from "./peer-tile.js";
 import { element, message, onForm } from "./ui.js";
@@ -93,9 +93,11 @@ class RoomCall {
       reason === "SESSION_REPLACED" ? "Một tab khác đã vào phòng bằng tài khoản này." : "Bạn đã bị đưa ra khỏi phòng."
     ));
     this.socket.on("room_closed", () => this.end("Phòng đã đóng."));
-    this.socket.on("force_disconnect", () => {
-      clearSession();
-      this.end("Phiên cuộc gọi đã bị thu hồi. Vui lòng đăng nhập lại.");
+    this.socket.on("force_disconnect", ({reason}) => {
+      this.stop();
+      sessionEnded(reason === "DEVICE_SESSION_REPLACED"
+        ? "Tài khoản đã được chuyển sang thiết bị khác."
+        : "Phiên cuộc gọi đã bị thu hồi. Vui lòng đăng nhập lại.");
     });
   }
 
@@ -624,7 +626,7 @@ element("copy-code").addEventListener("click", async () => {
   }
 });
 
-if (requireSession()) {
+if (await requireSession()) {
   try {
     if (!/^[a-z]{3}-[a-z]{4}-[a-z]{3}$/.test(code)) throw new Error("Mã phòng không hợp lệ.");
     const room = await api("/rooms/" + code, {authenticated: true});

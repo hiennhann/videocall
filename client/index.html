@@ -22,6 +22,14 @@
         <label>Mật khẩu <input name="password" type="password" autocomplete="current-password" maxlength="128" required></label>
         <button>Đăng nhập</button>
       </form>
+      <dialog id="device-transfer" aria-labelledby="device-transfer-title">
+        <h2 id="device-transfer-title">Chuyển thiết bị</h2>
+        <p>Tiếp tục sẽ đăng xuất thiết bị đang dùng tài khoản này và kết thúc cuộc gọi trên thiết bị đó.</p>
+        <div class="controls">
+          <button id="transfer-confirm" type="button">Chuyển sang thiết bị này</button>
+          <button id="transfer-cancel" class="secondary" type="button" autofocus>Hủy</button>
+        </div>
+      </dialog>
       <details id="register-panel">
         <summary>Tạo tài khoản</summary>
         <form id="register-form">

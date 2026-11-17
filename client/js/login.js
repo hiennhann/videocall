@@ -1,14 +1,57 @@
-import { api, saveSession, session } from "./api.js";
+import { api, restoreSession, saveSession, takeSessionNotice } from "./api.js";
 import { element, message, onForm } from "./ui.js";
 
-if (session()) location.replace("/lobby");
+const transfer = element("device-transfer");
+let pendingTransfer;
+const notice = takeSessionNotice();
+if (notice) message(notice);
+else if (await restoreSession()) location.replace("/lobby");
 
 async function signIn(path, body) {
   saveSession(await api(path, { method: "POST", body }));
   location.assign("/lobby");
 }
 
-onForm("account-form", fields => signIn("/auth/login", fields));
+onForm("account-form", async fields => {
+  try {
+    await signIn("/auth/login", {...fields, client_type: "web"});
+  } catch (error) {
+    if (error.code !== "DEVICE_TRANSFER_REQUIRED") throw error;
+    pendingTransfer = error.details.transfer_token;
+    transfer.showModal();
+  }
+});
+
+async function finishTransfer(action) {
+  if (!pendingTransfer) return;
+  const token = pendingTransfer;
+  pendingTransfer = undefined;
+  const confirm = element("transfer-confirm");
+  const cancel = element("transfer-cancel");
+  confirm.disabled = cancel.disabled = true;
+  try {
+    const result = await api("/auth/device-transfer/" + action, {
+      method: "POST", body: {transfer_token: token, client_type: "web"},
+    });
+    if (action === "confirm") {
+      saveSession(result);
+      location.assign("/lobby");
+    }
+  } catch (error) {
+    message(error.message, true);
+  } finally {
+    transfer.close();
+    confirm.disabled = cancel.disabled = false;
+    element("account-form").elements.password.value = "";
+  }
+}
+
+element("transfer-confirm").addEventListener("click", () => finishTransfer("confirm"));
+element("transfer-cancel").addEventListener("click", () => finishTransfer("cancel"));
+transfer.addEventListener("cancel", event => {
+  event.preventDefault();
+  finishTransfer("cancel");
+});
 onForm("guest-form", fields => signIn("/auth/guest", fields));
 onForm("register-form", async (fields, form) => {
   await api("/auth/register", { method: "POST", body: fields });

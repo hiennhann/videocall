@@ -68,9 +68,16 @@ async def current_principal(
     if credentials is None:
         raise AuthError(ErrorCode.UNAUTHENTICATED)
     access = decode_access_token(credentials.credentials, auth.secret)
-    user = await get_user(db, access.identity.id) if access.identity.family_id is not None else None
+    family = access.identity.family_id
+    user = await get_user(db, access.identity.id) if family is not None else None
     if user is not None and not user.is_active:
         raise AuthError(ErrorCode.ACCOUNT_DISABLED)
+    if (
+        user is not None
+        and family is not None
+        and not await auth.has_active_session(db, user.id, family)
+    ):
+        raise AuthError(ErrorCode.TOKEN_INVALID)
     request.state.user_id = access.identity.subject
     return Principal(access, user)
 

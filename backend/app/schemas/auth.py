@@ -44,6 +44,12 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: Email
     password: SuppliedPassword
+    client_type: Literal["web", "mobile"] = "mobile"
+
+
+class DeviceTransferRequest(BaseModel):
+    transfer_token: Annotated[SecretStr, Field(min_length=1, max_length=256)]
+    client_type: Literal["web", "mobile"] = "mobile"
 
 
 class RefreshRequest(BaseModel):
@@ -111,7 +117,7 @@ class AccessResponse(BaseModel):
 
 
 class RefreshResponse(AccessResponse):
-    refresh_token: str
+    refresh_token: str | None = None
 
 
 class LoginResponse(RefreshResponse):

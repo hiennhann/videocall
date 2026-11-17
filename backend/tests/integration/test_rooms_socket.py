@@ -638,3 +638,28 @@ async def test_revoked_family_cannot_reconnect_with_an_unexpired_access_token(li
                 wait_timeout=3,
             )
         assert (await rejected.event("connect_error"))["data"]["code"] == "TOKEN_INVALID"
+
+
+async def test_device_transfer_notifies_and_removes_old_room_peer(live: Server) -> None:
+    first = await account(live)
+    visitor = await guest(live)
+    code = await room(live, first)
+    async with AsyncExitStack() as stack:
+        old = await peer(live, stack, first)
+        witness = await peer(live, stack, visitor)
+        assert (await old.call("join_room", {"code": code}))["ok"]
+        assert (await witness.call("join_room", {"code": code}))["ok"]
+        request = await live.http.post(
+            "auth/login", json={"email": first["user"]["email"], "password": "room-test-password"}
+        )
+        assert request.status_code == 409
+        old_peer = old.sid
+        confirmed = await live.http.post(
+            "auth/device-transfer/confirm",
+            json={"transfer_token": request.json()["error"]["details"]["transfer_token"]},
+        )
+        assert confirmed.status_code == 200
+        await old.event("force_disconnect", reason="DEVICE_SESSION_REPLACED")
+        await witness.event("peer_left", peer_id=old_peer)
+        second = await peer(live, stack, confirmed.json())
+        assert (await second.call("join_room", {"code": code}))["ok"]

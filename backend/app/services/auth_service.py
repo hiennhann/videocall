@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from ipaddress import IPv4Address, IPv6Address
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,7 +17,7 @@ from app.core.security import (
     new_refresh_token,
     verify_password,
 )
-from app.models import RefreshToken, User
+from app.models import DeviceTransfer, RefreshToken, User
 from app.schemas.settings import SettingsSchema
 from app.services.account_events import AccountEvents
 from app.services.audit_service import AuditActor, record_audit
@@ -25,6 +25,7 @@ from app.services.login_attempts import LoginAttempts
 from app.services.settings_service import SettingsService
 
 REFRESH_GRACE = timedelta(seconds=10)
+DEVICE_TRANSFER_TTL = timedelta(minutes=2)
 logger = logging.getLogger(__name__)
 
 
@@ -96,6 +97,7 @@ class AuthService:
         client: ClientInfo,
         *,
         admin_only: bool = False,
+        use_cookie: bool = False,
     ) -> tuple[User, SessionTokens]:
         policy = await self.settings.get(db)
         ip = client.login_ip
@@ -119,8 +121,27 @@ class AuthService:
         if admin_only and user.role != "admin":
             raise AuthError(ErrorCode.FORBIDDEN)
         now = datetime.now(UTC)
+        if not admin_only:
+            family = await self._active_family(db, user.id, now)
+            if family is not None:
+                raw = new_refresh_token()
+                pending = await db.get(DeviceTransfer, user.id) or DeviceTransfer(user_id=user.id)
+                pending.token_hash = hash_refresh_token(raw)
+                pending.expected_family = family
+                pending.use_cookie = use_cookie
+                pending.expires_at = now + DEVICE_TRANSFER_TTL
+                db.add(pending)
+                expires_at = pending.expires_at.isoformat()
+                await db.commit()
+                self._login_attempts.reset(email, ip)
+                raise AuthError(
+                    ErrorCode.DEVICE_TRANSFER_REQUIRED,
+                    details={"transfer_token": raw, "expires_at": expires_at},
+                )
         user.last_login_at = now
-        _, tokens = self._new_session(db, user, uuid4(), now, client, policy)
+        _, tokens = self._new_session(
+            db, user, uuid4(), now, client, policy, scope="admin" if admin_only else "user"
+        )
         if admin_only:
             record_audit(
                 db, AuditActor(user.id, user.email, client.ip), "admin.login", "user", str(user.id)
@@ -128,6 +149,48 @@ class AuthService:
         await db.commit()
         self._login_attempts.reset(email, ip)
         return user, tokens
+
+    async def confirm_device_transfer(
+        self, db: AsyncSession, raw: str, client: ClientInfo, *, use_cookie: bool
+    ) -> tuple[User, SessionTokens]:
+        policy = await self.settings.get(db)
+        token_hash = hash_refresh_token(raw)
+        user = await self._lock_transfer_owner(db, token_hash)
+        if user is None:
+            raise AuthError(ErrorCode.DEVICE_TRANSFER_INVALID)
+        pending = await db.get(DeviceTransfer, user.id)
+        now = datetime.now(UTC)
+        if (
+            pending is None
+            or pending.token_hash != token_hash
+            or pending.use_cookie != use_cookie
+            or pending.expires_at <= now
+            or not user.is_active
+            or await self._active_family(db, user.id, now) != pending.expected_family
+        ):
+            raise AuthError(ErrorCode.DEVICE_TRANSFER_INVALID)
+        previous_family = pending.expected_family
+        await self.revoke_sessions(db, user.id, now, only_family=previous_family)
+        await db.delete(pending)
+        user.last_login_at = now
+        _, tokens = self._new_session(db, user, uuid4(), now, client, policy, scope="user")
+        await db.commit()
+        await self.events.sessions_revoked(
+            user.id, "DEVICE_SESSION_REPLACED", only_family=previous_family
+        )
+        return user, tokens
+
+    async def cancel_device_transfer(self, db: AsyncSession, raw: str) -> None:
+        token_hash = hash_refresh_token(raw)
+        if await self._lock_transfer_owner(db, token_hash) is not None:
+            await db.execute(delete(DeviceTransfer).where(DeviceTransfer.token_hash == token_hash))
+            await db.commit()
+
+    async def _lock_transfer_owner(self, db: AsyncSession, token_hash: str) -> User | None:
+        user_id = await db.scalar(
+            select(DeviceTransfer.user_id).where(DeviceTransfer.token_hash == token_hash)
+        )
+        return await self.lock_user(db, user_id) if user_id is not None else None
 
     async def refresh(
         self, db: AsyncSession, raw_token: str, client: ClientInfo, *, admin_only: bool = False
@@ -140,7 +203,8 @@ class AuthService:
 
         token = await db.scalar(select(RefreshToken).where(RefreshToken.token_hash == token_hash))
         now = datetime.now(UTC)
-        if token is None or token.expires_at <= now:
+        scope = "admin" if admin_only else "user"
+        if token is None or token.expires_at <= now or token.scope != scope:
             raise AuthError(ErrorCode.INVALID_REFRESH_TOKEN)
         if not user.is_active:
             raise AuthError(ErrorCode.ACCOUNT_DISABLED)
@@ -159,7 +223,9 @@ class AuthService:
 
         if user.must_change_password:
             raise AuthError(ErrorCode.PASSWORD_CHANGE_REQUIRED)
-        replacement, tokens = self._new_session(db, user, token.family_id, now, client, policy)
+        replacement, tokens = self._new_session(
+            db, user, token.family_id, now, client, policy, scope=scope
+        )
         await db.flush()
         token.revoked_at = now
         token.replaced_by_id = replacement.id
@@ -214,6 +280,7 @@ class AuthService:
         self._check_password_length(new, policy.password_min_length, "new_password")
         user.password_hash = await hash_password(new)
         user.must_change_password = False
+        await db.execute(delete(DeviceTransfer).where(DeviceTransfer.user_id == user_id))
         await self.revoke_sessions(db, user_id, datetime.now(UTC), keep_family=family_id)
         await db.commit()
         await self.events.sessions_revoked(user_id, "SESSIONS_REVOKED", keep_family=family_id)
@@ -231,15 +298,30 @@ class AuthService:
             raise AuthError(ErrorCode.LOGIN_LOCKED, retry_after=remaining)
 
     @staticmethod
-    async def has_active_session(db: AsyncSession, user_id: UUID, family_id: UUID) -> bool:
+    def _active_tokens(user_id: UUID, now: datetime, scope: str):
+        return select(RefreshToken).where(
+            RefreshToken.user_id == user_id,
+            RefreshToken.scope == scope,
+            RefreshToken.revoked_at.is_(None),
+            RefreshToken.expires_at > now,
+        )
+
+    @classmethod
+    async def _active_family(cls, db: AsyncSession, user_id: UUID, now: datetime) -> UUID | None:
+        return await db.scalar(
+            cls._active_tokens(user_id, now, "user")
+            .with_only_columns(RefreshToken.family_id)
+            .limit(1)
+        )
+
+    @classmethod
+    async def has_active_session(
+        cls, db: AsyncSession, user_id: UUID, family_id: UUID, *, scope: str = "user"
+    ) -> bool:
         session_id = await db.scalar(
-            select(RefreshToken.id)
-            .where(
-                RefreshToken.user_id == user_id,
-                RefreshToken.family_id == family_id,
-                RefreshToken.revoked_at.is_(None),
-                RefreshToken.expires_at > datetime.now(UTC),
-            )
+            cls._active_tokens(user_id, datetime.now(UTC), scope)
+            .with_only_columns(RefreshToken.id)
+            .where(RefreshToken.family_id == family_id)
             .limit(1)
         )
         return session_id is not None
@@ -252,12 +334,15 @@ class AuthService:
         now: datetime,
         client: ClientInfo,
         policy: SettingsSchema,
+        *,
+        scope: str,
     ) -> tuple[RefreshToken, SessionTokens]:
         raw_token = new_refresh_token()
         refresh = RefreshToken(
             user_id=user.id,
             token_hash=hash_refresh_token(raw_token),
             family_id=family,
+            scope=scope,
             expires_at=now + timedelta(days=policy.refresh_token_ttl_days),
             created_at=now,
             ip=client.ip,

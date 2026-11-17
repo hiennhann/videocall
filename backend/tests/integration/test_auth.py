@@ -51,6 +51,66 @@ async def refresh(client: AsyncClient, token: str) -> Response:
     return await client.post("auth/refresh", json={"refresh_token": token})
 
 
+async def transfer_request(client: AsyncClient, account: dict[str, str]) -> dict[str, str]:
+    response = await client.post("auth/login", json=account)
+    assert_error(response, 409, "DEVICE_TRANSFER_REQUIRED")
+    assert response.headers["cache-control"] == "no-store"
+    return {"transfer_token": response.json()["error"]["details"]["transfer_token"]}
+
+
+async def test_confirm_cancel_and_concurrent_device_transfer(
+    client: AsyncClient, account: dict[str, str]
+) -> None:
+    old = await login(client, account)
+    canceled = await transfer_request(client, account)
+    assert (await client.post("auth/device-transfer/cancel", json=canceled)).status_code == 204
+    assert_error(
+        await client.post("auth/device-transfer/confirm", json=canceled),
+        409,
+        "DEVICE_TRANSFER_INVALID",
+    )
+    assert (await client.get("me", headers=bearer(old["access_token"]))).status_code == 200
+
+    pending = await transfer_request(client, account)
+    results = await asyncio.gather(
+        client.post("auth/device-transfer/confirm", json=pending),
+        client.post("auth/device-transfer/confirm", json=pending),
+    )
+    assert sorted(response.status_code for response in results) == [200, 409]
+    current = next(response.json() for response in results if response.status_code == 200)
+    assert_error(await client.get("me", headers=bearer(old["access_token"])), 401, "TOKEN_INVALID")
+    assert_error(await refresh(client, old["refresh_token"]), 401, "INVALID_REFRESH_TOKEN")
+    assert (await client.get("me", headers=bearer(current["access_token"]))).status_code == 200
+
+
+async def test_browser_cookie_session_can_be_shared_across_tabs(
+    app: FastAPI, account: dict[str, str]
+) -> None:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="https://test/api/v1/"
+    ) as web:
+        credentials = {**account, "client_type": "web"}
+        origin = {"Origin": "https://test"}
+        assert_error(
+            await web.post("auth/login", json=credentials, headers={"Origin": "https://other"}),
+            403,
+            "FORBIDDEN",
+        )
+        signed_in = await web.post("auth/login", json=credentials, headers=origin)
+        assert signed_in.status_code == 200
+        assert "refresh_token" not in signed_in.json()
+        cookie = signed_in.headers["set-cookie"].lower()
+        assert all(
+            flag in cookie
+            for flag in ("path=/api/v1/auth", "httponly", "secure", "samesite=strict")
+        )
+        for _ in range(2):
+            response = await web.post("auth/refresh", headers=origin)
+            assert response.status_code == 200 and "refresh_token" not in response.json()
+        assert (await web.post("auth/logout", headers=origin)).status_code == 204
+        assert_error(await web.post("auth/refresh", headers=origin), 401, "INVALID_REFRESH_TOKEN")
+
+
 async def test_register_login_and_update_profile(
     client: AsyncClient, app: FastAPI, signup: dict[str, str]
 ) -> None:
@@ -168,7 +228,10 @@ async def test_refresh_rotation_concurrent_reuse_and_expiry(
     client: AsyncClient, app: FastAPI, account: dict[str, str]
 ) -> None:
     original = (await login(client, account))["refresh_token"]
-    other_session = (await login(client, account))["refresh_token"]
+    other_account = {**account, "email": f"other-{uuid4().hex}@example.com"}
+    registered = await client.post("auth/register", json={**other_account, "display_name": "Other"})
+    assert registered.status_code == 201
+    other_session = (await login(client, other_account))["refresh_token"]
     responses = await asyncio.gather(refresh(client, original), refresh(client, original))
     assert sorted(response.status_code for response in responses) == [200, 401]
     success = next(response for response in responses if response.status_code == 200)
@@ -208,29 +271,28 @@ async def test_refresh_rotation_concurrent_reuse_and_expiry(
 
 async def test_logout_and_logout_all(client: AsyncClient, account: dict[str, str]) -> None:
     one = await login(client, account)
-    two = await login(client, account)
     successor = (await refresh(client, one["refresh_token"])).json()["refresh_token"]
     for token in ("unknown", one["refresh_token"], one["refresh_token"]):
         response = await client.post("auth/logout", json={"refresh_token": token})
         assert response.status_code == 204 and not response.content
     assert_error(await refresh(client, successor), 401, "INVALID_REFRESH_TOKEN")
 
+    two = await login(client, account)
     active = await refresh(client, two["refresh_token"])
     assert active.status_code == 200
-    third = await login(client, account)
     response = await client.post("auth/logout-all", headers=bearer(two["access_token"]))
     assert response.status_code == 204 and not response.content
     assert_error(
         await refresh(client, active.json()["refresh_token"]), 401, "INVALID_REFRESH_TOKEN"
     )
-    assert_error(await refresh(client, third["refresh_token"]), 401, "INVALID_REFRESH_TOKEN")
+    assert_error(await client.get("me", headers=bearer(two["access_token"])), 401, "TOKEN_INVALID")
 
 
-async def test_change_password_preserves_only_current_family(
+async def test_change_password_preserves_current_family_and_cancels_transfer(
     client: AsyncClient, account: dict[str, str]
 ) -> None:
     first = await login(client, account)
-    other = await login(client, account)
+    pending = await transfer_request(client, account)
     headers = bearer(first["access_token"])
     new_password = "test-password-two"
     for current, new, code in (
@@ -248,9 +310,13 @@ async def test_change_password_preserves_only_current_family(
     )
     assert changed.status_code == 204 and not changed.content
     assert (await refresh(client, first["refresh_token"])).status_code == 200
-    assert_error(await refresh(client, other["refresh_token"]), 401, "INVALID_REFRESH_TOKEN")
+    assert_error(
+        await client.post("auth/device-transfer/confirm", json=pending),
+        409,
+        "DEVICE_TRANSFER_INVALID",
+    )
     assert_error(await client.post("auth/login", json=account), 401, "INVALID_CREDENTIALS")
-    await login(client, {**account, "password": new_password})
+    await transfer_request(client, {**account, "password": new_password})
 
 
 @pytest.mark.parametrize(
