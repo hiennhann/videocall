@@ -32,7 +32,7 @@
 - Chuyển trạng thái phòng sang Redis, chạy nhiều instance
 
 ### 2.3 Ngoài phạm vi
-Đăng nhập OAuth, quên mật khẩu qua email, 2FA, app mobile native, simulcast/SVC.
+Đăng nhập OAuth, quên mật khẩu qua email, 2FA, simulcast/SVC.
 
 ## 3. Mục tiêu phi chức năng
 
@@ -72,6 +72,16 @@
 ```
 
 Server **chỉ trung chuyển tín hiệu (signaling)**. Media đi thẳng giữa các trình duyệt, hoặc qua TURN khi P2P không thông, hoặc qua SFU ở giai đoạn sau.
+
+### 4.1 Web Videocall, ứng dụng mobile và trang quản trị
+
+Giao diện quản trị tại `/admin` tách biệt với web Videocall và dành cho tài khoản có quyền quản trị. Trang này quản lý người dùng, phòng, cấu hình và nhật ký hoạt động trên cùng hệ thống.
+
+Giai đoạn V2 bổ sung ứng dụng React Native cho điện thoại và thiết kế lại giao diện web. Videocall vẫn là một dự án với hai giao diện người dùng dùng chung một backend.
+
+- **Dùng chung tài khoản và phòng.** Tài khoản tạo trên web đăng nhập được trên app. Người dùng trên laptop có thể tạo phòng, rồi người dùng trên điện thoại nhập cùng mã phòng để gọi hoặc xem livestream.
+- **Dùng chung máy chủ.** Web và app kết nối tới cùng API, dùng các sự kiện Socket.IO hiện có để báo hiệu WebRTC và dùng chung TURN/SFU. Trang quản trị web quản lý người dùng và phòng của cả hai giao diện.
+- **Dùng chung repo GitHub.** Mã nguồn React Native có thể đặt trong thư mục `mobile/` của repo Videocall. Android và iOS có bản cài riêng, còn backend và dữ liệu vẫn dùng chung.
 
 ## 5. Công nghệ
 
@@ -125,6 +135,56 @@ Ghi chú: **WebRTC trong trình duyệt bắt buộc dùng JavaScript** (camera,
 | B5 | Prometheus + Grafana + cảnh báo |
 | B6 | Load test bằng bot aiortc, đo giới hạn |
 | B7 | Báo cáo: sơ đồ, số liệu, bài học |
+
+### Giai đoạn V2
+
+#### Ứng dụng mobile React Native
+
+Bổ sung ứng dụng React Native cho Android và iOS theo [kiến trúc dùng chung backend](#41-web-videocall-ứng-dụng-mobile-và-trang-quản-trị).
+
+1. Tạo ứng dụng trong thư mục `mobile/` và cho phép đăng ký, đăng nhập ngay trên app qua API xác thực dùng chung. Tài khoản tạo trên app cũng đăng nhập được trên web. App tuân theo cấu hình cho phép đăng ký của quản trị viên.
+2. Cho phép app nhập mã phòng để gọi video hoặc xem livestream cùng người dùng web.
+3. Kiểm thử cuộc gọi web ↔ mobile để xác nhận cả hai bên nhận được tiếng và hình. Kiểm thử thêm luồng phát từ web và xem trên app.
+
+#### Thiết kế lại web người dùng
+
+![Hình mẫu bố cục web V2 với thanh điều hướng, hai thanh bên, các tab, vùng nội dung chính và thanh dưới](assets/v2-web-layout.png)
+
+- Dùng thanh biểu tượng sát mé trái cho điều hướng chính và thanh bên trái cho danh sách phòng. Các tab phía trên chuyển giữa những nội dung liên quan.
+- Dành vùng chính cho lobby, cuộc gọi hoặc livestream. Thanh bên phải hiển thị thông tin theo ngữ cảnh, chẳng hạn danh sách thành viên và chat trong phòng. Thanh dưới hiển thị trạng thái kết nối khi đang gọi.
+- Trên màn hình hẹp, cho phép thu gọn các thanh bên để ưu tiên nội dung chính và nút điều khiển cuộc gọi.
+
+#### Giao diện sáng và tối
+
+Web người dùng, trang quản trị và ứng dụng mobile có tùy chọn **Sáng** và **Tối**. Lưu lựa chọn trên từng trình duyệt hoặc thiết bị để áp dụng ở lần mở tiếp theo.
+
+#### Thiết kế lại web quản trị
+
+Trang `/admin` dùng bố cục tương tự hình mẫu, với bảng màu, tiêu đề và menu riêng để dễ phân biệt với web người dùng. Menu quản trị gồm Dashboard, tài khoản, phòng, cấu hình và nhật ký.
+
+Tab **Dashboard** tự cập nhật tại chỗ hai chỉ số theo thời gian thực.
+
+- **Số phòng đang hoạt động** đếm các phòng có ít nhất một người đang ở trong phòng.
+- **Số tài khoản đang hoạt động** đếm các tài khoản đã đăng nhập có kết nối realtime. Mỗi tài khoản tính một lần, kể cả khi mở nhiều tab trong cùng phiên.
+
+Kiểm thử Dashboard khi người đầu tiên vào hoặc người cuối cùng rời phòng. Kiểm tra thêm một tài khoản mở nhiều tab vẫn được tính một lần và rời bộ đếm khi mất kết nối cuối cùng.
+
+#### Tài khoản và cấu hình quản trị
+
+- Bản demo cục bộ có tài khoản quản trị cố định `admin` với mật khẩu `admin123`, đăng nhập tại `/admin`. Bản triển khai có người dùng thật dùng mật khẩu quản trị mạnh, riêng cho từng môi trường.
+- Trong tab **Cấu hình**, quản trị viên có thể đổi tên hiển thị của dự án, màu chủ đạo và phông chữ trên web người dùng và app.
+- Quản trị viên có thể khóa và mở lại từng chức năng để bảo trì. Backend áp dụng trạng thái khóa cho cả web và app. Giao diện hiển thị thông báo bảo trì, và quản trị viên vẫn truy cập được trang cấu hình để mở lại chức năng.
+
+#### Giới hạn đăng nhập trên một thiết bị
+
+Mỗi tài khoản người dùng có tối đa một phiên thiết bị. Các tab dùng chung phiên trình duyệt được tính là một phiên. Quy tắc áp dụng cho cả web và app mobile.
+
+Khi thông tin đăng nhập trên thiết bị mới hợp lệ và thiết bị cũ còn phiên, thiết bị mới hiển thị lựa chọn **Chuyển sang thiết bị này** hoặc **Hủy**.
+
+- **Xác nhận chuyển.** Backend thông báo cho thiết bị cũ, thu hồi phiên và ngắt kết nối realtime ở đó, rồi cấp phiên đăng nhập cho thiết bị mới.
+- **Hủy.** Thiết bị mới trở về màn hình đăng nhập. Thiết bị cũ giữ phiên và tiếp tục cuộc gọi nếu đang gọi.
+
+Kiểm thử cả xác nhận và hủy trong lúc gọi, cùng trường hợp hai lượt đăng nhập đến gần như đồng thời. Máy chủ chỉ duy trì tối đa một phiên thiết bị hợp lệ.
 
 ## 7. Quy ước chung của dự án
 
