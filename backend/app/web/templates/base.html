@@ -9,11 +9,12 @@
   <link rel="stylesheet" href="/admin/static/admin.css">
   <script src="/admin/static/htmx.min.js" defer></script>
   <script src="/client/js/theme.js" type="module"></script>
+  <script src="/admin/static/dashboard.js" type="module"></script>
 </head>
 <body class="admin-page" hx-history="false">
   <div id="layout" hx-boost="true" hx-target="#layout" hx-select="#layout" hx-swap="outerHTML">
     <header class="topbar"><div class="shell">
-      <a class="brand" href="/admin">Quản trị Videocall</a>
+      <a class="brand" href="/admin"><span class="admin-mark" aria-hidden="true">V</span> Quản trị Videocall</a>
       <button class="secondary" type="button" data-theme-toggle>Giao diện tối</button>
       {% if admin %}
         <form class="inline" method="post" action="/admin/logout">
@@ -38,6 +39,14 @@
         {% if error %}<p role="alert" class="notice error">{{ error }}</p>{% endif %}
         {% block content %}{% endblock %}
       </main>
+      {% if admin %}
+        <aside class="admin-context">
+          <section class="panel">
+            <h2>Quản trị viên</h2>
+            <p>{{ admin.user.display_name }}</p>
+          </section>
+        </aside>
+      {% endif %}
     </div>
   </div>
 </body>

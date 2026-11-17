@@ -1,4 +1,4 @@
-from asyncio import Lock
+from asyncio import Event, Lock
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
@@ -105,6 +105,23 @@ class RoomStateStore:
         self._rooms: dict[str, RoomPresence] = {}
         self._connections: dict[str, Connection] = {}
         self._users_online: dict[str, set[str]] = {}
+        self.presence_changed = Event()
+
+    def presence_counts(self) -> dict[str, int]:
+        return {
+            "rooms_with_participants": sum(bool(room.peers) for room in self._rooms.values()),
+            "online_accounts": len(
+                {
+                    connection.user_id
+                    for connection in self._connections.values()
+                    if not connection.is_guest
+                }
+            ),
+        }
+
+    def _notify_presence(self) -> None:
+        self.presence_changed.set()
+        self.presence_changed = Event()
 
     def get_room(self, code: str) -> RoomPresence | None:
         return self._rooms.get(code)
@@ -118,6 +135,7 @@ class RoomStateStore:
     def add_connection(self, connection: Connection) -> None:
         self._connections[connection.peer_id] = connection
         self._users_online.setdefault(connection.user_id, set()).add(connection.peer_id)
+        self._notify_presence()
 
     def remove_connection(self, peer_id: str) -> None:
         connection = self._connections.pop(peer_id, None)
@@ -126,6 +144,7 @@ class RoomStateStore:
             peers.discard(peer_id)
             if not peers:
                 del self._users_online[connection.user_id]
+            self._notify_presence()
 
     def connections_for(self, user_id: str) -> tuple[Connection, ...]:
         return tuple(self._connections[sid] for sid in self._users_online.get(user_id, ()))
@@ -148,12 +167,14 @@ class RoomStateStore:
         room.peers[peer.id] = peer
         peer.connection.room_code = room.code
         room.empty_since = None
+        self._notify_presence()
 
     def remove_peer(self, room: RoomPresence, peer: Peer) -> None:
         room.peers.pop(peer.id, None)
         peer.connection.room_code = None
         if not room.peers:
             room.empty_since = datetime.now(UTC)
+        self._notify_presence()
 
     def remove_room(self, room: RoomPresence) -> None:
         for peer in list(room.peers.values()):

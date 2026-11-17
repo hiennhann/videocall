@@ -13,18 +13,34 @@
     <button class="secondary" type="button" data-theme-toggle>Giao diện tối</button>
     <button id="logout" class="secondary" type="button">Đăng xuất</button>
   </div></header>
-  <main class="shell page">
-    <h1>Phòng gọi</h1>
-    <p id="profile" class="muted"></p>
-    <p id="message" class="notice" role="status" hidden></p>
-    <div class="grid">
-      <section class="panel"><h2>Vào phòng</h2>
+  <main class="workspace">
+    <nav class="workspace-rail" aria-label="Điều hướng">
+      <a href="/lobby" aria-current="page"><span aria-hidden="true">⌂</span>Sảnh</a>
+      <a href="#rooms-sidebar"><span aria-hidden="true">▤</span>Phòng</a>
+      <a href="#account-sidebar"><span aria-hidden="true">○</span>Tài khoản</a>
+    </nav>
+    <details class="workspace-sidebar" id="rooms-sidebar" open>
+      <summary>Phòng của bạn</summary>
+      <section id="mine-panel" hidden>
+        <p class="muted" id="no-rooms">Chưa có phòng đã tạo.</p>
+        <ul id="mine" class="room-links"></ul>
+      </section>
+    </details>
+    <section class="workspace-main" aria-labelledby="lobby-title">
+      <h1 id="lobby-title">Sảnh cuộc gọi</h1>
+      <p id="message" class="notice" role="status" hidden></p>
+      <div class="workspace-tabs" role="tablist" aria-label="Thao tác phòng">
+        <button id="join-tab" type="button" role="tab" aria-selected="true" aria-controls="join-panel">Vào phòng</button>
+        <button id="create-tab" type="button" role="tab" aria-selected="false" aria-controls="create-panel" tabindex="-1" hidden>Tạo phòng</button>
+      </div>
+      <section class="panel" id="join-panel" role="tabpanel" aria-labelledby="join-tab">
+        <h2>Vào bằng mã phòng</h2>
         <form id="join-form">
           <label>Mã phòng <input name="code" placeholder="abc-defg-hjk" maxlength="12" autocomplete="off" required></label>
           <button>Tiếp tục</button>
         </form>
       </section>
-      <section class="panel" id="create-panel" hidden><h2>Tạo phòng</h2>
+      <section class="panel" id="create-panel" role="tabpanel" aria-labelledby="create-tab" hidden><h2>Tạo phòng</h2>
         <form id="create-form">
           <label>Loại phòng
             <select name="mode"><option value="meeting">Gọi nhóm</option><option value="livestream">Livestream</option></select>
@@ -34,15 +50,21 @@
           <button>Tạo phòng</button>
         </form>
       </section>
-    </div>
-    <section class="panel" id="mine-panel" hidden><h2>Phòng của bạn</h2><ul id="mine" class="link-list"></ul></section>
-    <section class="panel" id="password-panel" hidden><h2>Đổi mật khẩu</h2>
+      <section class="panel" id="password-panel" hidden><h2>Đổi mật khẩu</h2>
       <form id="password-form">
         <label>Mật khẩu hiện tại <input name="current_password" type="password" autocomplete="current-password" required></label>
         <label>Mật khẩu mới <input name="new_password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
         <button>Đổi mật khẩu</button>
       </form>
+      </section>
     </section>
+    <aside class="workspace-context" id="account-sidebar">
+      <section class="panel">
+        <h2>Tài khoản</h2>
+        <p id="profile">Đang tải…</p>
+        <p id="presence-state" class="status-pill" role="status">Đang kết nối…</p>
+      </section>
+    </aside>
   </main>
 </body>
 </html>

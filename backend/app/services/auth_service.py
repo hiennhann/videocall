@@ -224,7 +224,7 @@ class AuthService:
                 logger.warning("Refresh token bị dùng lại, đã thu hồi phiên.")
             raise AuthError(ErrorCode.INVALID_REFRESH_TOKEN)
 
-        if user.must_change_password:
+        if admin_only and user.must_change_password:
             raise AuthError(ErrorCode.PASSWORD_CHANGE_REQUIRED)
         replacement, tokens = self._new_session(
             db, user, token.family_id, now, client, policy, scope=scope

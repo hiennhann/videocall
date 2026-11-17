@@ -4,6 +4,26 @@ import { applyBranding } from "./theme.js";
 
 const authenticated = true;
 let presence;
+const tabs = [element("join-tab"), element("create-tab")];
+
+function selectTab(tab, focus = false) {
+  for (const button of tabs) {
+    const selected = button === tab;
+    button.setAttribute("aria-selected", String(selected));
+    button.tabIndex = selected ? 0 : -1;
+    element(button.getAttribute("aria-controls")).hidden = !selected;
+  }
+  if (focus) tab.focus();
+}
+
+for (const tab of tabs) {
+  tab.addEventListener("click", () => selectTab(tab));
+  tab.addEventListener("keydown", event => {
+    if (!["ArrowLeft", "ArrowRight"].includes(event.key) || tabs.some(button => button.hidden)) return;
+    event.preventDefault();
+    selectTab(tabs.find(button => button !== tab), true);
+  });
+}
 
 onForm("join-form", async fields => {
   const code = fields.code.trim().toLowerCase();
@@ -36,13 +56,24 @@ async function load() {
   const profile = await api("/me", { authenticated });
   element("profile").textContent = profile.display_name;
   element("password-panel").hidden = !profile.must_change_password;
-  element("join-form").closest("section").hidden = profile.must_change_password;
+  element("join-tab").parentElement.hidden = profile.must_change_password;
+  if (profile.must_change_password) {
+    element("join-panel").hidden = true;
+    element("create-panel").hidden = true;
+    element("presence-state").textContent = "Cần đổi mật khẩu";
+  } else {
+    selectTab(tabs.find(tab => tab.getAttribute("aria-selected") === "true") || tabs[0]);
+  }
+  if (profile.is_guest) element("presence-state").textContent = "Đang dùng tên khách";
   if (profile.is_guest || profile.must_change_password) return;
   if (!presence) {
     presence = window.io({
       transports: ["websocket"],
       auth: done => accessToken().then(token => done({token}), () => done({})),
     });
+    presence.on("connect", () => { element("presence-state").textContent = "Đã kết nối"; });
+    presence.on("disconnect", () => { element("presence-state").textContent = "Đang kết nối lại…"; });
+    presence.on("connect_error", () => { element("presence-state").textContent = "Kết nối tạm gián đoạn"; });
     presence.on("force_disconnect", ({reason}) => {
       presence.disconnect();
       sessionEnded(reason === "DEVICE_SESSION_REPLACED"
@@ -51,7 +82,7 @@ async function load() {
     });
     window.addEventListener("pagehide", () => presence.disconnect());
   }
-  element("create-panel").hidden = false;
+  element("create-tab").hidden = false;
   const rooms = await api("/rooms/mine", { authenticated });
   const list = element("mine");
   list.replaceChildren();
@@ -63,7 +94,8 @@ async function load() {
     item.append(link);
     list.append(item);
   }
-  element("mine-panel").hidden = rooms.length === 0;
+  element("mine-panel").hidden = false;
+  element("no-rooms").hidden = rooms.length !== 0;
 }
 
 if (await requireSession()) {

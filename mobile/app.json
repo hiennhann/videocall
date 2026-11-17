@@ -3,8 +3,7 @@
     "name": "Videocall",
     "slug": "videocall",
     "version": "2.0.0",
-    "userInterfaceStyle": "automatic",
-    "plugins": ["@config-plugins/react-native-webrtc", "expo-secure-store"],
+    "plugins": ["@config-plugins/react-native-webrtc", "expo-secure-store", "./plugins/with-debug-certificates"],
     "ios": {
       "bundleIdentifier": "com.hiennhann.videocall",
       "infoPlist": {

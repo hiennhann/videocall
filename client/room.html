@@ -12,7 +12,12 @@
   <header class="topbar"><div class="shell"><a class="brand" href="/lobby" data-project-name>Videocall</a>
     <button class="secondary" type="button" data-theme-toggle>Giao diện tối</button><a href="/lobby">Về lobby</a>
   </div></header>
-  <main class="shell page">
+  <main class="call-workspace">
+    <nav class="workspace-rail" aria-label="Điều hướng">
+      <a href="/lobby"><span aria-hidden="true">⌂</span>Sảnh</a>
+      <a href="#room-name" aria-current="page"><span aria-hidden="true">▣</span>Phòng</a>
+    </nav>
+    <div class="workspace-main">
     <div class="heading-row"><div><h1 id="room-name">Phòng gọi</h1><p id="room-code"></p></div><button id="copy-code" type="button" class="secondary" hidden>Sao chép mã</button></div>
     <p id="message" role="status" class="notice" hidden></p>
     <section id="join-panel" class="panel" hidden>
@@ -21,7 +26,8 @@
         <button id="enter-room" type="submit">Vào phòng và bật camera</button>
       </form>
     </section>
-    <section id="call-panel" hidden aria-label="Cuộc gọi">
+    <section id="call-panel" class="room-content" hidden aria-label="Cuộc gọi">
+      <div class="room-stage">
       <div id="video-grid" class="video-grid">
         <figure id="local-panel"><video id="local" autoplay muted playsinline></video><figcaption>Bạn</figcaption></figure>
         <figure id="local-screen-panel" class="shared-screen" hidden>
@@ -41,13 +47,20 @@
           <button type="submit">Cập nhật quyền phát</button>
         </form>
       </section>
-      <div class="controls">
+      <div class="controls call-controls">
         <button id="mic" type="button" class="secondary" aria-pressed="true">Mic bật</button>
         <button id="camera" type="button" class="secondary" aria-pressed="true">Camera bật</button>
         <button id="screen" type="button" class="secondary" aria-pressed="false" hidden>Chia sẻ màn hình</button>
         <button id="stats-toggle" type="button" class="secondary" aria-pressed="false">Chỉ số mạng</button>
         <button id="leave" type="button" class="danger">Rời phòng</button>
       </div>
+      </div>
+      <details class="room-sidebar" open>
+      <summary>Thành viên và chat</summary>
+      <section class="panel" aria-labelledby="members-title">
+        <h2 id="members-title">Thành viên</h2>
+        <ul id="room-members" class="room-links"></ul>
+      </section>
       <section class="panel room-chat" aria-labelledby="chat-title">
         <h2 id="chat-title">Tin nhắn</h2>
         <button id="older-messages" type="button" class="secondary" hidden>Tin nhắn cũ hơn</button>
@@ -58,7 +71,10 @@
           <button type="submit">Gửi</button>
         </form>
       </section>
+      </details>
     </section>
+    <footer class="call-status"><span id="call-state" class="status-pill" role="status">Chưa vào phòng</span></footer>
+    </div>
   </main>
   <template id="peer-tile">
     <figure class="peer-camera">

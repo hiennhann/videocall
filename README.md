@@ -45,6 +45,18 @@ docker compose run --rm migrate alembic check
 docker compose stop
 ```
 
+## Thử V2 ở môi trường dev
+
+Chạy Docker Compose ở thư mục dự án rồi tạo tài khoản quản trị demo lần đầu.
+
+```powershell
+docker compose exec app python -m app.cli create-demo-admin
+```
+
+Đăng nhập [trang quản trị](http://localhost:8000/admin/login) bằng `admin` và mật khẩu `admin123` trong môi trường dev cục bộ. Tài khoản đã có có thể đăng nhập lại sau khi nâng cấp từ V1. Dùng hai tài khoản khác nhau khi thử gọi giữa hai thiết bị, và dùng một tài khoản khi thử chuyển thiết bị.
+
+Xem cách cài [ứng dụng mobile](mobile/README.md) và [ma trận nghiệm thu V2](docs/docs_v2/06-trien-khai.md).
+
 ## Kiểm thử backend với Python 3.12
 
 Đặt `DATABASE_URL` trỏ tới PostgreSQL thử nghiệm bằng tài khoản có quyền chạy migration. Đặt `TEST_DATABASE_URL` trỏ tới cùng database bằng tài khoản có quyền đọc `alembic_version` và đọc, thêm, cập nhật bảng `users`, `refresh_tokens`. Khi dùng tài khoản app riêng, đặt `POSTGRES_APP_USER` thành tên role đã tạo để Alembic cấp quyền vào hai bảng mới. Suite integration tạo dữ liệu giả trong database này. Các lệnh chạy trong thư mục `backend/`.

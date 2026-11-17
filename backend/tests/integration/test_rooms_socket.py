@@ -1,4 +1,5 @@
 import asyncio
+import json
 import socket
 from collections import defaultdict
 from collections.abc import AsyncIterator
@@ -20,6 +21,7 @@ from app.cli import create_admin
 from app.realtime.server import RealtimeServer
 from app.services import room_service
 from app.sfu.control import SfuClient
+from app.web.session import CSRF_COOKIE
 
 
 @dataclass(slots=True)
@@ -702,3 +704,49 @@ async def test_admin_branding_and_maintenance_apply_to_new_room_actions(live: Se
             )
             assert restored.status_code == 200
         assert (await guest_socket.call("join_room", {"code": code}))["ok"]
+
+
+async def test_dashboard_presence_updates_for_rooms_and_unique_accounts(live: Server) -> None:
+    admin = await account(live, admin=True)
+    member = await account(live)
+    visitor = await guest(live)
+    code = await room(live, member)
+    dashboard_stream = live.url + "/admin/dashboard/events"
+    denied = await live.http.get(dashboard_stream, headers=bearer(member))
+    assert denied.status_code == 303
+    form = await live.http.get(live.url + "/admin/login")
+    csrf = form.cookies[CSRF_COOKIE]
+    signed_in = await live.http.post(
+        live.url + "/admin/login",
+        data={"email": admin["user"]["email"], "password": "room-test-password", "_csrf": csrf},
+        headers={"Cookie": f"{CSRF_COOKIE}={csrf}"},
+    )
+    assert signed_in.status_code == 303
+    cookie = "; ".join(f"{key}={value}" for key, value in signed_in.cookies.items())
+
+    async def counts(lines: AsyncIterator[str]) -> dict[str, int]:
+        async with asyncio.timeout(4):
+            async for line in lines:
+                if line.startswith("data: "):
+                    return json.loads(line[6:])
+        raise AssertionError("Dòng cập nhật Dashboard đã đóng.")
+
+    async with (
+        live.http.stream("GET", dashboard_stream, headers={"Cookie": cookie}) as stream,
+        AsyncExitStack() as stack,
+    ):
+        assert stream.status_code == 200
+        assert stream.headers["content-type"].startswith("text/event-stream")
+        events = stream.aiter_lines()
+        assert await counts(events) == {"rooms_with_participants": 0, "online_accounts": 0}
+        first = await peer(live, stack, member)
+        assert await counts(events) == {"rooms_with_participants": 0, "online_accounts": 1}
+        second = await peer(live, stack, member)
+        guest_socket = await peer(live, stack, visitor)
+        assert (await guest_socket.call("join_room", {"code": code}))["ok"]
+        assert await counts(events) == {"rooms_with_participants": 1, "online_accounts": 1}
+        assert (await guest_socket.call("leave_room"))["ok"]
+        assert await counts(events) == {"rooms_with_participants": 0, "online_accounts": 1}
+        await first.client.disconnect()
+        await second.client.disconnect()
+        assert await counts(events) == {"rooms_with_participants": 0, "online_accounts": 0}

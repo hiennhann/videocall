@@ -122,6 +122,11 @@ async def test_admin_account_lifecycle_and_live_permissions(
     assert old_password.json()["error"]["code"] == "INVALID_CREDENTIALS"
     changed_user = await token_for(client, email, temporary)
     assert changed_user["user"]["must_change_password"] is True
+    refreshed = await client.post(
+        "auth/refresh", json={"refresh_token": changed_user["refresh_token"]}
+    )
+    assert refreshed.status_code == 200
+    changed_user["access_token"] = refreshed.json()["access_token"]
     assert (await client.get("me", headers=headers(changed_user))).status_code == 200
     forbidden = await client.patch(
         "me", headers=headers(changed_user), json={"display_name": "New Name"}

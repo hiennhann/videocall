@@ -1,11 +1,15 @@
-from collections.abc import Awaitable, Callable
+import asyncio
+import json
+from collections.abc import AsyncIterator, Awaitable, Callable
 from datetime import UTC, datetime
 from pathlib import Path
+from time import monotonic
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, FastAPI, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRoute
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -21,6 +25,7 @@ from app.api.rooms import Rooms
 from app.core.config import DEMO_ADMIN_EMAIL
 from app.core.errors import AuthError, ErrorCode
 from app.core.security import decode_access_token
+from app.models import User
 from app.schemas.admin import UserPatch
 from app.schemas.auth import ChangePasswordRequest, LoginRequest
 from app.schemas.rooms import AdminKick
@@ -32,6 +37,7 @@ from app.services.admin_service import (
     user_counts,
 )
 from app.services.audit_service import AuditActor, list_audit
+from app.services.auth_service import AuthService
 from app.services.settings_service import settings_metadata
 from app.web.session import (
     WebAdmin,
@@ -195,6 +201,49 @@ async def dashboard(request: Request, admin: Admin, db: DB, service: AdminOps) -
         connections=connections,
         rooms=rooms,
         participants=participants,
+        presence=request.app.state.realtime.state.presence_counts(),
+    )
+
+
+@router.get("/dashboard/events")
+async def dashboard_events(request: Request, admin: Admin) -> StreamingResponse:
+    state = request.app.state.realtime.state
+    factory = request.app.state.session_factory
+
+    async def updates() -> AsyncIterator[str]:
+        previous = None
+        recheck_at = 0.0
+        while True:
+            now = monotonic()
+            if now >= recheck_at:
+                async with factory() as db:
+                    user = await db.get(User, admin.user.id)
+                    if (
+                        user is None
+                        or user.role != "admin"
+                        or not user.is_active
+                        or user.must_change_password
+                        or not await AuthService.has_active_session(
+                            db, admin.user.id, admin.family_id, scope="admin"
+                        )
+                    ):
+                        yield "event: session-ended\ndata: {}\n\n"
+                        return
+                recheck_at = now + 10
+            event = state.presence_changed
+            snapshot = state.presence_counts()
+            if snapshot != previous:
+                yield f"data: {json.dumps(snapshot)}\n\n"
+                previous = snapshot
+            try:
+                await asyncio.wait_for(event.wait(), timeout=max(0.1, recheck_at - monotonic()))
+            except TimeoutError:
+                yield ": keep-alive\n\n"
+
+    return StreamingResponse(
+        updates(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
     )
 
 

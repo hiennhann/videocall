@@ -61,8 +61,8 @@ class RoomCall {
     this.roomEvent("peer_left", ({peer_id: id}) => {
       this.liveMembers.delete(id);
       this.removePeer(id);
-      if (this.mode === "livestream") this.renderControls();
-      else if (!this.peers.size) message("Đang chờ người tham gia.");
+      this.renderControls();
+      if (this.mode === "meeting" && !this.peers.size) message("Đang chờ người tham gia.");
     });
     this.roomEvent("live_speaker_changed", ({speaker_peer_id: id}) => {
       this.speaker = id;
@@ -217,6 +217,15 @@ class RoomCall {
 
   renderControls() {
     const live = this.mode === "livestream";
+    element("call-state").textContent = this.joined ? "Đã kết nối" :
+      this.accepted && !this.stopped ? "Đang kết nối lại…" : "Chưa vào phòng";
+    const members = live ? [...this.liveMembers.values()] : [...this.peers.values()].map(entry => entry.peer);
+    element("room-members").replaceChildren(...(this.joined ? [{display_name: "Bạn"}, ...members] : [])
+      .map(peer => {
+        const row = document.createElement("li");
+        row.textContent = peer.display_name;
+        return row;
+      }));
     const canMute = this.joined && this.hostId === this.socket.id;
     for (const {tile} of this.peers.values()) tile.mute.hidden = !canMute;
     element("screen").hidden = !this.joined || !this.features.screen_share;
@@ -441,7 +450,7 @@ class RoomCall {
       showState: state => tile.setState(state),
       showError: error => message(error.message || "Kết nối video gặp lỗi.", true),
     });
-    this.peers.set(id, {tile, call});
+    this.peers.set(id, {peer, tile, call});
     tile.showStats(this.statsVisible);
     if (this.screen) {
       call.setScreen(this.screenStream, this.screen.getVideoTracks()[0])
