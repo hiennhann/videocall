@@ -1,5 +1,6 @@
 import { api, restoreSession, saveSession, takeSessionNotice } from "./api.js";
 import { element, message, onForm } from "./ui.js";
+import { applyBranding } from "./theme.js";
 
 const transfer = element("device-transfer");
 let pendingTransfer;
@@ -63,6 +64,7 @@ onForm("register-form", async (fields, form) => {
 
 try {
   const config = await api("/config/public");
+  applyBranding(config);
   element("register-panel").hidden = !config.allow_registration;
   element("guest-panel").hidden = !config.allow_guest || config.maintenance_mode;
   element("register-form").elements.password.minLength = config.password_min_length;

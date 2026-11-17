@@ -80,6 +80,7 @@ def create_app() -> FastAPI:
                 await engine.dispose()
 
     app = FastAPI(title="Video Call / Livestream", lifespan=lifespan)
+    app.state.demo_admin = settings.env == "dev"
     app.state.realtime = realtime
     app.state.metrics = metrics
     app.state.turn_service = TurnService(

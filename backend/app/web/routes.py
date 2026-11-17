@@ -18,6 +18,7 @@ from app.api.admin import AdminOps, PageSize
 from app.api.deps import DB, Auth, OperationalSettings, client_info, enforce_rate_limit
 from app.api.errors import AUTH_ERRORS
 from app.api.rooms import Rooms
+from app.core.config import DEMO_ADMIN_EMAIL
 from app.core.errors import AuthError, ErrorCode
 from app.core.security import decode_access_token
 from app.schemas.admin import UserPatch
@@ -129,7 +130,15 @@ async def login_form(request: Request) -> Response:
 @router.post("/login")
 async def login(request: Request, form: Form, db: DB, auth: Auth) -> Response:
     enforce_rate_limit(request, LOGIN_LIMIT, "admin.login", get_remote_address(request))
-    credentials = LoginRequest.model_validate(dict(form))
+    fields = dict(form)
+    identifier = fields.get("email")
+    if (
+        request.app.state.demo_admin
+        and isinstance(identifier, str)
+        and identifier.strip().casefold() == "admin"
+    ):
+        fields["email"] = DEMO_ADMIN_EMAIL
+    credentials = LoginRequest.model_validate(fields)
     user, tokens = await auth.login(
         db,
         credentials.email,

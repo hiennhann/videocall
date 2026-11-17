@@ -8,6 +8,7 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import DEMO_ADMIN_EMAIL
 from app.core.errors import AuthError, ErrorCode
 from app.core.security import (
     Identity,
@@ -65,6 +66,8 @@ class AuthService:
     ) -> User:
         if not (await self.settings.get(db)).allow_registration:
             raise AuthError(ErrorCode.REGISTRATION_DISABLED)
+        if email == DEMO_ADMIN_EMAIL:
+            raise AuthError(ErrorCode.EMAIL_TAKEN)
         return await self.create_account(db, email, display_name, password, role="user")
 
     async def create_account(

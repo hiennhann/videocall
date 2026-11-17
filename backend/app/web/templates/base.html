@@ -8,11 +8,13 @@
   <link rel="stylesheet" href="/client/styles.css">
   <link rel="stylesheet" href="/admin/static/admin.css">
   <script src="/admin/static/htmx.min.js" defer></script>
+  <script src="/client/js/theme.js" type="module"></script>
 </head>
-<body hx-history="false">
+<body class="admin-page" hx-history="false">
   <div id="layout" hx-boost="true" hx-target="#layout" hx-select="#layout" hx-swap="outerHTML">
     <header class="topbar"><div class="shell">
       <a class="brand" href="/admin">Quản trị Videocall</a>
+      <button class="secondary" type="button" data-theme-toggle>Giao diện tối</button>
       {% if admin %}
         <form class="inline" method="post" action="/admin/logout">
           {% include "_csrf.html" %}<button class="secondary">Đăng xuất</button>

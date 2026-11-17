@@ -94,7 +94,10 @@ async function request(path, method, body, token) {
   if (response.status === 204) return null;
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new ApiError(data?.error?.message || "Yêu cầu thất bại.", data?.error?.code, response.status, data?.error?.details);
+    throw new ApiError(
+      data?.error?.details?.notice || data?.error?.message || "Yêu cầu thất bại.",
+      data?.error?.code, response.status, data?.error?.details,
+    );
   }
   return data;
 }

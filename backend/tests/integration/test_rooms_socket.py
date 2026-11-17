@@ -663,3 +663,42 @@ async def test_device_transfer_notifies_and_removes_old_room_peer(live: Server) 
         await witness.event("peer_left", peer_id=old_peer)
         second = await peer(live, stack, confirmed.json())
         assert (await second.call("join_room", {"code": code}))["ok"]
+
+
+async def test_admin_branding_and_maintenance_apply_to_new_room_actions(live: Server) -> None:
+    admin = await account(live, admin=True)
+    host = await account(live)
+    newcomer = await guest(live)
+    code = await room(live, host)
+    patch = {
+        "project_name": "Studio V2",
+        "brand_color": "#125E88",
+        "brand_font": "serif",
+        "meeting_enabled": False,
+        "maintenance_message": "Đang bảo trì phòng gọi.",
+    }
+    async with AsyncExitStack() as stack:
+        joined = await peer(live, stack, host)
+        assert (await joined.call("join_room", {"code": code}))["ok"]
+        try:
+            changed = await live.http.patch("admin/settings", json=patch, headers=bearer(admin))
+            assert changed.status_code == 200
+            public = (await live.http.get("config/public")).json()
+            assert {key: public[key] for key in patch} == patch
+            blocked = await live.http.post("rooms", headers=bearer(host), json={"mode": "meeting"})
+            assert (
+                blocked.status_code == 503 and blocked.json()["error"]["code"] == "MAINTENANCE_MODE"
+            )
+            assert (
+                await joined.call("media_state", {"audio": False, "video": True, "screen": False})
+            )["ok"]
+            guest_socket = await peer(live, stack, newcomer)
+            assert_socket_error(
+                await guest_socket.call("join_room", {"code": code}), "MAINTENANCE_MODE"
+            )
+        finally:
+            restored = await live.http.patch(
+                "admin/settings", json=dict.fromkeys(patch), headers=bearer(admin)
+            )
+            assert restored.status_code == 200
+        assert (await guest_socket.call("join_room", {"code": code}))["ok"]

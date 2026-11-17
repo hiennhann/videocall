@@ -9,7 +9,9 @@
   <script type="module" src="/client/js/room.js"></script>
 </head>
 <body class="call-page">
-  <header class="topbar"><div class="shell"><a class="brand" href="/lobby">Videocall</a><a href="/lobby">Về lobby</a></div></header>
+  <header class="topbar"><div class="shell"><a class="brand" href="/lobby" data-project-name>Videocall</a>
+    <button class="secondary" type="button" data-theme-toggle>Giao diện tối</button><a href="/lobby">Về lobby</a>
+  </div></header>
   <main class="shell page">
     <div class="heading-row"><div><h1 id="room-name">Phòng gọi</h1><p id="room-code"></p></div><button id="copy-code" type="button" class="secondary" hidden>Sao chép mã</button></div>
     <p id="message" role="status" class="notice" hidden></p>

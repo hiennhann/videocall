@@ -6,6 +6,7 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.exc import ArgumentError
 
 NonEmptyString = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+DEMO_ADMIN_EMAIL = "admin@videocall.example.com"
 
 
 class Settings(BaseSettings):

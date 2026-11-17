@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-{% set labels = {"access": "Truy cập", "rooms": "Phòng và chat", "media": "Media", "turn": "TURN", "security": "Bảo mật"} %}
+{% set labels = {"branding": "Nhận diện", "access": "Truy cập", "rooms": "Phòng và chat", "media": "Media", "turn": "TURN", "security": "Bảo mật"} %}
 {% for category, fields in groups.items() %}
   <section class="panel settings-group"><h2>{{ labels[category] }}</h2>
   {% for key, field in fields %}
@@ -14,9 +14,12 @@
         </select>
       {% elif field.type == 'int' %}
         <input type="number" name="value" id="setting-{{ key }}" value="{{ field.value }}" min="{{ field.min }}" max="{{ field.max }}">
+      {% elif key == 'brand_color' %}
+        <input type="color" name="value" id="setting-{{ key }}" value="{{ field.value }}">
       {% elif field.type == 'enum' %}
         <select name="value" id="setting-{{ key }}">
-          {% for option in field.options %}<option value="{{ option }}"{% if field.value == option %} selected{% endif %}>{{ option }}</option>{% endfor %}
+          {% set font_labels = {"system": "Hệ thống", "serif": "Có chân", "monospace": "Đơn cách"} %}
+          {% for option in field.options %}<option value="{{ option }}"{% if field.value == option %} selected{% endif %}>{{ font_labels[option] if key == "brand_font" else option }}</option>{% endfor %}
         </select>
       {% else %}
         <input name="value" id="setting-{{ key }}" value="{{ field.value }}"{% if field.max_length is defined %} maxlength="{{ field.max_length }}"{% endif %}>

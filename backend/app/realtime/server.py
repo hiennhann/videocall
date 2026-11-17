@@ -206,7 +206,10 @@ class RealtimeServer(AccountEvents):
                     RATE_VIOLATIONS, "violations", sid
                 ):
                     self.sio.start_background_task(self.sio.disconnect, sid)
-                return {"ok": False, "error": error_payload(exc.code)}
+                error = error_payload(exc.code)
+                if exc.details and (notice := exc.details.get("notice")):
+                    error["message"] = notice
+                return {"ok": False, "error": error}
             except Exception:
                 return {
                     "ok": False,
@@ -271,7 +274,8 @@ class RealtimeServer(AccountEvents):
         if target == "sfu":
             if event != "offer":
                 raise AuthError(ErrorCode.INVALID_PAYLOAD)
-            answer = await self.rooms.live_offer(connection, "publish", description.sdp)
+            async with self.sessions() as db:
+                answer = await self.rooms.live_offer(db, connection, "publish", description.sdp)
             return answer.model_dump()
         await self.rooms.signal(
             connection, target, event, {key: value.model_dump(exclude_unset=True)}
@@ -282,7 +286,8 @@ class RealtimeServer(AccountEvents):
         sdp = SessionDescription.model_validate(data)
         if sdp.type != "offer" or len(sdp.sdp.encode()) > 20 * 1024:
             raise AuthError(ErrorCode.INVALID_PAYLOAD)
-        return (await self.rooms.live_offer(connection, "view", sdp)).model_dump()
+        async with self.sessions() as db:
+            return (await self.rooms.live_offer(db, connection, "view", sdp)).model_dump()
 
     async def unsubscribe(self, connection: Connection, data: Any) -> None:
         if data not in (None, {}):

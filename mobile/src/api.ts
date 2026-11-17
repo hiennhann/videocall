@@ -71,7 +71,7 @@ async function request<T>(path: string, method: string, body?: unknown, token?: 
     const data = response.status === 204 ? null : await response.json().catch(() => null);
     if (!response.ok) {
       throw new ApiError(
-        data?.error?.message || "Máy chủ chưa xử lý được yêu cầu.",
+        data?.error?.details?.notice || data?.error?.message || "Máy chủ chưa xử lý được yêu cầu.",
         response.status, data?.error?.code, data?.error?.details,
       );
     }

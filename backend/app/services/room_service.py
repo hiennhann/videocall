@@ -97,6 +97,7 @@ class RoomService:
         settings = await self.settings.get(db)
         if settings.maintenance_mode:
             raise AuthError(ErrorCode.MAINTENANCE_MODE)
+        self.require_mode(settings, body.mode)
         if body.mode == "livestream" and self.sfu is None:
             raise AuthError(ErrorCode.MODE_NOT_SUPPORTED)
         if body.max_participants is not None and body.max_participants > capacity_for_mode(
@@ -196,6 +197,7 @@ class RoomService:
                 return self._join_result(
                     room, presence, presence.peers[connection.peer_id], settings
                 )
+            self.require_mode(settings, room.mode)
 
             if room.password_hash is not None:
                 key = (connection.user_id, connection.ip)
@@ -379,12 +381,22 @@ class RoomService:
             presence.speaker_id = target
             await self.sync_speaker(presence)
 
+    @staticmethod
+    def require_mode(settings: SettingsSchema, mode: str) -> None:
+        enabled = settings.livestream_enabled if mode == "livestream" else settings.meeting_enabled
+        if not enabled:
+            details = (
+                {"notice": settings.maintenance_message} if settings.maintenance_message else None
+            )
+            raise AuthError(ErrorCode.MAINTENANCE_MODE, details=details)
+
     async def live_offer(
-        self, connection: Connection, mode: Mode, sdp: SessionDescription
+        self, db: AsyncSession, connection: Connection, mode: Mode, sdp: SessionDescription
     ) -> SessionDescription:
         presence = self.live_room(connection)
         async with presence.lock:
             self.joined_room(connection)
+            self.require_mode(await self.settings.get(db), "livestream")
             if mode == "publish" and presence.live_speaker() != connection.peer_id:
                 raise AuthError(ErrorCode.NOT_LIVE_SPEAKER)
             if mode == "view" and (

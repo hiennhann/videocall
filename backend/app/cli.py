@@ -5,7 +5,7 @@ from getpass import getpass
 from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from app.core.config import Settings
+from app.core.config import DEMO_ADMIN_EMAIL, Settings
 from app.core.errors import AuthError
 from app.schemas.auth import DisplayName, Email, Password
 from app.services.account_events import AccountEvents
@@ -32,8 +32,15 @@ def main() -> int:
     admin = commands.add_parser("create-admin")
     admin.add_argument("--email", required=True)
     admin.add_argument("--display-name", default="Admin")
+    commands.add_parser("create-demo-admin")
     args = parser.parse_args()
     try:
+        if args.command == "create-demo-admin":
+            if Settings().env != "dev":
+                parser.error("Tài khoản demo chỉ được tạo ở môi trường dev.")
+            asyncio.run(create_admin(DEMO_ADMIN_EMAIL, "Demo Admin", "admin123"))
+            print("Đã tạo tài khoản quản trị demo admin.")
+            return 0
         email = TypeAdapter(Email).validate_python(args.email)
         name = TypeAdapter(DisplayName).validate_python(args.display_name)
         password = getpass("Mật khẩu admin: ")

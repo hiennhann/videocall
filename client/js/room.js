@@ -3,6 +3,7 @@ import { LiveConnection } from "./live.js";
 import { PeerTile } from "./peer-tile.js";
 import { element, message, onForm } from "./ui.js";
 import { PeerCall } from "./webrtc.js";
+import { applyBranding } from "./theme.js";
 
 const code = new URLSearchParams(location.search).get("code") || "";
 const mediaButtons = {audio: ["mic", "Mic"], video: ["camera", "Camera"]};
@@ -628,6 +629,7 @@ element("copy-code").addEventListener("click", async () => {
 
 if (await requireSession()) {
   try {
+    applyBranding(await api("/config/public").catch(() => null));
     if (!/^[a-z]{3}-[a-z]{4}-[a-z]{3}$/.test(code)) throw new Error("Mã phòng không hợp lệ.");
     const room = await api("/rooms/" + code, {authenticated: true});
     roomMode = room.mode;

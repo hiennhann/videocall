@@ -1,11 +1,36 @@
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+
+ProjectName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+BrandColor = Annotated[str, StringConstraints(pattern=r"^#[0-9a-fA-F]{6}$")]
+BrandFont = Literal["system", "serif", "monospace"]
 
 
 class SettingsSchema(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
 
+    project_name: ProjectName = Field(
+        "Videocall",
+        description="Tên hiển thị của dự án.",
+        json_schema_extra={"category": "branding"},
+    )
+    brand_color: BrandColor = Field(
+        "#176276", description="Màu chủ đạo (#RRGGBB).", json_schema_extra={"category": "branding"}
+    )
+    brand_font: BrandFont = Field(
+        "system", description="Phông chữ giao diện.", json_schema_extra={"category": "branding"}
+    )
+    meeting_enabled: bool = Field(
+        True,
+        description="Cho phép tạo và vào phòng gọi nhóm.",
+        json_schema_extra={"category": "rooms"},
+    )
+    livestream_enabled: bool = Field(
+        True,
+        description="Cho phép tạo, vào, phát và xem livestream mới.",
+        json_schema_extra={"category": "rooms"},
+    )
     allow_registration: bool = Field(
         True, description="Cho phép tự đăng ký.", json_schema_extra={"category": "access"}
     )
@@ -144,6 +169,11 @@ class SettingsSchema(BaseModel):
 class PublicSettings(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    project_name: ProjectName
+    brand_color: BrandColor
+    brand_font: BrandFont
+    meeting_enabled: bool
+    livestream_enabled: bool
     allow_registration: bool
     allow_guest: bool
     maintenance_mode: bool

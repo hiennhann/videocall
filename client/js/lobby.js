@@ -1,5 +1,6 @@
 import { accessToken, api, logout, requireSession, sessionEnded } from "./api.js";
 import { element, message, onForm, roomUrl } from "./ui.js";
+import { applyBranding } from "./theme.js";
 
 const authenticated = true;
 let presence;
@@ -28,11 +29,7 @@ onForm("password-form", async fields => {
 });
 
 element("logout").addEventListener("click", async () => {
-  try {
-    await logout();
-  } finally {
-    location.assign("/");
-  }
+  await logout().catch(() => {});
 });
 
 async function load() {
@@ -71,6 +68,18 @@ async function load() {
 
 if (await requireSession()) {
   try {
+    const config = await api("/config/public").catch(() => null);
+    applyBranding(config);
+    if (config) {
+      const mode = element("create-form").elements.mode;
+      mode.options[0].disabled = config.meeting_enabled === false;
+      mode.options[1].disabled = config.livestream_enabled === false;
+      if (mode.selectedOptions[0].disabled && !mode.options[1].disabled) mode.value = "livestream";
+      if (config.maintenance_mode || (mode.options[0].disabled && mode.options[1].disabled)) {
+        element("create-form").querySelector("button").disabled = true;
+        message(config.maintenance_message || "Tạo phòng đang bảo trì.");
+      }
+    }
     await load();
   } catch (error) {
     if (error.status === 401) location.replace("/");
