@@ -11,7 +11,8 @@ export class LiveConnection {
       const track = stream?.getTracks().find(track => track.kind === kind);
       const options = track ? {direction: "sendonly", streams: [stream]} : {direction: "recvonly"};
       const transceiver = this.pc.addTransceiver(track ?? kind, options);
-      if (kind === "video" && RTCRtpSender.getCapabilities && transceiver.setCodecPreferences) {
+      if (kind === "video" && typeof RTCRtpSender !== "undefined" &&
+          RTCRtpSender.getCapabilities && transceiver.setCodecPreferences) {
         const vp8 = RTCRtpSender.getCapabilities(kind)?.codecs.filter(codec => codec.mimeType === "video/VP8");
         if (vp8?.length) transceiver.setCodecPreferences(vp8);
       }

@@ -25,7 +25,7 @@ export class PeerCall {
       if (!this.canOffer || pc.signalingState !== "stable") return;
       this.makingOffer = true;
       try {
-        await pc.setLocalDescription();
+        await pc.setLocalDescription(await pc.createOffer());
         await this.signal("offer", {sdp: pc.localDescription.toJSON()});
       } finally {
         this.makingOffer = false;
@@ -79,7 +79,7 @@ export class PeerCall {
       this.candidates = [];
       for (const candidate of queued) await this.addCandidate(candidate);
       if (sdp.type === "offer") {
-        await pc.setLocalDescription();
+        await pc.setLocalDescription(await pc.createAnswer());
         await this.signal("answer", {sdp: pc.localDescription.toJSON()});
       }
       this.canOffer = true;
