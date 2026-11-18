@@ -77,7 +77,7 @@ Server **chỉ trung chuyển tín hiệu (signaling)**. Media đi thẳng giữ
 
 Giao diện quản trị tại `/admin` tách biệt với web Videocall và dành cho tài khoản có quyền quản trị. Trang này quản lý người dùng, phòng, cấu hình và nhật ký hoạt động trên cùng hệ thống.
 
-Giai đoạn V2 bổ sung ứng dụng React Native cho điện thoại và thiết kế lại giao diện web. Videocall vẫn là một dự án với hai giao diện người dùng dùng chung một backend.
+Giai đoạn V2 tập trung thiết kế lại giao diện web người dùng và quản trị. Điện thoại dùng web trên trình duyệt để kiểm thử. App React Native được lưu cho đợt phát triển sau, dùng chung backend, tài khoản và mã phòng. [Kế hoạch tiếp tục app](../docs_v2/08-app-mobile-sau-nay.md)
 
 - **Dùng chung tài khoản và phòng.** Tài khoản tạo trên web đăng nhập được trên app. Người dùng trên laptop có thể tạo phòng, rồi người dùng trên điện thoại nhập cùng mã phòng để gọi hoặc xem livestream.
 - **Dùng chung máy chủ.** Web và app kết nối tới cùng API, dùng các sự kiện Socket.IO hiện có để báo hiệu WebRTC và dùng chung TURN/SFU. Trang quản trị web quản lý người dùng và phòng của cả hai giao diện.
@@ -140,6 +140,8 @@ Ghi chú: **WebRTC trong trình duyệt bắt buộc dùng JavaScript** (camera,
 
 #### Ứng dụng mobile React Native
 
+Tạm hoãn từ ngày 18/11/2026. Các mục dưới đây được giữ làm kế hoạch cho đợt phát triển app sau. [Phạm vi V2 hiện tại](../docs_v2/01-pham-vi.md)
+
 Bổ sung ứng dụng React Native cho Android và iOS theo [kiến trúc dùng chung backend](#41-web-videocall-ứng-dụng-mobile-và-trang-quản-trị).
 
 1. Tạo ứng dụng trong thư mục `mobile/` và cho phép đăng ký, đăng nhập ngay trên app qua API xác thực dùng chung. Tài khoản tạo trên app cũng đăng nhập được trên web. App tuân theo cấu hình cho phép đăng ký của quản trị viên.
@@ -156,7 +158,7 @@ Bổ sung ứng dụng React Native cho Android và iOS theo [kiến trúc dùng
 
 #### Giao diện sáng và tối
 
-Web người dùng, trang quản trị và ứng dụng mobile có tùy chọn **Sáng** và **Tối**. Lưu lựa chọn trên từng trình duyệt hoặc thiết bị để áp dụng ở lần mở tiếp theo.
+Web người dùng trên máy tính/điện thoại và trang quản trị có tùy chọn **Sáng** và **Tối**. Lưu lựa chọn trên từng trình duyệt để áp dụng ở lần mở tiếp theo. App sẽ tiếp tục tính năng này trong đợt phát triển sau.
 
 #### Thiết kế lại web quản trị
 

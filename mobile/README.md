@@ -1,5 +1,7 @@
 # Videocall mobile
 
+**Tạm hoãn từ ngày 18/11/2026.** Giai đoạn hiện tại kiểm thử điện thoại bằng web. Mã app và hướng dẫn dưới đây được lưu để tiếp tục sau. [Kế hoạch phát triển app sau](../docs/docs_v2/08-app-mobile-sau-nay.md)
+
 Ứng dụng React Native kết nối backend Videocall dùng chung với web. Thực hiện các lệnh bên dưới tại thư mục `mobile/`.
 
 ## Chuẩn bị kết nối

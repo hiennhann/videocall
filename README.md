@@ -55,7 +55,7 @@ docker compose exec app python -m app.cli create-demo-admin
 
 Đăng nhập [trang quản trị](http://localhost:8000/admin/login) bằng `admin` và mật khẩu `admin123` trong môi trường dev cục bộ. Tài khoản đã có có thể đăng nhập lại sau khi nâng cấp từ V1. Dùng hai tài khoản khác nhau khi thử gọi giữa hai thiết bị, và dùng một tài khoản khi thử chuyển thiết bị.
 
-Xem cách cài [ứng dụng mobile](mobile/README.md) và [ma trận nghiệm thu V2](docs/docs_v2/06-trien-khai.md).
+Điện thoại kiểm thử bằng web trên trình duyệt qua HTTPS. App React Native được lưu để phát triển sau. Xem [kế hoạch app](docs/docs_v2/08-app-mobile-sau-nay.md) và [ma trận nghiệm thu V2](docs/docs_v2/06-trien-khai.md).
 
 ## Kiểm thử backend với Python 3.12
 

@@ -30,7 +30,7 @@ Giữ dấu hiệu nhận diện riêng qua tiêu đề **Quản trị**, bảng
 | Cấu hình | Chỉnh tên hiển thị, màu chủ đạo, phông chữ. Có phần bật/tắt từng chức năng và nội dung thông báo bảo trì. |
 | Nhật ký | Xem các thay đổi cấu hình và thao tác quản trị đã ghi nhận. |
 
-## 4. App React Native
+## 4. App React Native cho đợt phát triển sau
 
 1. Màn hình **Đăng ký** và **Đăng nhập** dùng chung tài khoản với web. Điểm chuyển giữa hai màn hình hiển thị theo cấu hình đăng ký.
 2. Khi có phiên ở thiết bị cũ, hiển thị **Chuyển sang thiết bị này** và **Hủy** cùng thông tin rằng chuyển thiết bị sẽ kết thúc phiên cũ.

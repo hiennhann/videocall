@@ -4,7 +4,7 @@
 
 ## Môi trường ngày 18/11/2026
 
-Máy phát triển dùng Windows và Docker Desktop. Người dùng có iPhone, hiện chưa có Mac, Apple Developer trả phí hoặc VPS/domain. Các bài thử cần iPhone thật và hai mạng Internet được thực hiện khi có bản cài phù hợp và server truy cập được.
+Máy phát triển dùng Windows và Docker Desktop. Người dùng có iPhone, hiện chưa có Mac, Apple Developer trả phí hoặc VPS/domain. Theo quyết định ngày 18/11/2026, nghiệm thu điện thoại dùng Safari. App React Native được lưu để phát triển sau. [Kế hoạch app](08-app-mobile-sau-nay.md)
 
 ## Bằng chứng đã có
 
@@ -16,7 +16,7 @@ Máy phát triển dùng Windows và Docker Desktop. Người dùng có iPhone, 
 | Quản trị và giao diện | Đã đăng nhập tài khoản demo, nhận số liệu Dashboard qua SSE, kiểm tra bố cục hẹp và lưu chế độ sáng/tối. |
 | Mobile tại `77cee0c` | TypeScript và bundle Android/iOS đạt trên Mobile CI. [Lượt chạy](https://github.com/hiennhann/videocall/actions/runs/44116578931) |
 
-## Build native
+## Build native đã lưu cho đợt app sau
 
 Theo dõi bước biên dịch Android và iOS tại commit `5901045` trên [lượt chạy native](https://github.com/hiennhann/videocall/actions/runs/44219003259). [Workflow](../../.github/workflows/mobile.yml)
 
@@ -33,9 +33,8 @@ Backend CI tại cùng commit cũng thành công. Các artifact native được 
 
 | Bài thử | Điều kiện | Tiêu chí |
 |---|---|---|
-| Web ↔ app Android | Điện thoại Android arm64, bản phát triển đã cài và backend cùng Wi-Fi | Đăng ký/đăng nhập, vào phòng, tiếng/hình hai chiều và xem livestream web |
-| Web ↔ app iPhone | Mac với Xcode để cài bằng tài khoản Apple hoặc tài khoản Apple Developer cho EAS Build; iPhone đã đăng ký | Các luồng tài khoản, chuyển thiết bị, tiếng/hình hai chiều và xem livestream |
+| Laptop ↔ web trên iPhone | Safari và laptop cùng Wi-Fi, HTTPS được điện thoại tin cậy | Đăng ký/đăng nhập, vào phòng, tiếng/hình hai chiều và xem livestream từ laptop |
 | Hai laptop thật | Hai tài khoản khác nhau, hai máy cùng Wi-Fi và HTTPS tin cậy | Vào cùng mã phòng, nhận tiếng/hình, bật/tắt media và rời phòng |
 | Wi-Fi ↔ 4G/5G | Backend HTTPS cùng TURN/SFU có địa chỉ truy cập được từ cả hai mạng | Kết nối được trong cả lượt dùng đường trực tiếp phù hợp và lượt buộc TURN |
 
-Với từng lượt chạy, ghi commit, phiên bản bản cài, hệ điều hành, mạng sử dụng, loại candidate ICE, kết quả tiếng/hình và lỗi quan sát được. Dùng tài khoản riêng trên mỗi thiết bị khi thử gọi, rồi dùng chung tài khoản cho bài thử chuyển thiết bị.
+Với từng lượt chạy, ghi commit, trình duyệt, hệ điều hành, mạng sử dụng, loại candidate ICE, kết quả tiếng/hình và lỗi quan sát được. Dùng tài khoản riêng trên mỗi thiết bị khi thử gọi, rồi dùng chung tài khoản cho bài thử chuyển thiết bị. Các bài thử web ↔ app Android/iPhone tiếp tục theo tài liệu phát triển app sau.

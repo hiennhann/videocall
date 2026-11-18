@@ -2,6 +2,8 @@
 
 [Mục lục V2](README.md)
 
+Các luồng app trong tài liệu này dùng làm tham chiếu cho đợt phát triển sau. Nghiệm thu hiện tại chạy web trên laptop và điện thoại. [Kế hoạch app](08-app-mobile-sau-nay.md)
+
 Đường dẫn và sự kiện đã có dựa trên [API V1](../docs/02-api.md) và [Socket.IO V1](../docs/03-socket-events.md). Các phần đánh dấu **V2 đề xuất** cần được review trước khi viết mã.
 
 ## 1. Đăng ký và đăng nhập

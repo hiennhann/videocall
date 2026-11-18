@@ -2,6 +2,8 @@
 
 [Mục lục V2](README.md)
 
+Phần React Native được lưu cho đợt phát triển app sau. Hiện điện thoại dùng web trên trình duyệt. [Quyết định phạm vi](08-app-mobile-sau-nay.md)
+
 ## 1. Kiến trúc tổng quan
 
 ```mermaid
