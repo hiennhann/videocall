@@ -43,7 +43,7 @@ async function register(page, suffix) {
   await page.locator('#account-form [name=password]').fill(password);
   await page.locator('#account-form button').click();
   await page.waitForURL("**/lobby");
-  await page.locator("#create-tab").waitFor({state:"visible"});
+  await page.locator(".home-actions a[href='/rooms/create']").waitFor({state:"visible"});
   return email;
 }
 async function decoded(page, selector) {
@@ -97,7 +97,32 @@ async function mediaContext(browser) {
       await snapshot(page,channel,"login");
       const email = await register(page, channel);
       await snapshot(page,channel,"lobby");
-      await page.locator("#create-tab").click();
+      assert.equal(await page.locator("#join-form, #create-form, #mine, #profile").count(),0);
+      await page.evaluate(()=>{window.__homeDocument=true;});
+      await page.locator('.menu-item[href="/rooms"]').click();
+      await page.waitForURL(base+"/rooms");
+      await page.locator("#mine-panel").waitFor({state:"visible"});
+      assert.equal(await page.evaluate(()=>window.__homeDocument),undefined);
+      assert.equal(await page.locator("#join-form, #create-form, #profile").count(),0);
+      await snapshot(page,channel,"rooms");
+      await page.locator('.menu-item[href="/account"]').click();
+      await page.waitForURL(base+"/account");
+      await page.locator("#account-panel").waitFor({state:"visible"});
+      assert.equal(await page.locator("#join-form, #create-form, #mine").count(),0);
+      await snapshot(page,channel,"account");
+      await page.goBack(); await page.waitForURL(base+"/rooms");
+      await page.locator("#mine-panel").waitFor({state:"visible"});
+      await page.goForward(); await page.waitForURL(base+"/account");
+      await page.locator("#account-panel").waitFor({state:"visible"});
+      await page.reload();
+      await page.locator("#account-panel").waitFor({state:"visible"}).catch(async error=>{console.log('Reload:',page.url(),await page.locator('#message').textContent());throw error;});
+      await page.locator('.menu-item[href="/lobby"]').click();
+      await page.waitForURL(base+"/lobby");
+      await page.locator(".home-actions a[href='/rooms/create']").click();
+      await page.waitForURL(base+"/rooms/create");
+      await page.locator("#create-form").waitFor({state:"visible"});
+      assert.equal(await page.locator("#join-form, #mine, #profile").count(),0);
+      await snapshot(page,channel,"create");
       await page.locator('#create-form [name=name]').fill(`UI ${channel} meeting`);
       await page.locator('#create-form [name=password]').fill("room-test");
       await page.locator('#create-form button').click();
@@ -114,6 +139,15 @@ async function mediaContext(browser) {
       await guest.goto(base); await guest.locator("#guest-panel summary").click();
       await guest.locator('#guest-form [name=display_name]').fill("UI Khách");
       await guest.locator('#guest-form button').click(); await guest.waitForURL("**/lobby");
+      await guest.goto(base+"/rooms/create");
+      await guest.locator("#message").waitFor({state:"visible"});
+      assert.equal(await guest.locator("#create-form").isVisible(),false);
+      await guest.locator('.menu-item[href="/lobby"]').click(); await guest.waitForURL(base+"/lobby");
+      await guest.locator(".home-actions a[href='/rooms/join']").click();
+      await guest.waitForURL(base+"/rooms/join");
+      await guest.locator("#join-form").waitFor({state:"visible"});
+      assert.equal(await guest.locator("#create-form, #mine, #profile").count(),0);
+      await snapshot(guest,channel,"join");
       await guest.locator('#join-form [name=code]').fill(code); await guest.locator('#join-form button').click();
       await guest.waitForURL("**/room?code=*");
       await guest.locator('#enter-form [name=password]').fill("room-test"); await guest.locator("#enter-room").click();
@@ -134,7 +168,7 @@ async function mediaContext(browser) {
       await page.locator("#members-tab").click(); assert.equal(await page.locator("#room-members li").count(),2);
       await page.locator("#chat-tab").click();
       await snapshot(page,channel,"call");
-      report.functionality.push(`${channel}: registration, login, guest, private room, join by code, P2P decoded video in both directions, escaped chat, mic/camera, stats, members`);
+      report.functionality.push(`${channel}: independent home/rooms/account/join/create documents, navigation/back/forward/reload, guest create restriction, registration/login, private room, P2P decoded video both ways, escaped chat, mic/camera, stats, members`);
 
       const adminContext = await browser.newContext({reducedMotion:"reduce"}); contexts.push(adminContext);
       const admin = await adminContext.newPage(); monitor(admin);
@@ -163,8 +197,9 @@ async function mediaContext(browser) {
       await guest.locator("#leave").click();
       await page.locator("#leave").click();
       await guest.waitForURL("**/lobby"); await page.waitForURL("**/lobby");
-      await page.locator("#create-tab").waitFor({state:"visible"});
-      await page.locator("#create-tab").click(); await page.locator('#create-form [name=mode]').selectOption("livestream");
+      await page.locator(".home-actions a[href='/rooms/create']").click();
+      await page.waitForURL(base+"/rooms/create");
+      await page.locator('#create-form [name=mode]').selectOption("livestream");
       await page.locator('#create-form [name=name]').fill("UI livestream"); await page.locator('#create-form button').click();
       await page.waitForURL("**/room?code=*");
       const liveUrl = page.url();
@@ -176,10 +211,16 @@ async function mediaContext(browser) {
       await snapshot(guest,channel,"livestream");
       await guest.locator("#leave").click(); await page.locator("#leave").click();
       await guest.waitForURL("**/lobby"); await page.waitForURL("**/lobby");
-      report.functionality.push(`${channel}: admin HTMX navigation/filter/detail, SSE dashboard, CSRF forms, confirmation cancellation, SFU livestream decoded, leave`);
+      report.functionality.push(`${channel}: admin full-page navigation/filter/detail and HTMX forms, SSE dashboard, CSRF, confirmation cancellation, SFU livestream decoded, leave`);
     } finally {
       for (const context of contexts) await context.close();
       await browser.close();
+    }
+    if (channel === "chrome") {
+      // Full-document navigation refreshes the in-memory token on each page.
+      // Separate both browser passes to respect the existing 30/minute IP limit.
+      console.log("Chrome checks passed; waiting for the refresh rate-limit window before Edge.");
+      await new Promise(resolve => setTimeout(resolve, 60000));
     }
   }
   assert.deepEqual(errors,[]);

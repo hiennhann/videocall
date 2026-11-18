@@ -4,6 +4,8 @@
 > Nguồn tham chiếu: ảnh mockup gồm hai giao diện **"ConnectV – Webapp Người dùng"** (nền sáng) và **"ConnectV – Trang Quản trị Admin (Tối giản)"** (nền tối).
 > Quy tắc làm việc giữ nguyên: thiết kế trước, code sau; tài liệu là bản sống.
 
+> **Chốt bổ sung 18/11/2026:** Các mục menu và Vào/Tạo phòng dùng **trang HTML riêng, URL riêng, điều hướng tải trang đầy đủ**. Thay phương án một trang/hash router ở mục 5.1, 9.1 và U2 cho các màn hình hiện có. Chat/Thành viên vẫn là hai panel trong phòng gọi theo xác nhận của người dùng. [Ánh xạ đường dẫn và kiểm thử](navigation-pages-report.md).
+
 ## 1. Mục tiêu và phạm vi
 
 1. Đổi giao diện **web người dùng** và **trang quản trị** theo phong cách của mockup.

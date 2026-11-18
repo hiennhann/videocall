@@ -2,6 +2,8 @@
 
 Ngày kiểm tra: **18/11/2026**. Nhánh: **`feat/update-ui-v3`**.
 
+> Báo cáo này ghi nhận đợt áp dụng giao diện đầu tiên. Người dùng sau đó chốt tách mỗi mục menu và Vào/Tạo phòng thành trang riêng. Xem [báo cáo điều hướng hiện tại](navigation-pages-report.md).
+
 ## Phạm vi theo xác nhận của người dùng
 
 Người dùng duyệt trang mẫu U1 và yêu cầu thay toàn bộ giao diện web người dùng, web quản trị, đồng thời giữ các chức năng đã làm. Đợt này áp dụng thiết kế đã duyệt vào các màn hình hiện có. Các đường dẫn `/`, `/lobby`, `/room` và `/admin/*` tiếp tục hoạt động; không thêm migration hoặc chức năng backend thuộc E1–E7.
@@ -20,7 +22,7 @@ Không thêm các mục chưa có backend như bạn bè, nhắn tin riêng, l�
 ## Cách triển khai
 
 - Hai web dùng chung `tokens.css`, `base.css`, `components.css`, phông Inter và sprite SVG cục bộ của U1. `client/styles.css` và `admin.css` chỉ giữ phần bố cục riêng.
-- Giữ toàn bộ ID DOM cũ và tên trường biểu mẫu của ba trang người dùng. Các module API, refresh/thu hồi phiên, WebRTC, SFU, chat và stats tiếp tục thực hiện nghiệp vụ hiện có.
+- Giữ tên trường và ID biểu mẫu ở các trang tương ứng. Sau yêu cầu tách trang, các phần phòng/tài khoản/Vào/Tạo được chuyển ra khỏi `/lobby` và module sảnh được chia theo trang; API, refresh/thu hồi phiên, WebRTC, SFU, chat và stats tiếp tục thực hiện nghiệp vụ hiện có.
 - Chỉ bổ sung điều hướng tab Chat/Thành viên và hành vi giữ focus cho hộp thoại ở client. Thẻ phòng vẫn lấy dữ liệu thật từ `/rooms/mine`, gán tên bằng `textContent`.
 - Xác nhận thao tác quản trị dùng hộp thoại cùng thiết kế U1, chuyển tiếp yêu cầu HTMX hiện có sau khi xác nhận. Hủy/Esc không gửi thao tác. Chính sách CSP tiếp tục chặn script ngoài nguồn và inline; bổ sung `font-src 'self'` cho Inter và favicon dạng data.
 - Sáng/tối/theo hệ thống lưu riêng cho người dùng và admin. Mặc định người dùng sáng, admin tối. Khóa theme cũ được giữ; lựa chọn U1 có khóa riêng.

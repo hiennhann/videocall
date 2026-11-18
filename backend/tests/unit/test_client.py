@@ -12,7 +12,11 @@ async def test_serves_client_pages_and_socket_io_asset() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         for path, element in (
             ("/", "account-form"),
-            ("/lobby", "join-form"),
+            ("/lobby", "page-title"),
+            ("/rooms", "mine"),
+            ("/account", "password-form"),
+            ("/rooms/join", "join-form"),
+            ("/rooms/create", "create-form"),
             ("/room", "enter-form"),
         ):
             response = await client.get(path)
@@ -21,6 +25,29 @@ async def test_serves_client_pages_and_socket_io_asset() -> None:
         asset = await client.get("/client/vendor/socket.io.min.js")
         assert asset.status_code == 200
         assert "Socket.IO" in asset.text
+
+
+async def test_workspace_routes_have_separate_content() -> None:
+    app = FastAPI()
+    mount_client(app)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        for path, own, excluded in (
+            (
+                "/lobby",
+                'href="/rooms/join"',
+                ('id="mine"', 'id="profile"', 'id="join-form"', 'id="create-form"'),
+            ),
+            ("/rooms", 'id="mine"', ('id="profile"', 'id="join-form"', 'id="create-form"')),
+            ("/account", 'id="profile"', ('id="mine"', 'id="join-form"', 'id="create-form"')),
+            ("/rooms/join", 'id="join-form"', ('id="mine"', 'id="profile"', 'id="create-form"')),
+            ("/rooms/create", 'id="create-form"', ('id="mine"', 'id="profile"', 'id="join-form"')),
+        ):
+            response = await client.get(path)
+            assert response.status_code == 200
+            assert own in response.text
+            assert not any(fragment in response.text for fragment in excluded)
+            assert 'href="#rooms-sidebar"' not in response.text
+            assert 'href="#account-sidebar"' not in response.text
 
 
 @pytest.mark.parametrize("dev", [True, False])

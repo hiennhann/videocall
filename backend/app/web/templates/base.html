@@ -23,7 +23,7 @@
     {% if admin %}
     <aside class="admin-sidebar">
       <a class="brand" href="/admin" aria-label="Tổng quan quản trị"><span class="brand-mark">{{ icon('video') }}</span><span class="sidebar-label" data-project-name>Videocall</span><span class="badge badge--primary">ADMIN</span></a>
-      <nav class="admin-nav" aria-label="Quản trị">
+      <nav class="admin-nav" aria-label="Quản trị" hx-boost="false">
         {% for name, label, path, symbol in (
           ('dashboard', 'Tổng quan', '/admin', 'home'), ('rooms', 'Phòng trực tiếp', '/admin/rooms', 'video'),
           ('users', 'Tài khoản', '/admin/users', 'users'), ('settings', 'Cấu hình', '/admin/settings', 'settings'),

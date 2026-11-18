@@ -61,6 +61,8 @@ docker compose exec app python -m app.cli create-demo-admin
 
 Giao diện V3 đã áp dụng cho [web người dùng](http://localhost:8000/) và [web quản trị](http://localhost:8000/admin), dùng chung màu, phông và thành phần đã duyệt; có sáng/tối/theo hệ thống và bố cục cho điện thoại. Chạy lại `docker compose up --build --wait` để cập nhật. Xem [báo cáo tích hợp và ảnh kiểm tra](docs/docs_v3/ui-integration-report.md). Trang [mẫu U1](http://localhost:8000/styleguide) tiếp tục có khi `ENV=dev`.
 
+Các mục người dùng mở trang riêng: [Trang chủ](http://localhost:8000/lobby), [Phòng của tôi](http://localhost:8000/rooms), [Tài khoản](http://localhost:8000/account), [Vào phòng](http://localhost:8000/rooms/join), [Tạo phòng](http://localhost:8000/rooms/create). Mỗi trang chỉ chứa nội dung của mục đó; Chat/Thành viên tiếp tục nằm trong phòng gọi. Xem [báo cáo tách trang](docs/docs_v3/navigation-pages-report.md).
+
 ## Kiểm thử backend với Python 3.12
 
 Đặt `DATABASE_URL` trỏ tới PostgreSQL thử nghiệm bằng tài khoản có quyền chạy migration. Đặt `TEST_DATABASE_URL` trỏ tới cùng database bằng tài khoản có quyền đọc `alembic_version` và đọc, thêm, cập nhật bảng `users`, `refresh_tokens`. Khi dùng tài khoản app riêng, đặt `POSTGRES_APP_USER` thành tên role đã tạo để Alembic cấp quyền vào hai bảng mới. Suite integration tạo dữ liệu giả trong database này. Các lệnh chạy trong thư mục `backend/`.
