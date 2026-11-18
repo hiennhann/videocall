@@ -44,7 +44,6 @@ details form { margin-top: var(--space-4); }
 .app-sidebar { display: flex; flex-direction: column; gap: var(--space-8); padding: var(--space-6) var(--space-4); background: var(--surface); border-right: 1px solid var(--border); min-width: 0; }
 .app-sidebar > .brand { padding-inline: var(--space-3); }
 .sidebar-account { margin-top: auto; border-top: 1px solid var(--border); padding: var(--space-4) var(--space-3) 0; display: grid; gap: var(--space-3); }
-.sidebar-account h2 { margin: 0; font-size: var(--text-xs); color: var(--text-muted); }
 #profile { font-weight: 600; overflow-wrap: anywhere; }
 .workspace-body { min-width: 0; }
 .workspace-main { padding: var(--space-8); max-width: 1280px; margin: auto; min-width: 0; }
@@ -112,9 +111,7 @@ dialog .controls { margin-top: var(--space-6); }
   .workspace { grid-template-columns: 80px minmax(0, 1fr); }
   .app-sidebar { padding-inline: var(--space-3); align-items: center; }
   .app-sidebar > .brand { padding: 0; }
-  .sidebar-label, .sidebar-account h2, .sidebar-account #profile, .sidebar-account .status-pill { display: none; }
-  .sidebar-account { padding-inline: 0; width: 100%; }
-  .sidebar-account #logout { padding: var(--space-2); font-size: var(--text-xs); }
+  .sidebar-label, .sidebar-account { display: none; }
   .app-sidebar .menu-item { width: 44px; justify-content: center; padding: var(--space-3); }
   .workspace-main { padding: var(--space-6); }
   .room-content { grid-template-columns: minmax(0, 1fr) 300px; }
