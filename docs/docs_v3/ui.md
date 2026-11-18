@@ -1,6 +1,6 @@
 # UI: Tối ưu giao diện
 
-> Bổ sung cho bộ `docs/` và `docs_v3/extend.md`. Trạng thái: **bản nháp v0.1, chờ review**. Chưa có dòng code nào.
+> Bổ sung cho bộ `docs/` và `docs_v3/extend.md`. Trạng thái: **đã triển khai U1 ngày 18/11/2026; U2–U7 chưa triển khai**. Xem [báo cáo U1 và ảnh nghiệm thu](u1-report.md).
 > Nguồn tham chiếu: ảnh mockup gồm hai giao diện **"ConnectV – Webapp Người dùng"** (nền sáng) và **"ConnectV – Trang Quản trị Admin (Tối giản)"** (nền tối).
 > Quy tắc làm việc giữ nguyên: thiết kế trước, code sau; tài liệu là bản sống.
 
@@ -41,25 +41,32 @@
 
 ## 3. Hệ thống thiết kế (design tokens)
 
-> Giá trị màu dưới đây **lấy gần đúng từ ảnh** (đánh dấu ≈). Khi làm bước U1, dùng công cụ chọn màu trên ảnh gốc để chốt, rồi kiểm tra tương phản bằng công cụ đo (mục tiêu chữ thường ≥ 4,5:1).
+> Bảng dưới là màu đang triển khai trong U1, lấy bảng màu dự kiến làm cơ sở và điều chỉnh tương phản. Repo chưa có hai ảnh mockup ConnectV gốc, nên **chưa đối chiếu bằng công cụ chọn màu trên ảnh**. Các giá trị chính xác nằm trong `client/css/tokens.css`; kết quả đo ở [báo cáo U1](u1-report.md). Tên sản phẩm đã chốt: **Videocall**.
 
 ### 3.1 Màu sắc
 
 | Token | Giao diện sáng (người dùng) | Giao diện tối (admin) |
 |---|---|---|
-| `--bg-app` | ≈ `#F3F4F8` | ≈ `#0B0F1A` |
-| `--surface` (thẻ) | `#FFFFFF` | ≈ `#111827` |
-| `--surface-2` (nền phụ) | ≈ `#F8FAFC` | ≈ `#161E2E` |
-| `--border` | ≈ `#E6E8EF` | `rgba(255,255,255,.08)` |
-| `--text` | ≈ `#0F172A` | ≈ `#E5E7EB` |
-| `--text-muted` | ≈ `#64748B` | ≈ `#94A3B8` |
-| `--primary` | ≈ `#4F46E5` | ≈ `#6366F1` |
-| `--primary-hover` | ≈ `#4338CA` | ≈ `#818CF8` |
-| `--primary-soft` (nền nhạt) | ≈ `#EEF2FF` | `rgba(99,102,241,.15)` |
+| `--bg-app` | `#F3F4F8` | `#0B0F1A` |
+| `--surface` (thẻ) | `#FFFFFF` | `#111827` |
+| `--surface-2` (nền phụ) | `#F8FAFC` | `#161E2E` |
+| `--border` (trang trí) | `#E6E8EF` | `#2A3448` |
+| `--border-control` (ô nhập/nút phụ) | `#778399` | `#71839E` |
+| `--text` | `#0F172A` | `#E5E7EB` |
+| `--text-muted` | `#526277` | `#A2AEC2` |
+| `--primary` | `#4F46E5` | `#595DE3` |
+| `--primary-hover` | `#4338CA` | `#6264E9` |
+| `--primary-soft` (nền nhạt) | `#EEF2FF` | `#202846` |
+| `--primary-text` (chữ trên nền nhạt) | `#4338CA` | `#C7D2FE` |
 | `--on-primary` | `#FFFFFF` | `#FFFFFF` |
-| `--success` / soft | ≈ `#16A34A` / `#DCFCE7` | ≈ `#22C55E` / `rgba(34,197,94,.15)` |
-| `--warning` / soft | ≈ `#D97706` / `#FEF3C7` | ≈ `#F59E0B` / `rgba(245,158,11,.15)` |
-| `--danger` / soft | ≈ `#DC2626` / `#FEE2E2` | ≈ `#EF4444` / `rgba(239,68,68,.15)` |
+| `--focus` | `#4F46E5` | `#A5B4FC` |
+| `--success` / soft | `#166534` / `#DCFCE7` | `#4ADE80` / `#102D23` |
+| `--warning` / soft | `#92400E` / `#FEF3C7` | `#FBBF24` / `#352914` |
+| `--danger` / soft | `#B91C1C` / `#FEE2E2` | `#FCA5A5` / `#3B2029` |
+| `--danger-fill` / `--on-danger` | `#B91C1C` / `#FFFFFF` | `#B91C1C` / `#FFFFFF` |
+| `--progress-track` | `var(--border)` | `var(--surface-2)` |
+
+Chữ trên trạng thái và nút chính được đo riêng, kể cả hover. `--border` chỉ phân nhóm nội dung; thành phần cần nhận biết viền dùng `--border-control`. Bảng màu này dùng cho bộ thành phần mới; CSS V2 chỉ chuyển sang tokens khi thực hiện các bước tích hợp U2–U4.
 
 Quy ước dùng: nút **nguy hiểm** (Ngắt phòng, Xóa) ở dạng **viền + chữ đỏ**, chỉ đổ nền đỏ khi nằm trong hộp thoại xác nhận. Không truyền đạt trạng thái chỉ bằng màu (luôn kèm chữ hoặc biểu tượng).
 
@@ -511,7 +518,7 @@ Thứ tự đề xuất: **U1 → U2 → U3 → U4**, rồi U5/U6 khi các bư�
 
 | # | Câu hỏi | Đề xuất | Cần chốt trước |
 |---|---|---|---|
-| Q18 | **[CẦN CHỐT]** Tên hiển thị của sản phẩm: **ConnectV** (theo mockup) hay giữ **Videocall**? | Dùng một hằng số cấu hình để đổi dễ | U1 |
+| Q18 | **ĐÃ CHỐT: Videocall** (người dùng xác nhận 18/11/2026). | Hằng `productName` trong `client/js/app/i18n/vi.js` | U1 |
 | Q19 | **[CẦN CHỐT]** Có làm "Lịch họp" (đặt lịch, lời nhắc) ở bản này không? Mockup có nhưng chưa có backend | Không; để `idea.md` I-01 | U2 |
 | Q20 | Phòng gọi mở cùng tab hay tab mới? | Cùng tab (đơn giản, cuộc gọi chiếm toàn màn hình) | U3 |
 | Q21 | Giao diện người dùng có cần chủ đề tối ngay từ đầu? | Có, vì dùng token nên chi phí thấp | U1 |

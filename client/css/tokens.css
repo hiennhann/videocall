@@ -1,0 +1,98 @@
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg-app: #f3f4f8;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --border: #e6e8ef;
+  --border-control: #778399;
+  --text: #0f172a;
+  --text-muted: #526277;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-soft: #eef2ff;
+  --primary-text: #4338ca;
+  --on-primary: #ffffff;
+  --focus: #4f46e5;
+  --success: #166534;
+  --success-soft: #dcfce7;
+  --warning: #92400e;
+  --warning-soft: #fef3c7;
+  --danger: #b91c1c;
+  --danger-soft: #fee2e2;
+  --danger-fill: #b91c1c;
+  --on-danger: #ffffff;
+  --backdrop: rgb(11 15 26 / 60%);
+  --skeleton: #dce1ec;
+  --progress-track: var(--border);
+  --transparent: transparent;
+  --avatar-0: #e0e7ff;
+  --avatar-1: #dcfce7;
+  --avatar-2: #fef3c7;
+  --avatar-3: #fce7f3;
+  --avatar-4: #e0f2fe;
+  --avatar-text: #17233a;
+  --shadow-sm: 0 1px 2px rgb(15 23 42 / 5%);
+  --shadow-card: 0 4px 12px rgb(15 23 42 / 5%);
+  --shadow-overlay: 0 20px 60px rgb(15 23 42 / 18%);
+  --font-sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+  --text-xs: .75rem;
+  --text-sm: .875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.25rem;
+  --line-body: 1.57;
+  --line-heading: 1.2;
+  --space-1: .25rem;
+  --space-2: .5rem;
+  --space-3: .75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --radius-sm: .5rem;
+  --radius-md: .75rem;
+  --radius-lg: 1rem;
+  --radius-round: 999px;
+  --duration-fast: 140ms;
+  --duration-normal: 180ms;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-app: #0b0f1a;
+  --surface: #111827;
+  --surface-2: #161e2e;
+  --border: #2a3448;
+  --border-control: #71839e;
+  --text: #e5e7eb;
+  --text-muted: #a2aec2;
+  --primary: #595de3;
+  --primary-hover: #6264e9;
+  --primary-soft: #202846;
+  --primary-text: #c7d2fe;
+  --focus: #a5b4fc;
+  --success: #4ade80;
+  --success-soft: #102d23;
+  --warning: #fbbf24;
+  --warning-soft: #352914;
+  --danger: #fca5a5;
+  --danger-soft: #3b2029;
+  --skeleton: #344258;
+  --progress-track: var(--surface-2);
+  --avatar-0: #30355d;
+  --avatar-1: #163f32;
+  --avatar-2: #48351a;
+  --avatar-3: #4c2644;
+  --avatar-4: #193d54;
+  --avatar-text: #f1f5f9;
+  --shadow-sm: 0 0 0 var(--transparent);
+  --shadow-card: 0 0 0 var(--transparent);
+  --shadow-overlay: 0 0 0 1px var(--border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --duration-fast: 0ms; --duration-normal: 0ms; }
+}

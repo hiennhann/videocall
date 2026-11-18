@@ -57,6 +57,10 @@ docker compose exec app python -m app.cli create-demo-admin
 
 Điện thoại kiểm thử bằng web trên trình duyệt qua HTTPS. App React Native được lưu để phát triển sau. Xem [kế hoạch app](docs/docs_v2/08-app-mobile-sau-nay.md) và [ma trận nghiệm thu V2](docs/docs_v2/06-trien-khai.md).
 
+## Nền tảng UI V3
+
+Nền tảng UI V3 (U1) có trang [mẫu giao diện](http://localhost:8000/styleguide) khi `ENV=dev`. Chạy lại `docker compose up --build --wait` để cập nhật mã và tài nguyên. Xem [báo cáo U1, bảng màu và ảnh kiểm tra](docs/docs_v3/u1-report.md). Các màn hình ứng dụng được tích hợp ở những bước sau.
+
 ## Kiểm thử backend với Python 3.12
 
 Đặt `DATABASE_URL` trỏ tới PostgreSQL thử nghiệm bằng tài khoản có quyền chạy migration. Đặt `TEST_DATABASE_URL` trỏ tới cùng database bằng tài khoản có quyền đọc `alembic_version` và đọc, thêm, cập nhật bảng `users`, `refresh_tokens`. Khi dùng tài khoản app riêng, đặt `POSTGRES_APP_USER` thành tên role đã tạo để Alembic cấp quyền vào hai bảng mới. Suite integration tạo dữ liệu giả trong database này. Các lệnh chạy trong thư mục `backend/`.

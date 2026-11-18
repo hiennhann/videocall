@@ -100,7 +100,7 @@ def create_app() -> FastAPI:
     app.include_router(rooms_router, prefix="/api/v1")
     app.include_router(admin_rooms_router, prefix="/api/v1")
     app.include_router(turn_router, prefix="/api/v1")
-    mount_client(app)
+    mount_client(app, dev=settings.env == "dev")
     mount_admin(app)
     app.add_middleware(
         CORSMiddleware,

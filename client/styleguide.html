@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'">
+  <title data-i18n="title"></title>
+  <link rel="icon" href="data:,">
+  <link rel="preload" href="/client/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/client/css/tokens.css">
+  <link rel="stylesheet" href="/client/css/base.css">
+  <link rel="stylesheet" href="/client/css/components.css">
+  <link rel="stylesheet" href="/client/css/styleguide.css">
+  <script type="module" src="/client/js/styleguide.js"></script>
+</head>
+<body data-styleguide>
+  <a class="skip-link" href="#main" data-i18n="skip"></a>
+  <header class="guide-header">
+    <a class="guide-brand" href="#main"><span class="guide-brand__mark"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg></span><span data-i18n="brand"></span><span class="badge badge--primary">U1</span></a>
+    <label class="guide-theme" for="theme"><span class="text-small text-muted" data-i18n="theme"></span><select id="theme" class="input"><option value="light" data-i18n="light"></option><option value="dark" data-i18n="dark"></option><option value="system" data-i18n="system"></option></select></label>
+  </header>
+  <div class="guide-layout">
+    <nav class="guide-nav" data-i18n-label="contents">
+      <div class="guide-nav__inner">
+        <p class="text-label" data-i18n="foundations"></p>
+        <ul class="menu-list">
+          <li><a class="menu-item" href="#colors" data-i18n-label="colors" aria-current="location"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#sun"></use></svg><span class="guide-nav__text" data-i18n="colors"></span></a></li>
+          <li><a class="menu-item" href="#typography" data-i18n-label="typography"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#message"></use></svg><span class="guide-nav__text" data-i18n="typography"></span></a></li>
+          <li><a class="menu-item" href="#buttons" data-i18n-label="buttons"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#plus"></use></svg><span class="guide-nav__text" data-i18n="buttons"></span></a></li>
+          <li><a class="menu-item" href="#inputs" data-i18n-label="inputs"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#settings"></use></svg><span class="guide-nav__text" data-i18n="inputs"></span></a></li>
+          <li><a class="menu-item" href="#cards" data-i18n-label="cards"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg><span class="guide-nav__text" data-i18n="cards"></span></a></li>
+          <li><a class="menu-item" href="#avatars" data-i18n-label="avatars"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#users"></use></svg><span class="guide-nav__text" data-i18n="avatars"></span></a></li>
+          <li><a class="menu-item" href="#navigation" data-i18n-label="navigation"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#home"></use></svg><span class="guide-nav__text" data-i18n="navigation"></span></a></li>
+          <li><a class="menu-item" href="#overlays" data-i18n-label="overlays"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#bell"></use></svg><span class="guide-nav__text" data-i18n="overlays"></span></a></li>
+          <li><a class="menu-item" href="#feedback" data-i18n-label="feedback"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#loader"></use></svg><span class="guide-nav__text" data-i18n="feedback"></span></a></li>
+        </ul>
+      </div>
+    </nav>
+    <main id="main" class="guide-main" tabindex="-1">
+      <div class="guide-hero">
+        <p class="text-label" data-i18n="dev"></p>
+        <h1 data-i18n="guide"></h1>
+        <p class="guide-hero__description" data-i18n="intro"></p>
+        <p class="guide-notice"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#info"></use></svg><span data-i18n="demoNote"></span></p>
+      </div>
+
+      <section id="colors" class="guide-section" aria-labelledby="colors-title">
+        <div class="guide-section__heading"><span class="guide-section__index">01</span><h2 id="colors-title" data-i18n="colors"></h2></div>
+        <p class="guide-description" data-i18n="colorsNote"></p>
+        <div id="palette" class="guide-palette"></div>
+      </section>
+
+      <section id="typography" class="guide-section" aria-labelledby="typography-title">
+        <div class="guide-section__heading"><span class="guide-section__index">02</span><h2 id="typography-title" data-i18n="typography"></h2></div>
+        <div class="guide-grid guide-grid--two">
+          <div class="guide-panel guide-type"><p class="guide-type__sample" data-i18n="typeSample"></p><p data-i18n="vietnamese"></p><p data-i18n="combining"></p><p class="numeric" data-i18n="numeric"></p><p class="text-small text-muted" data-i18n="typeNote"></p></div>
+          <div id="icons" class="guide-icons"></div>
+        </div>
+      </section>
+
+      <section id="buttons" class="guide-section" aria-labelledby="buttons-title">
+        <div class="guide-section__heading"><span class="guide-section__index">03</span><h2 id="buttons-title" data-i18n="buttons"></h2></div>
+        <p class="guide-description" data-i18n="buttonsNote"></p>
+        <div class="guide-panel guide-stack">
+          <div class="guide-row">
+            <button class="button" type="button" data-dialog="sample-drawer"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#plus"></use></svg><span data-i18n="create"></span></button>
+            <button class="button button--secondary" type="button" data-dialog="sample-drawer" data-i18n="join"></button>
+            <button class="button button--ghost" type="button" data-dialog="sample-drawer" data-i18n="details"></button>
+            <button class="button button--danger" type="button" data-dialog="sample-modal" data-i18n="delete"></button>
+            <button class="button button--icon button--secondary" type="button" data-toast="info" data-i18n-label="notifications"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#bell"></use></svg></button>
+          </div>
+          <div class="guide-row">
+            <button class="button button--small" type="button" data-toast="info" data-i18n="small"></button>
+            <button class="button" type="button" data-toast="info" data-i18n="medium"></button>
+            <button class="button button--large" type="button" data-toast="info" data-i18n="large"></button>
+            <button class="button" type="button" disabled data-i18n="disabled"></button>
+            <button class="button" type="button" aria-busy="true" disabled><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#loader"></use></svg><span data-i18n="loading"></span></button>
+          </div>
+          <p class="text-small text-muted" data-i18n="statesNote"></p>
+        </div>
+      </section>
+
+      <section id="inputs" class="guide-section" aria-labelledby="inputs-title">
+        <div class="guide-section__heading"><span class="guide-section__index">04</span><h2 id="inputs-title" data-i18n="inputs"></h2></div>
+        <p class="guide-description" data-i18n="inputsNote"></p>
+        <form id="sample-form" class="guide-panel guide-stack" novalidate>
+          <div class="guide-grid guide-grid--two">
+            <div class="field"><label class="field__label" for="room-name" data-i18n="roomName"></label><input id="room-name" class="input" name="room" required maxlength="80" data-i18n-placeholder="roomPlaceholder" aria-describedby="room-hint room-error"><p id="room-hint" class="field__hint" data-i18n="roomHint"></p><p id="room-error" class="field__error" data-i18n="roomRequired" hidden></p></div>
+            <div class="field"><label class="field__label" for="sample-email" data-i18n="email"></label><input id="sample-email" class="input" type="email" aria-invalid="true" aria-describedby="email-error" data-i18n-placeholder="emailPlaceholder"><p id="email-error" class="field__error" data-i18n="emailError"></p></div>
+            <div class="field"><label class="field__label" for="room-type" data-i18n="roomType"></label><select id="room-type" class="input"><option data-i18n="meeting"></option><option data-i18n="livestream"></option></select></div>
+            <div class="field"><label class="field__label" for="unavailable" data-i18n="unavailable"></label><input id="unavailable" class="input" disabled data-i18n-placeholder="unavailableValue"></div>
+          </div>
+          <div class="guide-row"><label class="choice"><input type="checkbox" checked><span data-i18n="remember"></span></label><label class="switch"><input type="checkbox" role="switch" checked><span data-i18n="enableNotifications"></span></label></div>
+          <div><button class="button" type="submit" data-i18n="submit"></button></div>
+        </form>
+      </section>
+
+      <section id="cards" class="guide-section" aria-labelledby="cards-title">
+        <div class="guide-section__heading"><span class="guide-section__index">05</span><h2 id="cards-title" data-i18n="cards"></h2></div>
+        <p class="guide-description" data-i18n="cardsNote"></p>
+        <div class="guide-stack">
+          <div class="guide-row"><span class="badge" data-i18n="neutral"></span><span class="badge badge--primary" data-i18n="primary"></span><span class="badge badge--success"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#check"></use></svg><span data-i18n="live"></span></span><span class="badge badge--warning"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#alert"></use></svg><span data-i18n="warning"></span></span><span class="badge badge--danger" data-i18n="danger"></span><span class="badge badge--primary badge--count" data-i18n-label="count">3</span></div>
+          <div class="guide-grid">
+            <article class="card"><p class="text-label text-muted" data-i18n="example"></p><h3 class="card__body" data-i18n="cardTitle"></h3><p class="card__body text-muted" data-i18n="cardBody"></p></article>
+            <article class="card"><div class="card__header"><h3 data-i18n="roomCard"></h3><svg class="icon text-muted" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg></div><p class="card__body text-muted" data-i18n="roomCardBody"></p><div class="card__footer"><div class="avatar-group"><span class="avatar avatar--32" data-user="an" data-name="sampleName"></span><span class="avatar avatar--32" data-user="binh" data-name="sampleName2"></span><span class="avatar avatar--32" data-user="chi" data-name="sampleName3"></span></div><button class="button button--small" type="button" data-dialog="sample-drawer" data-i18n="details"></button></div></article>
+            <article class="card card--metric"><p class="text-label text-muted" data-i18n="metric"></p><p class="card__value">—</p><p class="text-small text-muted" data-i18n="noData"></p></article>
+          </div>
+        </div>
+      </section>
+
+      <section id="avatars" class="guide-section" aria-labelledby="avatars-title">
+        <div class="guide-section__heading"><span class="guide-section__index">06</span><h2 id="avatars-title" data-i18n="avatars"></h2></div>
+        <p class="guide-description" data-i18n="avatarsNote"></p>
+        <div class="guide-panel guide-row guide-row--between"><div class="guide-row"><span class="avatar avatar--24" data-user="an" data-name="sampleName"></span><span class="avatar avatar--32" data-user="binh" data-name="sampleName2"></span><span class="avatar" data-user="chi" data-name="sampleName3" data-online></span><span class="avatar avatar--64" data-user="an" data-name="sampleName"></span><span class="avatar avatar--96" data-user="binh" data-name="sampleName2"></span></div><div class="avatar-group"><span class="avatar" data-user="an" data-name="sampleName"></span><span class="avatar" data-user="binh" data-name="sampleName2"></span><span class="avatar" data-user="chi" data-name="sampleName3"></span><span class="avatar" role="img" data-i18n-label="extraPeople">+3</span></div></div>
+      </section>
+
+      <section id="navigation" class="guide-section" aria-labelledby="navigation-title">
+        <div class="guide-section__heading"><span class="guide-section__index">07</span><h2 id="navigation-title" data-i18n="navigation"></h2></div>
+        <p class="guide-description" data-i18n="navigationNote"></p>
+        <div class="guide-grid guide-grid--two">
+          <div class="guide-menus">
+            <nav class="guide-panel" data-i18n-label="menu"><ul class="menu-list"><li><a class="menu-item" href="#navigation" aria-current="page"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#home"></use></svg><span data-i18n="home"></span></a></li><li><a class="menu-item" href="#cards"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg><span data-i18n="rooms"></span><span class="badge badge--primary badge--count" data-i18n-label="count">3</span></a></li><li><a class="menu-item" href="#inputs"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#settings"></use></svg><span data-i18n="settings"></span></a></li></ul></nav>
+            <nav data-i18n-label="compactMenu"><ul class="menu-list menu-list--compact"><li><a class="menu-item" href="#navigation" data-i18n-label="home" aria-current="page"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#home"></use></svg></a></li><li><a class="menu-item" href="#cards" data-i18n-label="rooms"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg></a></li><li><a class="menu-item" href="#inputs" data-i18n-label="settings"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#settings"></use></svg></a></li></ul></nav>
+          </div>
+          <div class="guide-stack"><div class="tabs" role="tablist" data-i18n-label="tableStates"><button id="tab-data" type="button" role="tab" aria-selected="true" aria-controls="panel-data" tabindex="0" data-i18n="dataTab"></button><button id="tab-empty" type="button" role="tab" aria-selected="false" aria-controls="panel-empty" tabindex="-1" data-i18n="emptyTab"></button><button id="tab-loading" type="button" role="tab" aria-selected="false" aria-controls="panel-loading" tabindex="-1" data-i18n="loadingTab"></button></div>
+            <div id="panel-data" role="tabpanel" aria-labelledby="tab-data" tabindex="0"><p class="text-muted" data-i18n="sampleTable"></p></div>
+            <div id="panel-empty" role="tabpanel" aria-labelledby="tab-empty" tabindex="0" hidden><div class="empty-state"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg><h3 data-i18n="emptyTitle"></h3><p data-i18n="emptyBody"></p><button class="button button--secondary" type="button" data-dialog="sample-drawer" data-i18n="create"></button></div></div>
+            <div id="panel-loading" role="tabpanel" aria-labelledby="tab-loading" aria-busy="true" tabindex="0" hidden><span class="sr-only" data-i18n="tableLoading"></span><div aria-hidden="true"><span class="skeleton"></span><span class="skeleton guide-skeleton-short"></span><span class="skeleton"></span></div></div>
+          </div>
+        </div>
+        <div class="card__body"><div class="table-wrap" tabindex="0" role="region" data-i18n-label="sampleTable"><table class="table guide-table"><caption class="guide-table-caption" data-i18n="sampleTable"></caption><thead><tr><th scope="col" data-i18n="name"></th><th scope="col" data-i18n="owner"></th><th scope="col" data-i18n="status"></th><th class="table__actions" scope="col" data-i18n="actions"></th></tr></thead><tbody><tr><td data-i18n="sampleRoom1"></td><td><span class="guide-table-person"><span class="avatar avatar--24" data-user="an" data-name="sampleName"></span><span data-i18n="sampleName"></span></span></td><td><span class="badge badge--success" data-i18n="live"></span></td><td class="table__actions"><button class="button button--ghost button--small" type="button" data-dialog="sample-drawer" data-i18n="details"></button></td></tr><tr><td data-i18n="sampleRoom2"></td><td><span class="guide-table-person"><span class="avatar avatar--24" data-user="binh" data-name="sampleName2"></span><span data-i18n="sampleName2"></span></span></td><td><span class="badge badge--danger" data-i18n="danger"></span></td><td class="table__actions"><button class="button button--danger button--small" type="button" data-dialog="sample-modal" data-i18n="delete"></button></td></tr></tbody></table></div><nav class="pagination" data-i18n-label="page"><span class="text-small text-muted" data-i18n="page"></span><button class="button button--secondary button--small" type="button" disabled data-i18n="previous"></button><button class="button button--secondary button--small" type="button" disabled data-i18n="next"></button></nav></div>
+      </section>
+
+      <section id="overlays" class="guide-section" aria-labelledby="overlays-title">
+        <div class="guide-section__heading"><span class="guide-section__index">08</span><h2 id="overlays-title" data-i18n="overlays"></h2></div>
+        <p class="guide-description" data-i18n="overlaysNote"></p>
+        <div class="guide-grid guide-grid--two">
+          <div class="guide-panel guide-stack"><div class="guide-row"><button id="open-modal" class="button" type="button" data-dialog="sample-modal" data-i18n="openModal"></button><button id="open-drawer" class="button button--secondary" type="button" data-dialog="sample-drawer" data-i18n="openDrawer"></button></div><div class="guide-row"><button class="button button--secondary button--small" type="button" data-toast="info" data-i18n="infoToast"></button><button class="button button--secondary button--small" type="button" data-toast="success" data-i18n="successToast"></button><button class="button button--danger button--small" type="button" data-toast="danger" data-i18n="errorToast"></button></div><div class="guide-row"><details id="actions-dropdown" class="dropdown"><summary class="button button--secondary"><span data-i18n="more"></span><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#chevron"></use></svg></summary><div class="dropdown__items"><button class="button button--ghost" type="button" data-toast="info" data-i18n="details"></button><button class="button button--ghost" type="button" data-dialog="sample-drawer" data-i18n="openDrawer"></button></div></details><details id="notifications-dropdown" class="dropdown"><summary class="button button--secondary button--icon" data-i18n-label="notifications"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#bell"></use></svg></summary><div class="dropdown__items"><p class="text-small text-muted" data-i18n="notificationsEmpty"></p></div></details></div><p class="text-small text-muted" data-i18n="dropdownNote"></p></div>
+          <article class="card guide-invitation"><div class="card__header"><h3 data-i18n="invitation"></h3><svg class="icon text-muted" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg></div><p class="card__body text-muted" data-i18n="inviteBody"></p><div class="card__body"><button id="start-invite" class="button button--secondary" type="button" data-i18n="startInvite"></button></div><div id="invite-demo" class="card__body guide-stack" hidden><p id="invite-timer" class="guide-invitation__timer"></p><div class="guide-row"><button id="decline-invite" class="button button--secondary" type="button" data-i18n="decline"></button><button id="accept-invite" class="button" type="button" data-i18n="accept"></button></div><p id="invite-result" class="sr-only" role="status"></p></div></article>
+        </div>
+      </section>
+
+      <section id="feedback" class="guide-section" aria-labelledby="feedback-title">
+        <div class="guide-section__heading"><span class="guide-section__index">09</span><h2 id="feedback-title" data-i18n="feedback"></h2></div>
+        <p class="guide-description" data-i18n="feedbackNote"></p>
+        <div class="guide-grid guide-grid--two"><div class="card guide-stack"><label for="sample-progress" class="field__label" data-i18n="upload"></label><progress id="sample-progress" class="progress" max="100" value="60" aria-describedby="progress-value"></progress><p id="progress-value" class="text-small text-muted numeric" data-i18n="progressValue"></p></div><div class="card" aria-busy="true"><span class="sr-only" data-i18n="skeleton"></span><div aria-hidden="true"><span class="skeleton guide-skeleton-title"></span><span class="skeleton"></span><span class="skeleton guide-skeleton-short"></span></div></div></div>
+      </section>
+      <footer class="guide-footer"><span data-i18n="end"></span><span data-i18n="keyboard"></span></footer>
+    </main>
+  </div>
+
+  <dialog id="sample-modal" class="modal" aria-labelledby="modal-title" aria-describedby="modal-description">
+    <div class="modal__header"><h2 id="modal-title" data-i18n="modalTitle"></h2><button class="button button--icon button--ghost" type="button" data-close data-i18n-label="close"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#close"></use></svg></button></div>
+    <div class="modal__body"><p id="modal-description" data-i18n="modalBody"></p></div>
+    <div class="modal__footer"><button class="button button--secondary" type="button" data-close autofocus data-i18n="cancel"></button><button id="confirm-demo" class="button button--danger-fill" type="button" data-i18n="confirmDelete"></button></div>
+  </dialog>
+  <dialog id="sample-drawer" class="modal drawer" aria-labelledby="drawer-title" aria-describedby="drawer-description">
+    <div class="modal__header"><h2 id="drawer-title" data-i18n="drawerTitle"></h2><button class="button button--icon button--ghost" type="button" data-close autofocus data-i18n-label="close"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#close"></use></svg></button></div>
+    <div class="modal__body guide-stack"><p id="drawer-description" data-i18n="drawerBody"></p><div class="field"><label for="drawer-name" class="field__label" data-i18n="roomName"></label><input id="drawer-name" class="input" data-i18n-placeholder="roomPlaceholder"></div></div>
+    <div class="modal__footer"><button class="button button--secondary" type="button" data-close data-i18n="close"></button></div>
+  </dialog>
+  <div id="toasts" class="toast-stack" role="status" aria-live="polite" aria-atomic="false"></div>
+</body>
+</html>
