@@ -1,4 +1,4 @@
-import { api, restoreSession, saveSession, takeSessionNotice } from "./api.js";
+import { api, clearSession, restoreSession, saveSession, takeSessionNotice } from "./api.js";
 import { element, message, onForm } from "./ui.js";
 import { applyBranding } from "./theme.js";
 import { initDialogs } from "./app/components/primitives.js";
@@ -8,6 +8,7 @@ initDialogs();
 
 const transfer = element("device-transfer");
 const destination = loginDestination(new URLSearchParams(location.search).get("next"));
+if (new URLSearchParams(location.search).get("login_required") === "1") clearSession();
 let pendingTransfer;
 const notice = takeSessionNotice();
 if (notice) message(notice);
@@ -58,7 +59,7 @@ transfer.addEventListener("cancel", event => {
   event.preventDefault();
   finishTransfer("cancel");
 });
-onForm("guest-form", fields => signIn("/auth/guest", fields));
+onForm("guest-form", fields => signIn("/auth/guest", {...fields, client_type: "web"}));
 onForm("register-form", async (fields, form) => {
   await api("/auth/register", { method: "POST", body: fields });
   element("account-form").elements.email.value = fields.email;

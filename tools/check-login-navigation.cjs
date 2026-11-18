@@ -35,7 +35,19 @@ async function atLogin(page, destination) {
     try {
       const page = await pageInNewContext();
       for (const destination of ["/lobby","/rooms","/account","/rooms/join","/rooms/create","/room?code=abc-defg-hjk"]) {
+        const raw = await page.request.get(base+destination,{maxRedirects:0});
+        assert.equal(raw.status(),303);
+        assert.equal(raw.headers()["cache-control"],"no-store");
+        assert.equal((await raw.text()).includes("<html"),false);
         await atLogin(page,destination);
+      }
+      for (const destination of ["/client/lobby.html","/client/rooms.html","/client/account.html","/client/join.html","/client/create.html","/client/room.html"]) {
+        assert.equal((await page.request.get(base+destination,{maxRedirects:0})).status(),303);
+      }
+      for (const destination of ["/admin","/admin/rooms","/admin/users","/admin/settings","/admin/audit"]) {
+        const denied=await page.request.get(base+destination,{maxRedirects:0});
+        assert.equal(denied.status(),303);
+        assert.equal(denied.headers().location,"/admin/login");
       }
       const redirectChecks = await page.evaluate(async()=>{
         const {loginDestination}=await import("/client/js/auth-navigation.js");
@@ -58,6 +70,9 @@ async function atLogin(page, destination) {
       assert.equal(new URL(page.url()).searchParams.get("next"),"/rooms");
       await login(page,email); await page.waitForURL(base+"/rooms");
       await page.locator('#mine-panel').waitFor({state:"visible"});
+      const pageCookie=(await page.context().cookies()).find(cookie=>cookie.name==="vc_user_page_access");
+      assert.ok(pageCookie.httpOnly && pageCookie.secure && pageCookie.path==="/");
+      assert.equal(await page.evaluate(async()=> (await fetch('/client/rooms.html')).status),200);
       for (const [destination, element] of [["/lobby",".home-actions"],["/account","#account-panel"],["/rooms/join","#join-form"],["/rooms/create","#create-form"]]) {
         await page.goto(base+destination); await page.locator(element).waitFor({state:"visible"});
       }
@@ -65,6 +80,10 @@ async function atLogin(page, destination) {
       await page.goto(base+"/?next=%2Frooms%2Fjoin"); await page.waitForURL(base+"/rooms/join");
       await page.locator('#logout').click(); await page.waitForURL(base+"/");
       assert.equal(await page.locator('#account-form').isVisible(),true);
+      assert.equal((await page.request.get(base+"/rooms",{maxRedirects:0})).status(),303);
+      await page.goBack();
+      await page.waitForURL(url=>url.pathname==="/");
+      await page.locator('#account-form').waitFor({state:"visible"});
 
       // The original single-device confirmation must preserve the destination too.
       await atLogin(page,"/rooms/create"); await login(page,email);
@@ -88,9 +107,19 @@ async function atLogin(page, destination) {
       await guest.locator('#guest-form [name=display_name]').fill("UI Guest");
       await guest.locator('#guest-form button').click();
       await guest.waitForURL(base+"/rooms/join"); await guest.locator('#join-form').waitFor({state:"visible"});
+      assert.ok((await guest.context().cookies()).some(cookie=>cookie.name==="vc_user_page_access"));
+      await guest.context().clearCookies();
+      await atLogin(guest,"/rooms/join");
+      assert.equal(await guest.evaluate(()=>sessionStorage.getItem("videocall.session")),null);
+      await guest.locator('#guest-panel summary').click();
+      await guest.locator('#guest-form [name=display_name]').fill("UI Guest");
+      await guest.locator('#guest-form button').click();
+      await guest.waitForURL(base+"/rooms/join"); await guest.locator('#join-form').waitFor({state:"visible"});
       await guest.locator('#logout').click(); await guest.waitForURL(base+"/");
+      assert.equal((await guest.context().cookies()).some(cookie=>cookie.name==="vc_user_page_access"),false);
+      assert.equal((await guest.request.get(base+"/lobby",{maxRedirects:0})).status(),303);
       assert.deepEqual(errors,[]);
-      report.push({channel,result:"passed",guards:6,safeRedirects:redirectChecks.length,flows:["register/login to requested page","wrong password retains destination","authenticated pages and reload","restore session to requested page","logout","device transfer cancel and confirm","guest login to requested page"]});
+      report.push({channel,result:"passed",guards:6,htmlAliases:6,adminGuards:5,safeRedirects:redirectChecks.length,flows:["HTTP server gates without JavaScript","register/login to requested page","wrong password retains destination","authenticated pages and reload","restore session to requested page","logout and Back cannot reopen pages","device transfer cancel and confirm","guest web cookie and logout","missing guest cookie clears stale client session"]});
       console.log(channel+": login navigation checks passed");
     } finally {
       for (const context of contexts) await context.close();

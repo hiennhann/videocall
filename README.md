@@ -65,6 +65,8 @@ Các mục người dùng mở trang riêng: [Trang chủ](http://localhost:8000
 
 Mở [trang đăng nhập](http://localhost:8000/) để bắt đầu. Nếu mở trực tiếp một trang khi chưa có phiên, hệ thống chuyển sang đăng nhập rồi quay lại đúng trang đã yêu cầu. Đăng xuất sẽ trở về trang đăng nhập.
 
+Cả web người dùng và quản trị đều kiểm tra phiên ở máy chủ trước khi trả trang nội bộ, kể cả khi mở URL HTML trực tiếp. Web người dùng cho phép tài khoản hoặc phiên tên khách; web quản trị chỉ cho admin. Cookie trang được xóa khi đăng xuất, và phiên đã thu hồi không mở lại được trang.
+
 ## Kiểm thử backend với Python 3.12
 
 Đặt `DATABASE_URL` trỏ tới PostgreSQL thử nghiệm bằng tài khoản có quyền chạy migration. Đặt `TEST_DATABASE_URL` trỏ tới cùng database bằng tài khoản có quyền đọc `alembic_version` và đọc, thêm, cập nhật bảng `users`, `refresh_tokens`. Khi dùng tài khoản app riêng, đặt `POSTGRES_APP_USER` thành tên role đã tạo để Alembic cấp quyền vào hai bảng mới. Suite integration tạo dữ liệu giả trong database này. Các lệnh chạy trong thư mục `backend/`.

@@ -33,6 +33,20 @@ Các trang dùng chung thiết kế, khung menu và module `workspace.js` cho ph
 - Mỗi tài liệu khôi phục phiên bằng cơ chế refresh-cookie hiện có. Khi chuyển trang, socket hiện diện của trang cũ đóng; trang mới kết nối lại. Back/Forward khôi phục trang từ cache sẽ kết nối lại hiện diện.
 - Các lựa chọn sáng/tối, tên, màu và phông tiếp tục áp dụng trên từng trang.
 
+### Bắt buộc có phiên ở máy chủ cho cả hai web
+
+Theo xác nhận bổ sung của người dùng, **khách vẫn được dùng**, nhưng phải nhập tên để nhận phiên khách trước khi mở web người dùng. Máy chủ kiểm tra trước khi trả HTML cho `/lobby`, `/rooms`, `/account`, `/rooms/join`, `/rooms/create`, `/room` và các bản HTML trực tiếp dưới `/client/`. Chưa đăng nhập trả HTTP `303` về trang đăng nhập, không trả HTML ứng dụng để chờ JavaScript chuyển trang.
+
+- Web đăng nhập tài khoản, xác nhận chuyển thiết bị và refresh cấp cookie `vc_user_page_access`, có `HttpOnly`, `Secure`, `SameSite=Strict`, đường dẫn `/`. Refresh token giữ phạm vi cũ `/api/v1/auth`.
+- Mỗi yêu cầu trang của tài khoản kiểm tra chữ ký/hạn token, tài khoản còn hoạt động và session family thuộc phạm vi `user` chưa bị thu hồi. Cookie sao chép sau đăng xuất/thu hồi hoặc tài khoản bị khóa không mở được trang.
+- Web khách gửi `client_type: "web"` khi nhập tên để nhận cookie trang. Quyền khách vẫn giới hạn như cũ. Guest API mặc định giữ chế độ JSON cho client khác. Khi đăng xuất, cả tài khoản và khách đều gọi server để xóa cookie trang.
+- Trường hợp mất cookie hoặc chính sách không còn cho phép phiên khách, `login_required=1` giúp trang đăng nhập xóa trạng thái khách cũ ở trình duyệt, tránh tự chuyển trang lặp lại.
+- Trang HTML bảo vệ có `Cache-Control: no-store`, `Vary: Cookie`. Chuyển thiết bị, phiên hết hạn, đổi mật khẩu bắt buộc và khóa tài khoản tiếp tục được kiểm tra tại server/API.
+- Web quản trị tiếp tục dùng cookie phạm vi `/admin`, kiểm tra tài khoản admin đang hoạt động và phiên `admin`. Phiên người dùng/khách không mở được các trang quản trị; token của phiên admin cũng không được dùng làm cookie của web người dùng.
+- Trang đăng nhập/đăng ký/tên khách và tài nguyên CSS/JS/phông là công khai; các endpoint API giữ xác thực và phân quyền hiện có. Trang mẫu thành phần vẫn chỉ là công cụ dev theo U1.
+
+Kiểm tra bổ sung: **54 bài backend đạt**, gồm cookie giả/hết hạn/đã thu hồi, tài khoản bị khóa, yêu cầu đổi mật khẩu, phân tách hai phiên và chế độ khách. Chrome và Edge đã kiểm tra HTTP trực tiếp không qua JS, sáu URL ứng dụng, sáu URL HTML, năm trang admin; đăng xuất rồi Back không mở lại trang nội bộ. Kiểm tra riêng ở cả hai trình duyệt xác nhận mất cookie khách sẽ trở về đăng nhập và xóa trạng thái cũ, không lặp chuyển trang.
+
 ### Nối với trang đăng nhập
 
 `client/js/auth-navigation.js` dùng chung cho kiểm tra phiên và điều hướng sau đăng nhập. Các trang được phép là `/lobby`, `/rooms`, `/account`, `/rooms/join`, `/rooms/create`, `/room`; tham số mã phòng được giữ khi mở liên kết cuộc gọi. URL ngoài nguồn hiện tại, URL không hợp lệ và đường dẫn khác dùng đích mặc định `/lobby`.

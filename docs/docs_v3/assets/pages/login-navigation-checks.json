@@ -3,30 +3,38 @@
     "channel": "chrome",
     "result": "passed",
     "guards": 6,
+    "htmlAliases": 6,
+    "adminGuards": 5,
     "safeRedirects": 8,
     "flows": [
+      "HTTP server gates without JavaScript",
       "register/login to requested page",
       "wrong password retains destination",
       "authenticated pages and reload",
       "restore session to requested page",
-      "logout",
+      "logout and Back cannot reopen pages",
       "device transfer cancel and confirm",
-      "guest login to requested page"
-    ]
+      "guest web cookie and logout"
+    ],
+    "supplementalGuestCookieLoss": "passed"
   },
   {
     "channel": "msedge",
     "result": "passed",
     "guards": 6,
+    "htmlAliases": 6,
+    "adminGuards": 5,
     "safeRedirects": 8,
     "flows": [
+      "HTTP server gates without JavaScript",
       "register/login to requested page",
       "wrong password retains destination",
       "authenticated pages and reload",
       "restore session to requested page",
-      "logout",
+      "logout and Back cannot reopen pages",
       "device transfer cancel and confirm",
-      "guest login to requested page"
-    ]
+      "guest web cookie and logout"
+    ],
+    "supplementalGuestCookieLoss": "passed"
   }
 ]

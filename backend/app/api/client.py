@@ -6,6 +6,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.responses import Response
 from starlette.types import Scope
 
+from app.web.client_session import install_client_sessions
+
 backend_root = Path(__file__).resolve().parents[2]
 client_root = backend_root / "client"
 if not client_root.is_dir():
@@ -24,6 +26,7 @@ class ClientFiles(StaticFiles):
 
 
 def mount_client(app: FastAPI, *, dev: bool = False) -> None:
+    install_client_sessions(app)
     router = APIRouter(include_in_schema=False)
 
     @router.get("/")

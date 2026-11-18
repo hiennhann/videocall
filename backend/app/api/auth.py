@@ -23,6 +23,8 @@ from app.services.auth_service import SessionTokens
 
 REFRESH_COOKIE = "vc_user_refresh"
 COOKIE_FLAGS = {"path": "/api/v1/auth", "httponly": True, "secure": True, "samesite": "strict"}
+PAGE_ACCESS_COOKIE = "vc_user_page_access"
+PAGE_COOKIE_FLAGS = {"path": "/", "httponly": True, "secure": True, "samesite": "strict"}
 
 
 def require_same_origin(request: Request) -> None:
@@ -41,6 +43,9 @@ async def refresh_value(
     response.headers["Cache-Control"] = "no-store"
     if not use_cookie:
         return tokens.refresh_token
+    response.set_cookie(
+        PAGE_ACCESS_COOKIE, tokens.access_token, max_age=tokens.expires_in, **PAGE_COOKIE_FLAGS
+    )
     policy = await auth.settings.get(db)
     response.set_cookie(
         REFRESH_COOKIE,
@@ -150,6 +155,7 @@ def create_auth_router(limiter: Limiter) -> APIRouter:
         response = Response(status_code=204)
         if body is None:
             response.delete_cookie(REFRESH_COOKIE, **COOKIE_FLAGS)
+            response.delete_cookie(PAGE_ACCESS_COOKIE, **PAGE_COOKIE_FLAGS)
         return response
 
     @router.post("/logout-all", status_code=204)
@@ -162,8 +168,13 @@ def create_auth_router(limiter: Limiter) -> APIRouter:
     async def guest(
         request: Request, response: Response, body: GuestRequest, auth: Auth, db: DB
     ) -> GuestResponse:
+        if body.client_type == "web":
+            require_same_origin(request)
         identity, token, ttl = await auth.guest(db, body.display_name)
         response.headers["Cache-Control"] = "no-store"
+        if body.client_type == "web":
+            response.set_cookie(PAGE_ACCESS_COOKIE, token, max_age=ttl, **PAGE_COOKIE_FLAGS)
+            response.delete_cookie(REFRESH_COOKIE, **COOKIE_FLAGS)
         return GuestResponse(
             access_token=token,
             expires_in=ttl,

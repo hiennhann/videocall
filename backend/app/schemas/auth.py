@@ -58,6 +58,7 @@ class RefreshRequest(BaseModel):
 
 class GuestRequest(BaseModel):
     display_name: DisplayName
+    client_type: Literal["web", "mobile"] = "mobile"
 
 
 class UpdateProfileRequest(BaseModel):

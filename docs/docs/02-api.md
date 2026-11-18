@@ -218,6 +218,8 @@ Cần Bearer. Thu hồi mọi refresh token của user, ngắt các socket đang
 ### POST `/auth/guest`
 
 Request: `{ "display_name": "Khách 1" }`
+
+Web gửi thêm `"client_type": "web"` và `Origin` cùng nguồn để nhận cookie trang `vc_user_page_access` (`HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/`). Mặc định `client_type` là `mobile`, giữ hợp đồng JSON cũ và không cấp cookie trang. Cookie này chỉ mở giao diện web; quyền tạo phòng và quyền quản trị vẫn kiểm tra riêng tại API.
 Response `200`:
 ```json
 {

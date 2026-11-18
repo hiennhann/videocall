@@ -153,9 +153,7 @@ export async function api(path, {method = "GET", body, authenticated = false} = 
 
 export async function logout() {
   try {
-    if (session()?.user?.role !== "guest") {
-      await withSessionLock(() => request("/auth/logout", "POST"));
-    }
+    await withSessionLock(() => request("/auth/logout", "POST"));
   } finally {
     sessionEnded("Bạn đã đăng xuất.");
   }
