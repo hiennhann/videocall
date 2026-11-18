@@ -13,6 +13,7 @@
 | [04-giao-dien.md](04-giao-dien.md) | Bố cục theo hình mẫu, web quản trị riêng, màn hình mobile và chế độ sáng/tối |
 | [05-quy-tac.md](05-quy-tac.md) | Phân quyền, thông tin đăng nhập, cấu hình, bảo trì và cách đếm hiện diện |
 | [06-trien-khai.md](06-trien-khai.md) | Thứ tự thực hiện, môi trường chạy, kiểm thử và quay về bản trước |
+| [07-nghiem-thu.md](07-nghiem-thu.md) | Kết quả đã xác minh và điều kiện chạy các bài thử còn lại |
 
 ## Đọc trước khi triển khai
 
