@@ -90,7 +90,11 @@ async function load() {
     const item = document.createElement("li");
     const link = document.createElement("a");
     link.href = roomUrl(room.code);
-    link.textContent = room.name ? room.name + " · " + room.code : room.code;
+    const name = document.createElement("strong");
+    name.textContent = room.name || room.code;
+    const code = document.createElement("small");
+    code.textContent = room.code;
+    link.append(name, code);
     item.append(link);
     list.append(item);
   }

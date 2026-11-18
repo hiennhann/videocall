@@ -1,26 +1,25 @@
 <!doctype html>
-<html lang="vi">
+<html lang="vi" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cuộc gọi · Videocall</title>
+  <link rel="stylesheet" href="/client/css/tokens.css">
+  <link rel="stylesheet" href="/client/css/base.css">
+  <link rel="stylesheet" href="/client/css/components.css">
   <link rel="stylesheet" href="/client/styles.css">
+  <link rel="icon" href="data:,">
   <script src="/client/vendor/socket.io.min.js" defer></script>
   <script type="module" src="/client/js/room.js"></script>
 </head>
 <body class="call-page">
-  <header class="topbar"><div class="shell"><a class="brand" href="/lobby" data-project-name>Videocall</a>
-    <button class="secondary" type="button" data-theme-toggle>Giao diện tối</button><a href="/lobby">Về lobby</a>
-  </div></header>
+  <header class="topbar"><div class="shell"><a class="brand " href="/lobby"><span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg></span><span data-project-name>Videocall</span></a><div class="header-actions"><label class="theme-picker"><span data-i18n="theme">Giao diện</span><select data-theme-select aria-label="Giao diện"><option value="light" data-i18n="light">Sáng</option><option value="dark" data-i18n="dark">Tối</option><option value="system" data-i18n="system">Theo hệ thống</option></select></label><a class="text-link" href="/lobby"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#arrow"></use></svg> Về sảnh</a></div></div></header>
   <main class="call-workspace">
-    <nav class="workspace-rail" aria-label="Điều hướng">
-      <a href="/lobby"><span aria-hidden="true">⌂</span>Sảnh</a>
-      <a href="#room-name" aria-current="page"><span aria-hidden="true">▣</span>Phòng</a>
-    </nav>
     <div class="workspace-main">
     <div class="heading-row"><div><h1 id="room-name">Phòng gọi</h1><p id="room-code"></p></div><button id="copy-code" type="button" class="secondary" hidden>Sao chép mã</button></div>
     <p id="message" role="status" class="notice" hidden></p>
-    <section id="join-panel" class="panel" hidden>
+    <section id="join-panel" class="panel precall" hidden>
+      <div class="precall-visual"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg><h2 data-i18n="precallTitle">Sẵn sàng kết nối?</h2><p data-i18n="precallDescription">Tham gia khi bạn đã sẵn sàng. Mọi người đang ở cách bạn một lần chạm.</p></div>
       <form id="enter-form">
         <label id="password-label" hidden>Mật khẩu phòng <input name="password" type="password" maxlength="64" autocomplete="off"></label>
         <button id="enter-room" type="submit">Vào phòng và bật camera</button>
@@ -55,13 +54,16 @@
         <button id="leave" type="button" class="danger">Rời phòng</button>
       </div>
       </div>
-      <details class="room-sidebar" open>
-      <summary>Thành viên và chat</summary>
-      <section class="panel" aria-labelledby="members-title">
+      <aside class="room-sidebar" data-room-sidebar>
+      <div class="tabs" role="tablist" aria-label="Nội dung phòng">
+        <button id="chat-tab" type="button" role="tab" aria-selected="true" aria-controls="chat-panel" tabindex="0">Tin nhắn</button>
+        <button id="members-tab" type="button" role="tab" aria-selected="false" aria-controls="members-panel" tabindex="-1">Thành viên</button>
+      </div>
+      <section id="members-panel" class="panel" role="tabpanel" aria-labelledby="members-tab" tabindex="0" hidden>
         <h2 id="members-title">Thành viên</h2>
         <ul id="room-members" class="room-links"></ul>
       </section>
-      <section class="panel room-chat" aria-labelledby="chat-title">
+      <section id="chat-panel" class="panel room-chat" role="tabpanel" aria-labelledby="chat-tab" tabindex="0">
         <h2 id="chat-title">Tin nhắn</h2>
         <button id="older-messages" type="button" class="secondary" hidden>Tin nhắn cũ hơn</button>
         <ol id="chat-messages" aria-label="Tin nhắn trong phòng"></ol>
@@ -71,7 +73,7 @@
           <button type="submit">Gửi</button>
         </form>
       </section>
-      </details>
+      </aside>
     </section>
     <footer class="call-status"><span id="call-state" class="status-pill" role="status">Chưa vào phòng</span></footer>
     </div>

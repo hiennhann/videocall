@@ -137,6 +137,21 @@ export const vi = {
   skeleton: "Đang tải thẻ mẫu",
   end: "Videocall · Nền tảng UI V3 · U1",
   keyboard: "Dùng Tab để khám phá · Esc để đóng hộp thoại",
+  authEyebrow: "KHÔNG GIAN KẾT NỐI CỦA BẠN",
+  authHeadline: "Mỗi cuộc trò chuyện, gần nhau hơn.",
+  authDescription: "Gọi video, chia sẻ màn hình và trò chuyện cùng nhau trong một không gian đơn giản.",
+  authFeatures: "Gọi nhóm · Chat · Livestream",
+  authWelcome: "Chào mừng trở lại",
+  authSignIn: "Đăng nhập để tiếp tục cuộc trò chuyện.",
+  workspace: "Không gian của bạn",
+  lobbyEyebrow: "CÙNG NHAU, TỪ MỌI NƠI",
+  lobbyHeadline: "Bắt đầu cuộc trò chuyện.",
+  lobbyDescription: "Tạo phòng mới hoặc tham gia bằng mã để kết nối với mọi người.",
+  lobbySidebarNote: "Một nơi cho mọi cuộc trò chuyện.",
+  roomsDescription: "Các phòng bạn đã tạo, sẵn sàng để tiếp tục.",
+  workspaceFooter: "Videocall · Gọi video và livestream",
+  precallTitle: "Sẵn sàng kết nối?",
+  precallDescription: "Tham gia khi bạn đã sẵn sàng. Mọi người đang ở cách bạn một lần chạm.",
 };
 
 export function translate(root = document) {

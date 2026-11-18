@@ -1,53 +1,55 @@
+{% from "_icons.html" import icon %}
 <!doctype html>
-<html lang="vi">
+<html lang="vi" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="htmx-config" content='{"allowEval":false,"allowScriptTags":false,"includeIndicatorStyles":false,"historyCacheSize":0,"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"[45]..","swap":true,"error":true}]}'>
   <title>{{ title }} · Quản trị Videocall</title>
+  <link rel="stylesheet" href="/client/css/tokens.css">
+  <link rel="stylesheet" href="/client/css/base.css">
+  <link rel="stylesheet" href="/client/css/components.css">
   <link rel="stylesheet" href="/client/styles.css">
   <link rel="stylesheet" href="/admin/static/admin.css">
+  <link rel="icon" href="data:,">
   <script src="/admin/static/htmx.min.js" defer></script>
   <script src="/client/js/theme.js" type="module"></script>
   <script src="/admin/static/dashboard.js" type="module"></script>
+  <script src="/admin/static/admin-ui.js" type="module"></script>
 </head>
 <body class="admin-page" hx-history="false">
-  <div id="layout" hx-boost="true" hx-target="#layout" hx-select="#layout" hx-swap="outerHTML">
-    <header class="topbar"><div class="shell">
-      <a class="brand" href="/admin"><span class="admin-mark" aria-hidden="true">V</span> Quản trị Videocall</a>
-      <button class="secondary" type="button" data-theme-toggle>Giao diện tối</button>
-      {% if admin %}
-        <form class="inline" method="post" action="/admin/logout">
-          {% include "_csrf.html" %}<button class="secondary">Đăng xuất</button>
-        </form>
-      {% else %}<a href="/">Về trang gọi</a>{% endif %}
-    </div></header>
-    <div class="shell admin-layout {% if not admin %}solo{% endif %}">
-      {% if admin %}
-        <nav class="admin-nav" aria-label="Quản trị">
-          {% for name, label, path in (
-            ('dashboard', 'Tổng quan', '/admin'), ('users', 'Tài khoản', '/admin/users'),
-            ('rooms', 'Phòng', '/admin/rooms'), ('settings', 'Cấu hình', '/admin/settings'),
-            ('audit', 'Nhật ký', '/admin/audit')
-          ) %}
-            <a href="{{ path }}"{% if active == name %} aria-current="page"{% endif %}>{{ label }}</a>
-          {% endfor %}
-        </nav>
-      {% endif %}
-      <main>
-        <h1>{{ title }}</h1>
-        {% if error %}<p role="alert" class="notice error">{{ error }}</p>{% endif %}
-        {% block content %}{% endblock %}
-      </main>
-      {% if admin %}
-        <aside class="admin-context">
-          <section class="panel">
-            <h2>Quản trị viên</h2>
-            <p>{{ admin.user.display_name }}</p>
-          </section>
-        </aside>
-      {% endif %}
+  <a class="skip-link" href="#admin-main">Đến nội dung chính</a>
+  <div id="layout" hx-boost="true" hx-target="#layout" hx-select="#layout" hx-swap="outerHTML" class="admin-shell {% if not admin %}solo{% endif %}">
+    {% if admin %}
+    <aside class="admin-sidebar">
+      <a class="brand" href="/admin"><span class="brand-mark">{{ icon('video') }}</span><span class="sidebar-label" data-project-name>Videocall</span><span class="badge badge--primary">ADMIN</span></a>
+      <nav class="admin-nav" aria-label="Quản trị">
+        {% for name, label, path, symbol in (
+          ('dashboard', 'Tổng quan', '/admin', 'home'), ('rooms', 'Phòng trực tiếp', '/admin/rooms', 'video'),
+          ('users', 'Tài khoản', '/admin/users', 'users'), ('settings', 'Cấu hình', '/admin/settings', 'settings'),
+          ('audit', 'Nhật ký', '/admin/audit', 'history')
+        ) %}
+        <a href="{{ path }}" aria-label="{{ label }}"{% if active == name %} aria-current="page"{% endif %}>{{ icon(symbol) }}<span class="sidebar-label">{{ label }}</span></a>
+        {% endfor %}
+      </nav>
+      <div class="admin-account"><div><p>{{ admin.user.display_name }}</p><small>Quản trị viên</small></div><form method="post" action="/admin/logout">{% include "_csrf.html" %}<button class="secondary">Đăng xuất</button></form></div>
+    </aside>
+    {% endif %}
+    <div class="admin-body">
+      <header class="topbar"><div class="shell"><span class="eyebrow">VIDEOCALL / QUẢN TRỊ</span><div class="header-actions"><label class="theme-picker"><span data-i18n="theme">Giao diện</span><select data-theme-select aria-label="Giao diện"><option value="light" data-i18n="light">Sáng</option><option value="dark" data-i18n="dark">Tối</option><option value="system" data-i18n="system">Theo hệ thống</option></select></label><a href="/" class="text-link" hx-boost="false">Về web người dùng {{ icon('arrow') }}</a></div></div></header>
+      <div class="admin-layout {% if not admin %}solo{% endif %}">
+        <main id="admin-main" tabindex="-1">
+          <div class="admin-page-intro"><div><h1>{{ title }}</h1><p>{{ 'Quản lý không gian kết nối của bạn.' if admin else 'Đăng nhập bằng tài khoản quản trị viên.' }}</p></div>{% if admin %}<span class="badge badge--primary">{{ icon('settings') }} Quản trị</span>{% endif %}</div>
+          {% if error %}<p role="alert" class="notice error">{{ error }}</p>{% endif %}
+          {% block content %}{% endblock %}
+        </main>
+      </div>
     </div>
   </div>
+  <dialog id="admin-confirm" class="modal" aria-labelledby="admin-confirm-title" aria-describedby="admin-confirm-description">
+    <div class="modal__header"><h2 id="admin-confirm-title">Xác nhận thao tác</h2></div>
+    <div class="modal__body"><p id="admin-confirm-description"></p></div>
+    <div class="modal__footer"><button class="secondary" type="button" data-close autofocus>Hủy</button><button class="button--danger-fill" id="admin-confirm-submit" type="button">Xác nhận</button></div>
+  </dialog>
 </body>
 </html>

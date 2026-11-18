@@ -1,6 +1,6 @@
 # UI: Tối ưu giao diện
 
-> Bổ sung cho bộ `docs/` và `docs_v3/extend.md`. Trạng thái: **đã triển khai U1 ngày 18/11/2026; U2–U7 chưa triển khai**. Xem [báo cáo U1 và ảnh nghiệm thu](u1-report.md).
+> Bổ sung cho bộ `docs/` và `docs_v3/extend.md`. Trạng thái: **U1 đã được duyệt; đã tích hợp giao diện mới vào hai web cho các chức năng hiện có ngày 18/11/2026**. Xem [báo cáo U1](u1-report.md) và [báo cáo tích hợp](ui-integration-report.md). Các chức năng mở rộng phụ thuộc E1–E7 vẫn theo lộ trình riêng.
 > Nguồn tham chiếu: ảnh mockup gồm hai giao diện **"ConnectV – Webapp Người dùng"** (nền sáng) và **"ConnectV – Trang Quản trị Admin (Tối giản)"** (nền tối).
 > Quy tắc làm việc giữ nguyên: thiết kế trước, code sau; tài liệu là bản sống.
 

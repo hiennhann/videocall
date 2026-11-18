@@ -13,6 +13,12 @@
   --primary-soft: #eef2ff;
   --primary-text: #4338ca;
   --on-primary: #ffffff;
+  --brand-default: #4f46e5;
+  --brand-ink-dark: #000000;
+  --brand-ink-light: #ffffff;
+  --media-surface: #0b0f1a;
+  --media-text: #f1f5f9;
+  --media-muted: #a2aec2;
   --focus: #4f46e5;
   --success: #166534;
   --success-soft: #dcfce7;

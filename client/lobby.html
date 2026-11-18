@@ -1,46 +1,54 @@
 <!doctype html>
-<html lang="vi">
+<html lang="vi" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Lobby · Videocall</title>
+  <link rel="stylesheet" href="/client/css/tokens.css">
+  <link rel="stylesheet" href="/client/css/base.css">
+  <link rel="stylesheet" href="/client/css/components.css">
   <link rel="stylesheet" href="/client/styles.css">
+  <link rel="icon" href="data:,">
   <script src="/client/vendor/socket.io.min.js" defer></script>
   <script type="module" src="/client/js/lobby.js"></script>
 </head>
 <body>
-  <header class="topbar"><div class="shell"><a class="brand" href="/lobby" data-project-name>Videocall</a>
-    <button class="secondary" type="button" data-theme-toggle>Giao diện tối</button>
-    <button id="logout" class="secondary" type="button">Đăng xuất</button>
-  </div></header>
-  <main class="workspace">
-    <nav class="workspace-rail" aria-label="Điều hướng">
-      <a href="/lobby" aria-current="page"><span aria-hidden="true">⌂</span>Sảnh</a>
-      <a href="#rooms-sidebar"><span aria-hidden="true">▤</span>Phòng</a>
-      <a href="#account-sidebar"><span aria-hidden="true">○</span>Tài khoản</a>
-    </nav>
-    <details class="workspace-sidebar" id="rooms-sidebar" open>
-      <summary>Phòng của bạn</summary>
-      <section id="mine-panel" hidden>
-        <p class="muted" id="no-rooms">Chưa có phòng đã tạo.</p>
-        <ul id="mine" class="room-links"></ul>
+  <a class="skip-link" href="#main" data-i18n="skip">Đến nội dung chính</a>
+  <div class="workspace">
+    <aside class="app-sidebar">
+      <a class="brand " href="/lobby"><span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg></span><span class="sidebar-label" data-project-name>Videocall</span></a>
+      <nav aria-label="Điều hướng"><ul class="menu-list">
+        <li><a class="menu-item" href="/lobby" aria-current="page" aria-label="Trang chủ"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#home"></use></svg><span class="sidebar-label">Trang chủ</span></a></li>
+        <li><a class="menu-item" href="#rooms-sidebar" aria-label="Phòng của tôi"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg><span class="sidebar-label">Phòng của tôi</span></a></li>
+        <li><a class="menu-item" href="#account-sidebar" aria-label="Tài khoản"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#users"></use></svg><span class="sidebar-label">Tài khoản</span></a></li>
+      </ul></nav>
+      <div class="sidebar-account"><p class="eyebrow">VIDEOCALL WORKSPACE</p><p class="text-small muted" data-i18n="lobbySidebarNote">Một nơi cho mọi cuộc trò chuyện.</p></div>
+    </aside>
+    <div class="workspace-body">
+      <header class="topbar"><div class="shell"><span class="eyebrow" data-i18n="workspace">Không gian của bạn</span><a class="brand mobile-brand" href="/lobby"><span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg></span><span data-project-name>Videocall</span></a><div class="header-actions"><label class="theme-picker"><span data-i18n="theme">Giao diện</span><select data-theme-select aria-label="Giao diện"><option value="light" data-i18n="light">Sáng</option><option value="dark" data-i18n="dark">Tối</option><option value="system" data-i18n="system">Theo hệ thống</option></select></label><button id="logout" class="secondary" type="button">Đăng xuất</button></div></div></header>
+      <main class="workspace-main" id="main" tabindex="-1">
+        <div class="heading-row"><div><p class="eyebrow" data-i18n="lobbyEyebrow">CÙNG NHAU, TỪ MỌI NƠI</p><h1 id="lobby-title" data-i18n="lobbyHeadline">Bắt đầu cuộc trò chuyện.</h1><p data-i18n="lobbyDescription">Tạo phòng mới hoặc tham gia bằng mã để kết nối với mọi người.</p></div></div>
+        <p id="message" class="notice" role="status" hidden></p>
+        <section class="panel" id="password-panel" hidden><h2>Đổi mật khẩu</h2>
+      <form id="password-form">
+        <label>Mật khẩu hiện tại <input name="current_password" type="password" autocomplete="current-password" required></label>
+        <label>Mật khẩu mới <input name="new_password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
+        <button>Đổi mật khẩu</button>
+      </form>
       </section>
-    </details>
-    <section class="workspace-main" aria-labelledby="lobby-title">
-      <h1 id="lobby-title">Sảnh cuộc gọi</h1>
-      <p id="message" class="notice" role="status" hidden></p>
-      <div class="workspace-tabs" role="tablist" aria-label="Thao tác phòng">
-        <button id="join-tab" type="button" role="tab" aria-selected="true" aria-controls="join-panel">Vào phòng</button>
-        <button id="create-tab" type="button" role="tab" aria-selected="false" aria-controls="create-panel" tabindex="-1" hidden>Tạo phòng</button>
-      </div>
-      <section class="panel" id="join-panel" role="tabpanel" aria-labelledby="join-tab">
+        <section class="panel lobby-action" aria-label="Thao tác phòng">
+          <div class="workspace-tabs" role="tablist" aria-label="Thao tác phòng">
+            <button id="join-tab" type="button" role="tab" aria-selected="true" aria-controls="join-panel">Vào phòng</button>
+            <button id="create-tab" type="button" role="tab" aria-selected="false" aria-controls="create-panel" tabindex="-1" hidden>Tạo phòng</button>
+          </div>
+          <section class="lobby-form" id="join-panel" role="tabpanel" aria-labelledby="join-tab">
         <h2>Vào bằng mã phòng</h2>
         <form id="join-form">
           <label>Mã phòng <input name="code" placeholder="abc-defg-hjk" maxlength="12" autocomplete="off" required></label>
           <button>Tiếp tục</button>
         </form>
       </section>
-      <section class="panel" id="create-panel" role="tabpanel" aria-labelledby="create-tab" hidden><h2>Tạo phòng</h2>
+          <section class="lobby-form" id="create-panel" role="tabpanel" aria-labelledby="create-tab" hidden><h2>Tạo phòng</h2>
         <form id="create-form">
           <label>Loại phòng
             <select name="mode"><option value="meeting">Gọi nhóm</option><option value="livestream">Livestream</option></select>
@@ -50,21 +58,15 @@
           <button>Tạo phòng</button>
         </form>
       </section>
-      <section class="panel" id="password-panel" hidden><h2>Đổi mật khẩu</h2>
-      <form id="password-form">
-        <label>Mật khẩu hiện tại <input name="current_password" type="password" autocomplete="current-password" required></label>
-        <label>Mật khẩu mới <input name="new_password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
-        <button>Đổi mật khẩu</button>
-      </form>
-      </section>
-    </section>
-    <aside class="workspace-context" id="account-sidebar">
-      <section class="panel">
-        <h2>Tài khoản</h2>
-        <p id="profile">Đang tải…</p>
-        <p id="presence-state" class="status-pill" role="status">Đang kết nối…</p>
-      </section>
-    </aside>
-  </main>
+        </section>
+        <section id="rooms-sidebar" aria-labelledby="my-rooms-title">
+          <div class="heading-row"><div><h2 id="my-rooms-title">Phòng của bạn</h2><p data-i18n="roomsDescription">Các phòng bạn đã tạo, sẵn sàng để tiếp tục.</p></div><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg></div>
+          <section id="mine-panel" hidden><div class="panel empty-state" id="no-rooms"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg><h3 data-i18n="emptyTitle">Chưa có phòng nào</h3><p data-i18n="emptyBody">Phòng của bạn sẽ xuất hiện tại đây khi được tạo.</p></div><ul id="mine" class="room-links room-cards"></ul></section>
+        </section>
+        <section id="account-sidebar" class="panel account-actions"><div class="heading-row"><h2>Tài khoản</h2><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#users"></use></svg></div><p id="profile">Đang tải…</p><p id="presence-state" class="status-pill" role="status">Đang kết nối…</p></section>
+        <footer class="workspace-footer" data-i18n="workspaceFooter">Videocall · Gọi video và livestream</footer>
+      </main>
+    </div>
+  </div>
 </body>
 </html>

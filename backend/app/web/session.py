@@ -21,7 +21,7 @@ ACCESS_COOKIE = "vc_admin_access"
 REFRESH_COOKIE = "vc_admin_refresh"
 CSRF_COOKIE = "vc_admin_csrf"
 COOKIE_FLAGS = {"path": "/admin", "httponly": True, "secure": True, "samesite": "strict"}
-CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
+CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; font-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
 
 
 @dataclass(frozen=True, slots=True)

@@ -16,7 +16,7 @@ class SettingsSchema(BaseModel):
         json_schema_extra={"category": "branding"},
     )
     brand_color: BrandColor = Field(
-        "#176276", description="Màu chủ đạo (#RRGGBB).", json_schema_extra={"category": "branding"}
+        "#4f46e5", description="Màu chủ đạo (#RRGGBB).", json_schema_extra={"category": "branding"}
     )
     brand_font: BrandFont = Field(
         "system", description="Phông chữ giao diện.", json_schema_extra={"category": "branding"}

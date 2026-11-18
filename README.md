@@ -59,7 +59,7 @@ docker compose exec app python -m app.cli create-demo-admin
 
 ## Nền tảng UI V3
 
-Nền tảng UI V3 (U1) có trang [mẫu giao diện](http://localhost:8000/styleguide) khi `ENV=dev`. Chạy lại `docker compose up --build --wait` để cập nhật mã và tài nguyên. Xem [báo cáo U1, bảng màu và ảnh kiểm tra](docs/docs_v3/u1-report.md). Các màn hình ứng dụng được tích hợp ở những bước sau.
+Giao diện V3 đã áp dụng cho [web người dùng](http://localhost:8000/) và [web quản trị](http://localhost:8000/admin), dùng chung màu, phông và thành phần đã duyệt; có sáng/tối/theo hệ thống và bố cục cho điện thoại. Chạy lại `docker compose up --build --wait` để cập nhật. Xem [báo cáo tích hợp và ảnh kiểm tra](docs/docs_v3/ui-integration-report.md). Trang [mẫu U1](http://localhost:8000/styleguide) tiếp tục có khi `ENV=dev`.
 
 ## Kiểm thử backend với Python 3.12
 

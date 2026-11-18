@@ -1,6 +1,9 @@
 import { api, restoreSession, saveSession, takeSessionNotice } from "./api.js";
 import { element, message, onForm } from "./ui.js";
 import { applyBranding } from "./theme.js";
+import { initDialogs } from "./app/components/primitives.js";
+
+initDialogs();
 
 const transfer = element("device-transfer");
 let pendingTransfer;

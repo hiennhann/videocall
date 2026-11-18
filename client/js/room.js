@@ -4,6 +4,9 @@ import { PeerTile } from "./peer-tile.js";
 import { element, message, onForm } from "./ui.js";
 import { PeerCall } from "./webrtc.js";
 import { applyBranding } from "./theme.js";
+import { initTabs } from "./app/components/primitives.js";
+
+initTabs(document.querySelector("[data-room-sidebar]"));
 
 const code = new URLSearchParams(location.search).get("code") || "";
 const mediaButtons = {audio: ["mic", "Mic"], video: ["camera", "Camera"]};
