@@ -27,11 +27,19 @@ Các trang dùng chung thiết kế, khung menu và module `workspace.js` cho ph
 
 ## Giữ quyền và phiên đăng nhập
 
-- Người chưa đăng nhập được chuyển về `/` khi mở các trang người dùng.
+- Người chưa đăng nhập được chuyển về `/?next=...` khi mở các trang người dùng. Đăng nhập, vào bằng tên khách hoặc xác nhận chuyển thiết bị thành công sẽ về đúng trang đó. Mở trang đăng nhập bình thường sẽ vào `/lobby` sau khi đăng nhập.
 - Người bắt buộc đổi mật khẩu được chuyển tới `/account`, kể cả khi mở thẳng `/rooms/create`; sau đổi mật khẩu có thể tiếp tục vào các trang khác.
 - Khách được vào bằng mã, xem tài khoản khách và trang phòng; không hiện lối tắt tạo phòng. Mở trực tiếp trang tạo phòng bằng phiên khách hiển thị thông báo và không hiện biểu mẫu.
 - Mỗi tài liệu khôi phục phiên bằng cơ chế refresh-cookie hiện có. Khi chuyển trang, socket hiện diện của trang cũ đóng; trang mới kết nối lại. Back/Forward khôi phục trang từ cache sẽ kết nối lại hiện diện.
 - Các lựa chọn sáng/tối, tên, màu và phông tiếp tục áp dụng trên từng trang.
+
+### Nối với trang đăng nhập
+
+`client/js/auth-navigation.js` dùng chung cho kiểm tra phiên và điều hướng sau đăng nhập. Các trang được phép là `/lobby`, `/rooms`, `/account`, `/rooms/join`, `/rooms/create`, `/room`; tham số mã phòng được giữ khi mở liên kết cuộc gọi. URL ngoài nguồn hiện tại, URL không hợp lệ và đường dẫn khác dùng đích mặc định `/lobby`.
+
+Đăng ký giữ trang đích trong khi yêu cầu người dùng đăng nhập. Nhập sai mật khẩu hoặc hủy chuyển thiết bị không làm mất trang đích. Người đã có phiên hợp lệ khi mở `/?next=...` đi thẳng tới trang tương ứng. Đăng xuất vẫn kết thúc phiên và về `/` với thông báo; trang quản trị tiếp tục dùng đăng nhập `/admin/login` và phiên quản trị riêng.
+
+Kiểm tra bổ sung bằng `tools/check-login-navigation.cjs` trên Chrome và Edge: sáu đường dẫn khi chưa đăng nhập, tám trường hợp đích không hợp lệ, đăng ký/đăng nhập, mật khẩu sai, giữ phiên qua các trang và tải lại, khôi phục phiên, đăng xuất, khách và xác nhận/hủy chuyển thiết bị. [Kết quả kiểm tra đăng nhập](assets/pages/login-navigation-checks.json).
 
 ## Kiểm tra
 

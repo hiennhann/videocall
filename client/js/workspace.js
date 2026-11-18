@@ -2,6 +2,7 @@ import { accessToken, api, logout, requireSession, sessionEnded } from "./api.js
 import { element, message } from "./ui.js";
 import { applyBranding } from "./theme.js";
 import { vi } from "./app/i18n/vi.js";
+import { loginUrl } from "./auth-navigation.js";
 
 let presence;
 
@@ -41,7 +42,7 @@ export async function loadWorkspace() {
     }
     return {profile, config};
   } catch (error) {
-    if (error.status === 401) location.replace("/");
+    if (error.status === 401) location.replace(loginUrl());
     else message(error.message, true);
     return null;
   }

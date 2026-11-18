@@ -2,18 +2,20 @@ import { api, restoreSession, saveSession, takeSessionNotice } from "./api.js";
 import { element, message, onForm } from "./ui.js";
 import { applyBranding } from "./theme.js";
 import { initDialogs } from "./app/components/primitives.js";
+import { loginDestination } from "./auth-navigation.js";
 
 initDialogs();
 
 const transfer = element("device-transfer");
+const destination = loginDestination(new URLSearchParams(location.search).get("next"));
 let pendingTransfer;
 const notice = takeSessionNotice();
 if (notice) message(notice);
-else if (await restoreSession()) location.replace("/lobby");
+else if (await restoreSession()) location.replace(destination);
 
 async function signIn(path, body) {
   saveSession(await api(path, { method: "POST", body }));
-  location.assign("/lobby");
+  location.assign(destination);
 }
 
 onForm("account-form", async fields => {
@@ -39,7 +41,7 @@ async function finishTransfer(action) {
     });
     if (action === "confirm") {
       saveSession(result);
-      location.assign("/lobby");
+      location.assign(destination);
     }
   } catch (error) {
     message(error.message, true);

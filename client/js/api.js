@@ -1,3 +1,5 @@
+import { loginUrl } from "./auth-navigation.js";
+
 const STORAGE_KEY = "videocall.session";
 const NOTICE_KEY = "videocall.login-notice";
 const sessionChannel = typeof BroadcastChannel === "function" ? new BroadcastChannel("videocall-auth") : null;
@@ -77,7 +79,7 @@ export async function restoreSession() {
 
 export async function requireSession() {
   if (!await restoreSession()) {
-    location.replace("/");
+    location.replace(loginUrl());
     return false;
   }
   return true;

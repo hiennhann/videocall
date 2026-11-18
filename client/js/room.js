@@ -5,6 +5,7 @@ import { element, message, onForm } from "./ui.js";
 import { PeerCall } from "./webrtc.js";
 import { applyBranding } from "./theme.js";
 import { initTabs } from "./app/components/primitives.js";
+import { loginUrl } from "./auth-navigation.js";
 
 initTabs(document.querySelector("[data-room-sidebar]"));
 
@@ -654,7 +655,7 @@ if (await requireSession()) {
     element("enter-form").elements.password.required = room.has_password;
     element("join-panel").hidden = false;
   } catch (error) {
-    if (error.status === 401) location.replace("/");
+    if (error.status === 401) location.replace(loginUrl());
     else message(error.message, true);
   }
 }

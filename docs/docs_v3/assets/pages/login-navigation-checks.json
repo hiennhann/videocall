@@ -1,0 +1,32 @@
+[
+  {
+    "channel": "chrome",
+    "result": "passed",
+    "guards": 6,
+    "safeRedirects": 8,
+    "flows": [
+      "register/login to requested page",
+      "wrong password retains destination",
+      "authenticated pages and reload",
+      "restore session to requested page",
+      "logout",
+      "device transfer cancel and confirm",
+      "guest login to requested page"
+    ]
+  },
+  {
+    "channel": "msedge",
+    "result": "passed",
+    "guards": 6,
+    "safeRedirects": 8,
+    "flows": [
+      "register/login to requested page",
+      "wrong password retains destination",
+      "authenticated pages and reload",
+      "restore session to requested page",
+      "logout",
+      "device transfer cancel and confirm",
+      "guest login to requested page"
+    ]
+  }
+]
