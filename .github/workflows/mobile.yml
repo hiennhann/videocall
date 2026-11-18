@@ -17,6 +17,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: mobile-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   bundle:
     runs-on: ubuntu-latest
@@ -37,3 +41,83 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npx --no-install expo export --platform android --platform ios --max-workers 2
+
+  android:
+    needs: bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      EXPO_NO_TELEMETRY: '1'
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: actions/setup-java@v6.3.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - run: npx --no-install expo prebuild --platform android --no-install
+      - name: Compile Android development APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon --max-workers=2 -PreactNativeArchitectures=arm64-v8a
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: videocall-android-development
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+
+  ios:
+    needs: bundle
+    runs-on: macos-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      EXPO_NO_TELEMETRY: '1'
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npx --no-install expo prebuild --platform ios --no-install
+      - run: pod install --project-directory=ios
+      - name: Compile iOS Simulator application
+        run: |
+          if ! xcodebuild -workspace ios/Videocall.xcworkspace -scheme Videocall \
+            -configuration Release -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath ios/build CODE_SIGNING_ALLOWED=NO build > ios-build.log 2>&1; then
+            tail -n 100 ios-build.log
+            exit 1
+          fi
+          ditto -c -k --sequesterRsrc --keepParent ios/build/Build/Products/Release-iphonesimulator/Videocall.app Videocall-simulator.zip
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: videocall-ios-simulator
+          path: mobile/Videocall-simulator.zip
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@v7.0.2
+        if: failure()
+        with:
+          name: ios-build-log
+          path: mobile/ios-build.log
+          retention-days: 7

@@ -5,3 +5,5 @@ android/
 ios/
 .env
 .env.local
+*.zip
+*-build.log
