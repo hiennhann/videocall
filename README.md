@@ -25,6 +25,8 @@ Nếu đang dùng `.env` từ A6, bỏ dòng mẫu `TURN_URLS=stun:turn.example.
 
 Swagger vẫn có tại [`/docs`](http://localhost:8000/docs) để thử API.
 
+V3 E1 bổ sung API hồ sơ (ngày sinh, quyền riêng tư) và ảnh đại diện. Xem [báo cáo và cách nghiệm thu E1](docs/docs_v3/e1-report.md). E1 dùng migration `0009`; ảnh lưu trong volume `avatars`. Giao diện chỉnh các trường mới thuộc U6; E2–E7 đang chờ triển khai sau khi E1 được duyệt.
+
 Trong môi trường dev, [`/metrics`](http://localhost:8000/metrics) trả chỉ số HTTP, Socket.IO và phòng ở định dạng Prometheus. Xem log JSON bằng `docker compose logs app` và tra từng yêu cầu bằng header `X-Request-ID`.
 
 Tạo quản trị viên A3 bằng lệnh sau. Nhập mật khẩu hai lần khi được hỏi, rồi đăng nhập qua `/api/v1/auth/login` để dùng các API `/api/v1/admin`.

@@ -17,7 +17,7 @@ Khi thực hiện bất kỳ bước nào dưới đây, agent **bắt buộc** 
 2. **Kiến trúc kỹ thuật đã chốt (Không thay đổi):**
    - **Client Web người dùng:** HTML/CSS/JS thuần (ES Modules), **không dùng React/Vue hay bất kỳ bước build nào** (`D21`, `D33`).
    - **Trang quản trị (Admin):** Jinja2 + HTMX lưu cục bộ (không nạp CDN) (`D17`).
-   - **Cơ sở dữ liệu & Migration:** Tạo migration dần theo từng bước (`0008` đến `0012`). Đọc lại bản autogenerate của Alembic, viết tay `downgrade()`, index một phần (`WHERE ...`) và ràng buộc `CHECK`.
+   - **Cơ sở dữ liệu & Migration:** Tạo migration dần theo từng bước (`0009` đến `0013`). Đọc lại bản autogenerate của Alembic, viết tay `downgrade()`, index một phần (`WHERE ...`) và ràng buộc `CHECK`.
 
 3. **Bảo mật, Quyền riêng tư & An toàn dữ liệu:**
    - **Chống XSS:** Mọi dữ liệu từ người dùng (tên, tin nhắn, tên phòng) **bắt buộc gán bằng `textContent`**, tuyệt đối không dùng `innerHTML`.
@@ -45,16 +45,18 @@ Khi thực hiện bất kỳ bước nào dưới đây, agent **bắt buộc** 
 
 ### Giai đoạn 2: Mở rộng Backend & Realtime (`docs_v3/extend.md`)
 
+> Cập nhật E1 (20/11/2026): migration `0008` đã thuộc V2, vì vậy E1 dùng `0009`, các số dự kiến tiếp theo dịch một bước. Dừng sau E1 để người dùng kiểm tra và duyệt; chưa triển khai E2–E7.
+
 > *Thứ tự đề xuất sau khi hoàn thành MVP (A1–A9): `E1 → E2 → E3 → E5 → E6 → E4 → E7`.*
 
 | Bước | Phụ thuộc | Câu lệnh gợi ý cho Agent |
 |---|---|---|
-| **E1** | A3 | `Thực hiện bước E1 theo docs_v3/extend.md mục 3.2 và 4: viết migration 0008 (add_user_profile), mở rộng GET/PATCH /me, xây dựng PUT/DELETE /me/avatar với xử lý ảnh an toàn (Pillow, xóa EXIF, cắt 256px & 64px WebP, semaphore chống tràn RAM) và phục vụ /media/avatars. Trình bày kế hoạch trước.` |
-| **E2** | E1 | `Thực hiện bước E2 theo docs_v3/extend.md mục 3.3 và 5: viết migration 0009 (create_friends: friend_requests, friendships chuẩn hóa a < b, user_blocks), API tìm kiếm email chính xác, gửi/nhận/từ chối im lặng lời mời kết bạn, danh sách bạn, chặn, rate limit và viết test đảm bảo không lộ email ẩn. Trình bày kế hoạch trước.` |
+| **E1** | A3 | `Thực hiện bước E1 theo docs_v3/extend.md mục 3.2 và 4: viết migration 0009 (add_user_profile), mở rộng GET/PATCH /me, xây dựng PUT/DELETE /me/avatar với xử lý ảnh an toàn (Pillow, xóa EXIF, cắt 256px & 64px WebP, semaphore chống tràn RAM) và phục vụ /media/avatars. Trình bày kế hoạch trước.` |
+| **E2** | E1 | `Thực hiện bước E2 theo docs_v3/extend.md mục 3.3 và 5: viết migration 0010 (create_friends: friend_requests, friendships chuẩn hóa a < b, user_blocks), API tìm kiếm email chính xác, gửi/nhận/từ chối im lặng lời mời kết bạn, danh sách bạn, chặn, rate limit và viết test đảm bảo không lộ email ẩn. Trình bày kế hoạch trước.` |
 | **E3** | A4, E2 | `Thực hiện bước E3 theo docs_v3/extend.md mục 6: tạo room Socket.io user:<id>, xử lý presence_changed có độ trễ ~5s trước khi báo offline, phát sự kiện kết bạn, bộ nhớ đệm danh sách bạn trong RAM và cơ chế đồng bộ HTTP sau khi mất kết nối. Trình bày kế hoạch trước.` |
-| **E5** | A4, E3 | `Thực hiện bước E5 theo docs_v3/extend.md mục 8: viết migration 0011 (create_room_invites), POST /rooms/{code}/invites, GET /invites, mở rộng sự kiện join_room hỗ trợ invite_id (vào phòng có mật khẩu không cần nhập mật khẩu), job hết hạn lời mời và viết test invite của người khác bị từ chối. Trình bày kế hoạch trước.` |
-| **E6** | A4 (A8) | `Thực hiện bước E6 theo docs_v3/extend.md mục 3.6 và 9: viết migration 0012 (create_call_participants), ghi nhận lịch sử khi vào/ra phòng ở luồng nền, tự động đóng các dòng treo khi app khởi động lại, API GET/DELETE /me/call-history và xuất nhật ký chat (text/plain). Trình bày kế hoạch trước.` |
-| **E4** | E3 | `Thực hiện bước E4 theo docs_v3/extend.md mục 3.4 và 7: viết migration 0010 (create_direct_messages: conversations, direct_messages), xử lý socket dm_send có ack và chống trùng qua client_msg_id, dm_read, dm_typing, API lịch sử theo con trỏ và xóa mềm tin nhắn. Trình bày kế hoạch trước.` |
+| **E5** | A4, E3 | `Thực hiện bước E5 theo docs_v3/extend.md mục 8: viết migration 0012 (create_room_invites), POST /rooms/{code}/invites, GET /invites, mở rộng sự kiện join_room hỗ trợ invite_id (vào phòng có mật khẩu không cần nhập mật khẩu), job hết hạn lời mời và viết test invite của người khác bị từ chối. Trình bày kế hoạch trước.` |
+| **E6** | A4 (A8) | `Thực hiện bước E6 theo docs_v3/extend.md mục 3.6 và 9: viết migration 0013 (create_call_participants), ghi nhận lịch sử khi vào/ra phòng ở luồng nền, tự động đóng các dòng treo khi app khởi động lại, API GET/DELETE /me/call-history và xuất nhật ký chat (text/plain). Trình bày kế hoạch trước.` |
+| **E4** | E3 | `Thực hiện bước E4 theo docs_v3/extend.md mục 3.4 và 7: viết migration 0011 (create_direct_messages: conversations, direct_messages), xử lý socket dm_send có ack và chống trùng qua client_msg_id, dm_read, dm_typing, API lịch sử theo con trỏ và xóa mềm tin nhắn. Trình bày kế hoạch trước.` |
 | **E7** | A6 | `Thực hiện bước E7 theo docs_v3/extend.md mục 11 và 12: mở rộng API admin (/admin/users/{id}, gỡ avatar vi phạm, lịch sử cuộc gọi cấp phòng), thêm cấu hình mới vào SettingsSchema + /config/public và ghi audit log user.avatar_remove. Trình bày kế hoạch trước.` |
 
 ---

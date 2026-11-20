@@ -8,7 +8,9 @@ WORKDIR /opt/videocall
 COPY backend/pyproject.toml ./
 COPY backend/app/ app/
 RUN python -m pip install --no-cache-dir . \
-    && useradd --system --user-group --no-create-home app
+    && useradd --system --user-group --no-create-home app \
+    && mkdir -p /var/lib/videocall/avatars \
+    && chown app:app /var/lib/videocall/avatars
 
 COPY backend/alembic.ini ./
 COPY backend/migrations/ migrations/

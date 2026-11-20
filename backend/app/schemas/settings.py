@@ -101,6 +101,16 @@ class SettingsSchema(BaseModel):
         description="Bitrate camera tối đa (kbps).",
         json_schema_extra={"category": "media"},
     )
+    allow_avatar_upload: bool = Field(
+        True, description="Cho phép tải ảnh đại diện.", json_schema_extra={"category": "media"}
+    )
+    avatar_max_kb: int = Field(
+        2048,
+        ge=100,
+        le=5120,
+        description="Dung lượng ảnh đại diện tối đa (KB).",
+        json_schema_extra={"category": "media"},
+    )
     max_screen_bitrate_kbps: int = Field(
         2500,
         ge=200,
@@ -181,6 +191,8 @@ class PublicSettings(BaseModel):
     password_min_length: int
     allow_screen_share: bool
     chat_enabled: bool
+    allow_avatar_upload: bool
+    avatar_max_kb: int
 
 
 type SettingValue = bool | int | str

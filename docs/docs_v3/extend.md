@@ -1,6 +1,6 @@
 # Extend: Chức năng mở rộng
 
-> Bổ sung cho bộ `docs/` (README, 01-09). Trạng thái: **bản nháp v0.1, chờ review**. Chưa có dòng code nào.
+> Bổ sung cho bộ `docs/` (README, 01-09). Trạng thái: **E1 đã triển khai để nghiệm thu; E2–E7 vẫn là thiết kế**. Xem [báo cáo E1](e1-report.md). Người dùng yêu cầu dừng sau E1 để duyệt.
 > Quy tắc làm việc giữ nguyên như cũ: thiết kế xong rồi mới code; migration tạo dần; phân tầng `api/realtime → services → models`; tài liệu là bản sống (sửa code đổi thiết kế thì sửa docs trong cùng commit).
 > Giao diện của các chức năng này nằm ở `ui.md`; ý tưởng chưa chốt nằm ở `idea.md`.
 
@@ -29,7 +29,7 @@
 5. **Không đổi API cũ.** Chỉ **mở rộng** `/me` và `join_room`; mọi thứ khác là endpoint/sự kiện mới.
 6. **Dùng lại hạ tầng có sẵn.** Auth, rate limit, audit log, settings, trạng thái RAM của Socket.io.
 
-## 3. Mô hình dữ liệu (migration 0008 đến 0012)
+## 3. Mô hình dữ liệu (migration 0009 đến 0013)
 
 ### 3.1 ERD phần mới
 
@@ -110,7 +110,7 @@ erDiagram
 
 Quy ước đặt tên: bảng `messages` đã dùng cho **chat trong phòng** (migration `0007`); tin nhắn giữa bạn bè dùng tên riêng `direct_messages` để khỏi nhầm.
 
-### 3.2 Cột thêm vào `users` (migration `0008`)
+### 3.2 Cột thêm vào `users` (migration `0009`)
 
 | Cột | Kiểu | Ràng buộc | Ghi chú |
 |---|---|---|---|
@@ -122,7 +122,7 @@ Quy ước đặt tên: bảng `messages` đã dùng cho **chat trong phòng** (
 
 **Họ tên** dùng lại cột `display_name` đã có (2-50 ký tự); giao diện ghi nhãn "Họ và tên". Không thêm cột trùng ý nghĩa.
 
-### 3.3 `friend_requests` và `friendships` (migration `0009`)
+### 3.3 `friend_requests` và `friendships` (migration `0010`)
 
 **`friend_requests`**: lịch sử các lời mời.
 
@@ -154,7 +154,7 @@ Service luôn sắp xếp cặp trước khi ghi (`a = min(x, y)`, `b = max(x, y
 
 Index: `(blocked_id)`.
 
-### 3.4 `conversations` và `direct_messages` (migration `0010`)
+### 3.4 `conversations` và `direct_messages` (migration `0011`)
 
 **`conversations`**: mỗi cặp bạn bè có tối đa một cuộc trò chuyện, tạo khi gửi tin đầu tiên.
 
@@ -184,7 +184,7 @@ Số tin chưa đọc của X = số tin của người kia có `id > X_last_rea
 Index: `ix_direct_messages_conversation_id_id (conversation_id, id DESC)`.
 Khi xóa tài khoản: các `conversations` liên quan bị xóa (CASCADE), nên cả hai phía mất lịch sử. Chấp nhận ở bản này.
 
-### 3.5 `room_invites` (migration `0011`)
+### 3.5 `room_invites` (migration `0012`)
 
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
@@ -198,7 +198,7 @@ Khi xóa tài khoản: các `conversations` liên quan bị xóa (CASCADE), nên
 
 Index: UNIQUE một phần `(room_id, invitee_id) WHERE status = 'pending'`; `(invitee_id, status, expires_at)`; `(room_id)`.
 
-### 3.6 `call_participants` (migration `0012`)
+### 3.6 `call_participants` (migration `0013`)
 
 Mỗi **lần vào phòng** là một dòng (vào lại thì thêm dòng mới).
 
@@ -220,13 +220,15 @@ Index: `(user_id, joined_at DESC) WHERE user_id IS NOT NULL`; `(room_id, joined_
 
 ### 3.7 Kế hoạch migration
 
+V2 đã dùng `0008` cho chuyển thiết bị. E1 dùng `0009` thay cho số trong bản nháp cũ; các số dự kiến phía sau dịch một bước. Chỉ `0009` được triển khai ở E1; `down_revision` của bước sau phải nối head thực tế khi triển khai, theo thứ tự đã duyệt.
+
 | Rev | Tên | Nội dung | Bước |
 |---|---|---|---|
-| `0008` | `add_user_profile` | 5 cột mục 3.2 (đều có default hoặc NULL nên an toàn với dữ liệu cũ) | E1 |
-| `0009` | `create_friends` | `friend_requests`, `friendships`, `user_blocks` | E2 |
-| `0010` | `create_direct_messages` | `conversations`, `direct_messages` | E4 |
-| `0011` | `create_room_invites` | `room_invites` | E5 |
-| `0012` | `create_call_participants` | `call_participants` | E6 |
+| `0009` | `add_user_profile` | 5 cột mục 3.2 (đều có default hoặc NULL nên an toàn với dữ liệu cũ) | E1 |
+| `0010` | `create_friends` | `friend_requests`, `friendships`, `user_blocks` | E2 |
+| `0011` | `create_direct_messages` | `conversations`, `direct_messages` | E4 |
+| `0012` | `create_room_invites` | `room_invites` | E5 |
+| `0013` | `create_call_participants` | `call_participants` | E6 |
 
 Giữ nguyên quy tắc cũ: mỗi migration một việc, đọc lại bản autogenerate, viết `downgrade()`, CI chạy `alembic check`. Index một phần (`WHERE ...`) và CHECK có hàm Alembic **không tự sinh đúng**, viết tay.
 
@@ -284,7 +286,7 @@ Sau khi đổi tên, **phiên đang gọi giữ tên cũ** tới khi vào lại 
 | DELETE | `/me/avatar` | Gỡ ảnh | 204 |
 | GET | `/media/avatars/{user_id}/{hash}-{size}.webp` | Tệp ảnh (tĩnh) | 404 |
 
-Khách: tất cả đều 403 `GUEST_NOT_ALLOWED`.
+Khách vẫn dùng được `GET /me` như trước (hồ sơ khách, không có các trường thành viên mới). Các thao tác PATCH hồ sơ, PUT/DELETE avatar và đổi mật khẩu trả 403 `GUEST_NOT_ALLOWED`. GET ảnh là công khai theo đánh đổi ở mục 4.3.
 
 ### 4.3 Xử lý ảnh đại diện (an toàn là chính)
 
@@ -298,6 +300,10 @@ Không bao giờ tin tên tệp, `Content-Type` hay phần mở rộng do ngư�
 6. Tên tệp = băm nội dung đầu ra (`<hash>-256.webp`, `<hash>-64.webp`), ghi tạm rồi đổi tên nguyên tử; cập nhật `users.avatar_key`; xóa tệp cũ.
 7. Việc xử lý chạy trong **thread pool với semaphore nhỏ** (ví dụ 2), không chặn event loop và không làm cạn RAM trên máy yếu.
 8. Phục vụ với `Cache-Control: public, max-age=31536000, immutable` (tên tệp đổi khi ảnh đổi).
+
+E1 giới hạn tổng multipart ở mức `avatar_max_kb * 1024 + 16 KB` cho boundary/header, đọc file tối đa giới hạn + 1 byte và đóng tệp tạm khi lỗi. Xác thực và kiểm tra tính năng trước khi đọc body. Chỉ sao chép pixel sang ảnh mới sau khi đã thu nhỏ, để giảm RAM. Các yêu cầu thay/gỡ ảnh được tuần tự hóa qua commit và dọn tệp trong app một worker. Nếu commit gặp lỗi không xác định kết quả, giữ tệp mới để tránh làm mất ảnh DB có thể đã tham chiếu; job dọn ảnh mồ côi vẫn thuộc phần vận hành dự kiến.
+
+URL là bất biến theo nội dung, nên xóa trên máy chủ không thu hồi được bản đã lưu trong cache của trình duyệt.
 
 URL ảnh **công khai nhưng không đoán được** (`user_id` + mã băm). Đây là đánh đổi có chủ ý vì thẻ `<img>` không gửi được header `Authorization` (xem D31). Lưu tệp trên **volume Docker** (`avatars`), nằm trong phạm vi sao lưu.
 
@@ -573,6 +579,8 @@ Bổ sung vào `02-api.md` mục 8:
 
 Phần công khai cho client (`/config/public`) thêm: `friends_enabled`, `dm_enabled`, `call_history_enabled`, `allow_avatar_upload`, `avatar_max_kb`.
 
+Hai khóa `allow_avatar_upload` và `avatar_max_kb` được đưa vào E1 vì API tải ảnh cần áp dụng ngay. Các khóa chức năng còn lại và phần quản trị mở rộng vẫn chờ E7. Quyền riêng tư ở E1 mới được lưu; việc tìm bạn/ẩn hiện online được thực thi ở E2/E3.
+
 **Hằng số trong code:** độ dài tin 1-2000; cooldown sau khi bị từ chối 24 giờ; tìm kiếm 20/phút và 200/ngày; `dm_send` 10 tin / 10 giây; mời gọi 20 lần / phút; `dm_typing` 1 lần / 2 giây; tối đa 20 người mỗi lần mời; giới hạn điểm ảnh 25 triệu.
 
 ## 13. Mã lỗi mới (bổ sung bảng ở `02-api.md` mục 9)
@@ -586,7 +594,8 @@ Phần công khai cho client (`/config/public`) thêm: `friends_enabled`, `dm_en
 | 403 | `NOT_FRIENDS`, `DM_DISABLED`, `NOT_IN_CONVERSATION`, `FEATURE_DISABLED` | |
 | 410 | `INVITE_EXPIRED` | Lời mời đã hết hạn |
 | socket | `INVITE_INVALID` | `invite_id` sai người/phòng hoặc đã dùng |
-| 400 | `INVALID_IMAGE`, `INVALID_BIRTH_DATE` | |
+| 400 | `INVALID_IMAGE` | |
+| 422 | `INVALID_BIRTH_DATE` | Ngày sinh ngoài khoảng hợp lệ |
 | 413 | `IMAGE_TOO_LARGE` | |
 
 ## 14. Hạ tầng
@@ -611,12 +620,12 @@ Phần công khai cho client (`/config/public`) thêm: `friends_enabled`, `dm_en
 
 | Bước | Nội dung | Migration | Làm sau |
 |---|---|---|---|
-| E1 | Hồ sơ và avatar | `0008` | A3 |
-| E2 | Bạn bè, tìm kiếm, chặn (HTTP) | `0009` | E1 |
+| E1 | Hồ sơ và avatar | `0009` | A3 |
+| E2 | Bạn bè, tìm kiếm, chặn (HTTP) | `0010` | E1 |
 | E3 | Realtime theo người dùng, trạng thái online, thông báo kết bạn | | A4, E2 |
-| E5 | Mời vào cuộc gọi nhóm | `0011` | A4, E3 |
-| E6 | Lịch sử cuộc gọi | `0012` | A4 (và A8 để xuất chat) |
-| E4 | Nhắn tin qua bạn bè | `0010` | E3 |
+| E5 | Mời vào cuộc gọi nhóm | `0012` | A4, E3 |
+| E6 | Lịch sử cuộc gọi | `0013` | A4 (và A8 để xuất chat) |
+| E4 | Nhắn tin qua bạn bè | `0011` | E3 |
 | E7 | Admin và cấu hình | | A6 |
 
 Thứ tự đề xuất: **hoàn thành MVP (A1-A9) rồi mới làm E1 → E2 → E3 → E5 → E6 → E4 → E7**. E1 có thể làm sớm hơn nếu muốn có giao diện hồ sơ. Các bước E không chặn B1-B7.
@@ -626,7 +635,7 @@ Thứ tự đề xuất: **hoàn thành MVP (A1-A9) rồi mới làm E1 → E2 �
 | File | Cập nhật |
 |---|---|
 | `docs/README.md` | Phạm vi (mục 2), lộ trình thêm E1-E7, bảng công nghệ không đổi |
-| `docs/01-database.md` | Thêm 5 cột `users`, 7 bảng mới, ERD, migration `0008`-`0012`, việc dọn dẹp |
+| `docs/01-database.md` | Thêm 5 cột `users`, 7 bảng mới, ERD, migration `0009`-`0013`, việc dọn dẹp |
 | `docs/02-api.md` | Mở rộng `/me`; thêm các nhóm endpoint mục 4-9 và 11; mã lỗi mục 13; rate limit |
 | `docs/03-socket-events.md` | Room `user:<id>`, sự kiện mục 6, mở rộng `join_room` (`invite_id`), ghi `call_participants` khi vào/ra |
 | `docs/04-settings.md` | Cấu hình mục 12 |
@@ -653,21 +662,21 @@ Thứ tự đề xuất: **hoàn thành MVP (A1-A9) rồi mới làm E1 → E2 �
 
 | # | Câu hỏi | Đề xuất | Cần chốt trước |
 |---|---|---|---|
-| Q12 | **[CẦN CHỐT]** Có cho đổi email không? Nếu có thì xác minh bằng cách nào (cần gửi email) | Không ở bản này | E1 |
-| Q13 | **[CẦN CHỐT]** Ngày sinh có bắt buộc hoặc có độ tuổi tối thiểu không? | Tùy chọn, không giới hạn tuổi | E1 |
+| Q12 | Có cho đổi email không? Nếu có thì xác minh bằng cách nào (cần gửi email) | E1 dùng mặc định: không đổi email; chờ nghiệm thu | E1 |
+| Q13 | Ngày sinh có bắt buộc hoặc có độ tuổi tối thiểu không? | E1 dùng mặc định: tùy chọn, không có tuổi tối thiểu; kiểm tra ngày hợp lệ trong 120 năm; chờ nghiệm thu | E1 |
 | Q14 | Tin nhắn riêng lưu vô thời hạn hay có thời hạn? | `dm_retention_days = 0` (vô thời hạn), admin chỉnh được | E4 |
 | Q15 | Người bị chặn có còn thấy/ở cùng phòng với nhau được không? | Cho phép (không thể ngăn trong phòng công khai), chỉ chặn nhắn tin/mời/tìm kiếm | E2 |
-| Q16 | Lưu avatar: volume cục bộ hay dịch vụ lưu trữ ngoài? | Volume cục bộ; chuyển sau nếu cần | E1 |
+| Q16 | Lưu avatar: volume cục bộ hay dịch vụ lưu trữ ngoài? | E1 dùng mặc định: volume cục bộ; chờ nghiệm thu | E1 |
 | Q17 | Có cần thông báo đẩy khi đóng ứng dụng (đặc biệt lời mời gọi)? | Để `idea.md`; bản này chỉ thông báo khi đang mở ứng dụng | Sau E5 |
 
 ## 19. Câu lệnh gợi ý cho agent (bổ sung phần 2 của `AGENT_PROMPT.md`)
 
 | Bước | Câu lệnh |
 |---|---|
-| E1 | `Thực hiện bước E1 theo docs_v3/extend.md mục 3.2 và 4: migration 0008, mở rộng GET/PATCH /me, PUT/DELETE /me/avatar với xử lý ảnh an toàn, phục vụ /media/avatars. Trình bày kế hoạch trước.` |
-| E2 | `Thực hiện bước E2 theo extend.md mục 3.3 và 5: migration 0009, tìm kiếm email chính xác, lời mời kết bạn, danh sách bạn, chặn, rate limit, test không lộ email ẩn. Trình bày kế hoạch trước.` |
+| E1 | `Thực hiện bước E1 theo docs_v3/extend.md mục 3.2 và 4: migration 0009, mở rộng GET/PATCH /me, PUT/DELETE /me/avatar với xử lý ảnh an toàn, phục vụ /media/avatars. Trình bày kế hoạch trước.` |
+| E2 | `Thực hiện bước E2 theo extend.md mục 3.3 và 5: migration 0010, tìm kiếm email chính xác, lời mời kết bạn, danh sách bạn, chặn, rate limit, test không lộ email ẩn. Trình bày kế hoạch trước.` |
 | E3 | `Thực hiện bước E3 theo extend.md mục 6: room user:<id>, presence có trì hoãn, sự kiện kết bạn, bộ nhớ đệm danh sách bạn, đồng bộ sau khi nối lại. Trình bày kế hoạch trước.` |
-| E5 | `Thực hiện bước E5 theo extend.md mục 8: migration 0011, POST /rooms/{code}/invites, GET /invites, mở rộng join_room với invite_id, hết hạn lời mời, test invite của người khác bị từ chối. Trình bày kế hoạch trước.` |
-| E6 | `Thực hiện bước E6 theo extend.md mục 3.6 và 9: migration 0012, ghi call_participants khi vào/ra, đóng dòng treo khi khởi động, API lịch sử, xuất chat. Trình bày kế hoạch trước.` |
-| E4 | `Thực hiện bước E4 theo extend.md mục 3.4 và 7: migration 0010, dm_send có ack và client_msg_id, dm_read, lịch sử theo con trỏ, xóa mềm. Trình bày kế hoạch trước.` |
+| E5 | `Thực hiện bước E5 theo extend.md mục 8: migration 0012, POST /rooms/{code}/invites, GET /invites, mở rộng join_room với invite_id, hết hạn lời mời, test invite của người khác bị từ chối. Trình bày kế hoạch trước.` |
+| E6 | `Thực hiện bước E6 theo extend.md mục 3.6 và 9: migration 0013, ghi call_participants khi vào/ra, đóng dòng treo khi khởi động, API lịch sử, xuất chat. Trình bày kế hoạch trước.` |
+| E4 | `Thực hiện bước E4 theo extend.md mục 3.4 và 7: migration 0011, dm_send có ack và client_msg_id, dm_read, lịch sử theo con trỏ, xóa mềm. Trình bày kế hoạch trước.` |
 | E7 | `Thực hiện bước E7 theo extend.md mục 11 và 12: API admin mở rộng, cấu hình mới trong SettingsSchema, audit user.avatar_remove. Trình bày kế hoạch trước.` |

@@ -23,6 +23,7 @@ from app.api.errors import (
     validation_error_handler,
 )
 from app.api.me import router as me_router
+from app.api.media import router as media_router
 from app.api.rooms import admin_router as admin_rooms_router
 from app.api.rooms import router as rooms_router
 from app.api.system import router as system_router
@@ -36,6 +37,7 @@ from app.metrics import HttpObservability, Metrics
 from app.realtime.server import RealtimeServer
 from app.services.admin_service import AdminService
 from app.services.auth_service import AuthService
+from app.services.avatar_service import AvatarService
 from app.services.settings_service import SettingsService
 from app.services.turn_service import TurnService
 from app.sfu.control import SfuClient
@@ -83,6 +85,7 @@ def create_app() -> FastAPI:
     app.state.demo_admin = settings.env == "dev"
     app.state.realtime = realtime
     app.state.metrics = metrics
+    app.state.avatar_service = AvatarService(settings.avatar_storage_dir)
     app.state.turn_service = TurnService(
         settings.turn_secret.get_secret_value(), settings.turn_urls
     )
@@ -95,6 +98,7 @@ def create_app() -> FastAPI:
     app.include_router(system_router)
     app.include_router(create_auth_router(limiter), prefix="/api/v1")
     app.include_router(me_router, prefix="/api/v1")
+    app.include_router(media_router)
     app.include_router(admin_router, prefix="/api/v1")
     app.include_router(public_router, prefix="/api/v1")
     app.include_router(rooms_router, prefix="/api/v1")
@@ -105,7 +109,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
-        allow_methods=["GET", "POST", "PATCH", "DELETE"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Authorization"],
         expose_headers=["X-Request-ID", "Retry-After"],
     )

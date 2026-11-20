@@ -22,6 +22,7 @@ from app.schemas.settings import SettingsSchema
 from app.services.audit_service import AuditActor, record_audit
 from app.services.auth_service import AuthService
 from app.services.settings_service import SettingsService
+from app.services.user_service import get_user
 from app.sfu.control import Mode, SfuClient
 
 PASSWORD_FAILURES = parse("5/5 minute")
@@ -216,6 +217,10 @@ class RoomService:
             occupied = len(presence.peers) + len(presence.held_seats)
             if previous is None and held is None and occupied >= capacity(room, settings):
                 raise AuthError(ErrorCode.ROOM_FULL)
+
+            if not connection.is_guest:
+                user = await get_user(db, UUID(connection.user_id))
+                connection.display_name = user.display_name
 
             old_host = presence.host_id()
             if previous is not None:

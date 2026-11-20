@@ -1,6 +1,6 @@
 # 02. API (HTTP)
 
-> Base URL: `/api/v1`. Riêng `/health`, `/ready`, `/metrics` nằm ngoài prefix.
+> Base URL: `/api/v1`. Riêng `/health`, `/ready`, `/metrics`, `/media/avatars/*` nằm ngoài prefix.
 > Phần realtime (Socket.io) xem `03-socket-events.md`.
 
 ## 0. Quy ước chung
@@ -241,6 +241,10 @@ Khách **không** được: tạo phòng, gọi admin API, đổi tên/mật kh�
   "id": "uuid",
   "email": "an@example.com",
   "display_name": "An",
+  "birth_date": null,
+  "avatar_url": null,
+  "avatar_thumb_url": null,
+  "privacy": { "discoverable_by_email": true, "show_online_status": true },
   "role": "user",
   "is_guest": false,
   "must_change_password": false,
@@ -250,7 +254,25 @@ Khách **không** được: tạo phòng, gọi admin API, đổi tên/mật kh�
 Với khách: `email = null`, `is_guest = true`, thêm `expires_at`.
 
 ### PATCH `/me`
-`{ "display_name": "An Nguyen" }` → trả user. Khách: 403 `GUEST_NOT_ALLOWED`.
+Body gồm các khóa tùy chọn: `display_name`, `birth_date`, `privacy`. Khóa vắng mặt giữ nguyên; `birth_date: null` xóa ngày sinh. Trả toàn bộ hồ sơ như GET. Khách: 403 `GUEST_NOT_ALLOWED`.
+
+```json
+{ "display_name": "An Nguyen", "birth_date": "2004-05-20", "privacy": { "show_online_status": false } }
+```
+
+Ngày sinh theo `YYYY-MM-DD`, không ở tương lai, không trước 1900-01-01 hoặc quá 120 năm: 422 `INVALID_BIRTH_DATE`. Sai kiểu/định dạng, tên không hợp lệ, quyền riêng tư không phải boolean hoặc khóa ngoài hợp đồng (email, role…): 422 `VALIDATION_ERROR`. Tên và `privacy` không nhận `null`. Hồ sơ đọc tên từ DB; tên trong cuộc gọi đang diễn ra giữ snapshot lúc vào phòng.
+
+### PUT `/me/avatar` và DELETE `/me/avatar` (V3 E1)
+
+PUT nhận `multipart/form-data` với đúng một tệp ở trường `file`; trả hồ sơ có URL ảnh 256 px và thumbnail 64 px. Chỉ nhận JPEG/PNG/WebP theo nội dung; không tin tên hay MIME; xóa metadata, áp dụng hướng EXIF rồi cắt giữa thành ảnh vuông WebP.
+
+- Dung lượng mặc định tối đa 2048 KB (`avatar_max_kb`), tối đa 25 triệu pixel: 413 `IMAGE_TOO_LARGE`.
+- Ảnh hỏng, SVG, định dạng khác, sai multipart: 400 `INVALID_IMAGE`.
+- Admin tắt `allow_avatar_upload`: 403 `FEATURE_DISABLED`.
+- Khách không được PUT/DELETE: 403 `GUEST_NOT_ALLOWED`. Chưa đổi mật khẩu bắt buộc: 403 `PASSWORD_CHANGE_REQUIRED`.
+- DELETE trả 204, gọi lại vẫn 204, được gỡ ảnh khi tính năng tải lên đang tắt.
+
+`GET /media/avatars/{user_id}/{hash}-{size}.webp` công khai (không cần token), chỉ có cỡ 256/64; ảnh không tồn tại trả 404. Header `Cache-Control: public, max-age=31536000, immutable`, `Content-Type: image/webp`, `X-Content-Type-Options: nosniff`. URL thay đổi theo nội dung ảnh; bản cũ trên máy chủ được xóa sau khi cập nhật DB. Trình duyệt có thể còn giữ bản đã cache trước khi xóa.
 
 ### POST `/me/password`
 `{ "current_password": "...", "new_password": "..." }` → `204`.

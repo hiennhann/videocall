@@ -48,6 +48,9 @@ services:
       ADMIN_ALLOWED_IPS: ${ADMIN_ALLOWED_IPS:-}
       PROMETHEUS_URL: ${PROMETHEUS_URL:-}
       SFU_URL: http://sfu:8080
+      AVATAR_STORAGE_DIR: /var/lib/videocall/avatars
+    volumes:
+      - avatars:/var/lib/videocall/avatars
     ports:
       - "127.0.0.1:8000:8000"
     networks:
@@ -124,3 +127,4 @@ networks:
 
 volumes:
   pgdata:
+  avatars:

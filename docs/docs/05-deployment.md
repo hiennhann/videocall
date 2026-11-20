@@ -47,6 +47,8 @@ services:
 
 **`--workers 1` là bắt buộc** ở v1 vì trạng thái phòng nằm trong RAM của process (`03-socket-events.md` mục 3).
 
+V3 E1 bổ sung volume `avatars`, mount vào `/var/lib/videocall/avatars` của `app` (`AVATAR_STORAGE_DIR`). Dockerfile tạo thư mục thuộc user `app`; container không cần chạy root. Ảnh tồn tại qua lần tạo lại container; không chạy `docker compose down -v` nếu cần giữ dữ liệu. Reverse proxy cho qua `/media/avatars/*` tới app như các tuyến công khai khác.
+
 ## 2. Sơ đồ mạng
 
 ```
@@ -272,6 +274,9 @@ Dùng **image gắn tag SHA**, không dùng `latest` để triển khai, để b
 | Lưu giữ | 7 bản hằng ngày; (nâng cao) đẩy một bản ra nơi khác, ví dụ object storage |
 | **Thử khôi phục** | Mỗi tháng restore vào một DB tạm để chắc rằng bản backup dùng được. Backup chưa từng thử restore thì chưa phải backup |
 | Không cần backup | Trạng thái phòng (RAM), TURN |
+| Ảnh đại diện (V3 E1) | Sao lưu volume `avatars` cùng thời điểm với DB; khôi phục cả hai để `users.avatar_key` trỏ đúng tệp |
+
+Khi sao lưu/khôi phục thủ công, dừng `app` để không có yêu cầu thay ảnh trong lúc chụp DB và tệp. Có thể dùng `docker compose cp app:/var/lib/videocall/avatars <thư-mục-backup>` cả khi container đã dừng, kèm bản `pg_dump`. Khi restore, giữ cấu trúc `<user_id>/<hash>-256.webp` và `-64.webp`, trả quyền sở hữu cho user `app`, rồi khởi động lại app. Quy trình này cần được đưa vào lịch backup thực tế khi triển khai máy chủ; repository hiện chưa có tác vụ tự động sao lưu volume.
 
 ## 9. Giám sát (observability)
 

@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Annotated, Literal, Self
 
 from pydantic import Field, SecretStr, StringConstraints, field_validator, model_validator
@@ -24,6 +25,7 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     prometheus_url: str = ""
     sfu_url: str = ""
+    avatar_storage_dir: Path = Path(__file__).resolve().parents[3] / ".data" / "avatars"
 
     @field_validator("database_url")
     @classmethod

@@ -1,5 +1,5 @@
-from datetime import datetime
-from typing import Annotated, Literal
+from datetime import date, datetime
+from typing import TYPE_CHECKING, Annotated, Literal, Self
 from unicodedata import category
 from uuid import UUID
 
@@ -11,7 +11,11 @@ from pydantic import (
     EmailStr,
     Field,
     SecretStr,
+    field_validator,
 )
+
+if TYPE_CHECKING:
+    from app.models import User
 
 
 def normalize_email(value: str) -> str:
@@ -61,8 +65,49 @@ class GuestRequest(BaseModel):
     client_type: Literal["web", "mobile"] = "mobile"
 
 
+class PrivacySettings(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    discoverable_by_email: bool = True
+    show_online_status: bool = True
+
+
+class PrivacyPatch(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    discoverable_by_email: bool | None = None
+    show_online_status: bool | None = None
+
+    @field_validator("discoverable_by_email", "show_online_status")
+    @classmethod
+    def reject_null(cls, value: bool | None) -> bool:
+        if value is None:
+            raise ValueError("Quyền riêng tư phải là true hoặc false.")
+        return value
+
+
 class UpdateProfileRequest(BaseModel):
-    display_name: DisplayName
+    model_config = ConfigDict(extra="forbid")
+
+    display_name: DisplayName | None = None
+    birth_date: date | None = None
+    privacy: PrivacyPatch | None = None
+
+    @field_validator("display_name", "privacy")
+    @classmethod
+    def reject_null(cls, value: object) -> object:
+        if value is None:
+            raise ValueError("Trường này không được null.")
+        return value
+
+    @field_validator("birth_date", mode="before")
+    @classmethod
+    def date_only(cls, value: object) -> object:
+        if value is None or type(value) is date:
+            return value
+        if not isinstance(value, str) or len(value) != 10:
+            raise ValueError("Ngày sinh phải có dạng YYYY-MM-DD.")
+        return date.fromisoformat(value)
 
 
 class ChangePasswordRequest(BaseModel):
@@ -93,6 +138,25 @@ class RegisteredUser(BaseModel):
 class MemberProfile(LoginUser):
     is_guest: Literal[False] = False
     created_at: datetime
+    birth_date: date | None = None
+    avatar_url: str | None = None
+    avatar_thumb_url: str | None = None
+    privacy: PrivacySettings
+
+    @classmethod
+    def from_user(cls, user: "User") -> Self:
+        avatar = f"/media/avatars/{user.id}/{user.avatar_key}" if user.avatar_key else None
+        return cls(
+            **LoginUser.model_validate(user).model_dump(),
+            created_at=user.created_at,
+            birth_date=user.birth_date,
+            avatar_url=f"{avatar}-256.webp" if avatar else None,
+            avatar_thumb_url=f"{avatar}-64.webp" if avatar else None,
+            privacy=PrivacySettings(
+                discoverable_by_email=user.discoverable_by_email,
+                show_online_status=user.show_online_status,
+            ),
+        )
 
 
 class GuestUser(BaseModel):

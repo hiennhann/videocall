@@ -198,6 +198,25 @@ async def test_metrics_capture_room_activity_with_bounded_labels(live: Server) -
         assert kicked["room_participants", ()] == 1
 
 
+async def test_profile_name_is_snapshotted_until_next_room_join(live: Server) -> None:
+    owner = await account(live)
+    code = await room(live, owner)
+    async with AsyncExitStack() as stack:
+        host = await peer(live, stack, owner)
+        assert (await host.call("join_room", {"code": code}))["ok"]
+        changed = await live.http.patch(
+            "me", headers=bearer(owner), json={"display_name": "Updated Profile"}
+        )
+        assert changed.status_code == 200
+        # Lặp join trong cùng cuộc gọi vẫn giữ snapshot; JWT vẫn chứa tên cũ.
+        assert (await host.call("join_room", {"code": code}))["ok"]
+        connection = live.realtime.state.get_connection(host.sid)
+        assert connection.display_name == "Member"
+        assert (await host.call("leave_room"))["ok"]
+        assert (await host.call("join_room", {"code": code}))["ok"]
+        assert connection.display_name == "Updated Profile"
+
+
 async def test_mesh_capacity_and_rejoin_after_transport_loss(
     live: Server, monkeypatch: pytest.MonkeyPatch
 ) -> None:

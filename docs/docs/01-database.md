@@ -119,6 +119,10 @@ erDiagram
 | `email` | varchar(254) | NOT NULL | Đã chuyển lowercase ở tầng service |
 | `password_hash` | text | NOT NULL | Hash argon2id, không bao giờ trả ra API |
 | `display_name` | varchar(50) | NOT NULL | 2-50 ký tự |
+| `birth_date` | date | NULL, CHECK >= 1900-01-01 | E1 (`0009`); service kiểm tra không ở tương lai, không quá 120 năm |
+| `avatar_key` | varchar(80) | NULL | Hash SHA-256 của hai ảnh WebP đã xử lý; không lưu tên tệp người dùng |
+| `avatar_updated_at` | timestamptz | NULL | Thời điểm thay ảnh |
+| `discoverable_by_email` / `show_online_status` | boolean | NOT NULL, default `true` | E1 lưu lựa chọn; E2/E3 sẽ dùng khi tìm bạn/hiển thị online |
 | `role` | varchar(16) | NOT NULL, default `'user'`, CHECK in (`user`,`admin`) | Thêm ở `0003` |
 | `is_active` | boolean | NOT NULL, default `true` | `false` = bị khóa. Thêm ở `0003` |
 | `must_change_password` | boolean | NOT NULL, default `false` | `true` sau khi admin reset mật khẩu. Thêm ở `0003` |
@@ -264,6 +268,8 @@ Danh sách `action`: xem `02-api.md` mục 8.
 | `0005` | `create_audit_logs` | Bảng `audit_logs` + index | A3 | |
 | `0006` | `create_rooms` | Bảng `rooms` + ràng buộc + index | A4 | |
 | `0007` | `create_messages` | Bảng `messages` + index | A8 | |
+| `0008` | `device_transfers` | Phân loại phiên và xác nhận chuyển thiết bị | V2 | Đã triển khai, không sửa lại |
+| `0009` | `add_user_profile` | Hồ sơ, avatar và hai quyền riêng tư | V3 E1 | Cột mới có NULL/default, giữ nguyên dữ liệu cũ |
 
 Quy tắc (nhắc lại từ phần phân tích):
 1. Mỗi migration làm một việc nhỏ, tên rõ ràng.

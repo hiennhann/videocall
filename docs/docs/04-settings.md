@@ -26,6 +26,7 @@
 | `ALLOWED_ORIGINS` | Có | Danh sách origin cho CORS và Socket.io, phân tách bằng dấu phẩy |
 | `FORWARDED_ALLOW_IPS` | Prod | IP của reverse proxy được tin cậy khi đọc `X-Forwarded-For` |
 | `LOG_LEVEL` | Không | Mặc định `INFO` |
+| `AVATAR_STORAGE_DIR` | Không | Chạy Python: `<repo>/.data/avatars`; Compose đặt `/var/lib/videocall/avatars` và mount volume `avatars` |
 | `PROMETHEUS_URL` | Không | Để dashboard admin lấy băng thông TURN |
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Có | Cho container Postgres |
 | `ADMIN_ALLOWED_IPS` | Prod | Danh sách IP/CIDR được vào `/admin` (Caddy dùng) |
@@ -71,6 +72,8 @@ Về số người: mesh chịu được khoảng 4 người (mỗi máy upload 
 | `max_screen_bitrate_kbps` | int | `2500` | 200-10000 | Kết nối mới | Trần bitrate chia sẻ màn hình |
 | `max_video_resolution` | enum | `720p` | `360p`, `480p`, `720p`, `1080p` | Kết nối mới | Độ phân giải tối đa |
 | `default_codec` | enum | `VP8` | `VP8`, `VP9`, `H264` | Kết nối mới | Codec video ưu tiên |
+| `allow_avatar_upload` | bool | `true` | | Lần tải mới | Cho phép tải/thay ảnh đại diện; vẫn cho gỡ ảnh khi tắt |
+| `avatar_max_kb` | int | `2048` | 100-5120 | Lần tải mới | Giới hạn tệp ảnh (KB); trả cùng `allow_avatar_upload` qua `/config/public` |
 
 > **Lưu ý trung thực:** ở giai đoạn mesh, nhóm cấu hình này là **chính sách gửi cho client** (qua `media_policy`) và client tự áp dụng; một client sửa đổi có thể bỏ qua. Chỉ khi có SFU (A10) server mới ép được. Vì vậy đừng dùng nó để bảo vệ tài nguyên; việc bảo vệ băng thông TURN dựa vào giới hạn của coturn (xem `05-deployment.md`).
 

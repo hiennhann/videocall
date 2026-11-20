@@ -47,6 +47,10 @@ AUTH_ERRORS = {
     ErrorCode.GUEST_NOT_ALLOWED: (403, "Tính năng này cần tài khoản đã đăng ký."),
     ErrorCode.WRONG_PASSWORD: (400, "Mật khẩu hiện tại không đúng."),
     ErrorCode.PASSWORD_UNCHANGED: (400, "Mật khẩu mới phải khác mật khẩu hiện tại."),
+    ErrorCode.INVALID_BIRTH_DATE: (422, "Ngày sinh không hợp lệ."),
+    ErrorCode.INVALID_IMAGE: (400, "Ảnh phải là JPEG, PNG hoặc WebP hợp lệ."),
+    ErrorCode.IMAGE_TOO_LARGE: (413, "Ảnh vượt quá dung lượng hoặc số điểm ảnh cho phép."),
+    ErrorCode.FEATURE_DISABLED: (403, "Tính năng này đang tắt."),
 }
 
 
