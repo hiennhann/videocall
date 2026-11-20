@@ -49,6 +49,13 @@ Cột "Áp dụng" cho biết thay đổi có tác dụng với đối tượng 
 | `guest_ttl_minutes` | int | `120` | 10-1440 | Token mới | Thời hạn token khách |
 | `maintenance_mode` | bool | `false` | | Ngay | Chặn **tạo phòng mới** và cấp token khách mới |
 | `maintenance_message` | string | `""` | 0-200 ký tự | Ngay | Thông báo hiển thị khi bảo trì |
+| `friends_enabled` | bool | `true` | | Request/sự kiện mới | E2/E3; tắt bạn bè, vẫn cho quản lý chặn và dọn quan hệ |
+| `friend_search_enabled` | bool | `true` | | Request mới | Cho tìm email chính xác |
+| `max_friends_per_user` | int | `200` | 10-2000 | Gửi/chấp nhận mới | Kiểm tra cả hai bên, tuần tự hóa thay đổi |
+| `max_pending_friend_requests` | int | `50` | 5-500 | Gửi mới | Hạn mức người gửi, gồm lời mời từ chối bị che |
+| `friend_request_ttl_days` | int | `30` | 1-365 | Đọc/chấp nhận và sweep | Hết hạn có hiệu lực ngay khi đọc; job cập nhật status khoảng 30 giây |
+
+Hai cờ `friends_enabled` và `friend_search_enabled` có trong `/config/public`. Nhóm bạn bè được triển khai ở E2/E3 để áp dụng chính sách ngay; các phần quản trị còn lại thuộc E7.
 
 ### 3.2 Phòng và chat (`rooms`)
 

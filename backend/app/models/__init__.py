@@ -1,6 +1,7 @@
 from app.db.base import Base
 from app.models.audit_log import AuditLog
 from app.models.device_transfer import DeviceTransfer
+from app.models.friend import FriendRequest, Friendship, UserBlock
 from app.models.message import Message
 from app.models.refresh_token import RefreshToken
 from app.models.room import Room
@@ -11,9 +12,12 @@ __all__ = [
     "AuditLog",
     "Base",
     "DeviceTransfer",
+    "FriendRequest",
+    "Friendship",
     "Message",
     "RefreshToken",
     "Room",
     "Setting",
     "User",
+    "UserBlock",
 ]

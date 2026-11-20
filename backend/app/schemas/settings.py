@@ -37,6 +37,37 @@ class SettingsSchema(BaseModel):
     allow_guest: bool = Field(
         True, description="Cho phép đăng nhập khách.", json_schema_extra={"category": "access"}
     )
+    friends_enabled: bool = Field(
+        True,
+        description="Cho phép sử dụng chức năng bạn bè.",
+        json_schema_extra={"category": "access"},
+    )
+    friend_search_enabled: bool = Field(
+        True,
+        description="Cho phép tìm bạn bằng email chính xác.",
+        json_schema_extra={"category": "access"},
+    )
+    max_friends_per_user: int = Field(
+        200,
+        ge=10,
+        le=2000,
+        description="Số bạn tối đa của mỗi tài khoản.",
+        json_schema_extra={"category": "access"},
+    )
+    max_pending_friend_requests: int = Field(
+        50,
+        ge=5,
+        le=500,
+        description="Số lời mời đã gửi đang chờ tối đa.",
+        json_schema_extra={"category": "access"},
+    )
+    friend_request_ttl_days: int = Field(
+        30,
+        ge=1,
+        le=365,
+        description="Thời hạn lời mời kết bạn (ngày).",
+        json_schema_extra={"category": "access"},
+    )
     guest_ttl_minutes: int = Field(
         120,
         ge=10,
@@ -186,6 +217,8 @@ class PublicSettings(BaseModel):
     livestream_enabled: bool
     allow_registration: bool
     allow_guest: bool
+    friends_enabled: bool
+    friend_search_enabled: bool
     maintenance_mode: bool
     maintenance_message: str
     password_min_length: int

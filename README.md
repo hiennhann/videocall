@@ -25,7 +25,7 @@ Nếu đang dùng `.env` từ A6, bỏ dòng mẫu `TURN_URLS=stun:turn.example.
 
 Swagger vẫn có tại [`/docs`](http://localhost:8000/docs) để thử API.
 
-V3 E1 bổ sung API hồ sơ (ngày sinh, quyền riêng tư) và ảnh đại diện. Xem [báo cáo và cách nghiệm thu E1](docs/docs_v3/e1-report.md). E1 dùng migration `0009`; ảnh lưu trong volume `avatars`. Giao diện chỉnh các trường mới thuộc U6; E2–E7 đang chờ triển khai sau khi E1 được duyệt.
+V3 E1 bổ sung API hồ sơ và ảnh đại diện ([báo cáo E1](docs/docs_v3/e1-report.md), migration `0009`, volume `avatars`). E2/E3 bổ sung API bạn bè/chặn và thông báo realtime, ẩn hiện online, đồng bộ sau khi kết nối lại ([báo cáo và cách nghiệm thu E2/E3](docs/docs_v3/e2-e3-report.md), migration `0010`, nhánh `feat/phase2`). Giao diện Bạn bè thuộc U5, chỉnh hồ sơ thuộc U6; E4–E7 vẫn là các bước tiếp theo.
 
 Trong môi trường dev, [`/metrics`](http://localhost:8000/metrics) trả chỉ số HTTP, Socket.IO và phòng ở định dạng Prometheus. Xem log JSON bằng `docker compose logs app` và tra từng yêu cầu bằng header `X-Request-ID`.
 

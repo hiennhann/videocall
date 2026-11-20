@@ -46,6 +46,22 @@ Token chỉ kiểm tra **lúc kết nối**. Access token sống 15 phút nhưng
 
 Đây là đánh đổi có chủ ý, ghi ở `06-decisions.md` D15.
 
+### 1.4 Thông báo bạn bè và trạng thái online (V3 E3)
+
+Sau khi xác thực, socket thành viên tự vào room nội bộ `user:<UUID>`; guest không tham gia. Client không được tự chọn user room qua payload. Các tab dùng chung phiên nhận cùng thông báo; rời phòng gọi không rời user room.
+
+| Server → client | Payload | Đối tượng |
+|---|---|---|
+| `friend_request_received` | `{request:{id,from,to,status,created_at}}` | Người nhận, sau khi DB commit |
+| `friend_added` | `{user:{id,display_name,avatar_url,is_online,since}}` | Cả hai tài khoản |
+| `friend_removed` | `{user_id}` | Người còn lại khi hủy kết bạn; block không phát |
+| `friend_profile_changed` | `{user_id,display_name,avatar_url}` | Bạn bè, không có email/ngày sinh |
+| `presence_changed` | `{user_id,online:true\|false\|null}` | Bạn bè được phép xem; null để xóa trạng thái cũ khi vừa tắt quyền hiển thị |
+
+Chỉ phát online lần socket đầu tiên; socket cuối ngắt thì chờ 5 giây trước offline. Nối lại trong khoảng chờ hủy offline và không lặp online. Cache danh sách bạn chỉ giữ cho người đang online; quan hệ/quyền thay đổi làm mất hiệu lực cache. Shutdown hủy các timer và giải phóng cache.
+
+Thông báo best-effort, lỗi phát không làm thất bại API đã commit. `client/js/friends-sync.js` tự lấy đủ trang `/friends` và hai chiều `/friends/requests` lúc kết nối/kết nối lại, gộp làm mới đồng thời và bỏ kết quả từ kết nối cũ. Snapshot phát dưới dạng sự kiện trình duyệt `videocall:friends-synced`; lỗi là `videocall:friends-sync-error`. Module gắn vào workspace và socket cuộc gọi của thành viên, sẵn cho UI U5. DM/lời mời gọi sẽ được nối sau E4/E5.
+
 ## 2. Quy ước sự kiện
 
 - Tên sự kiện `snake_case`; dữ liệu là một object JSON.

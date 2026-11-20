@@ -21,6 +21,7 @@ from app.core.errors import AuthError, ErrorCode
 from app.core.security import decode_access_token
 from app.metrics import Metrics
 from app.models import Room
+from app.realtime.friends import FriendRealtime
 from app.realtime.state import Connection, RoomStateStore
 from app.schemas.chat import SendMessage
 from app.schemas.rooms import (
@@ -36,6 +37,7 @@ from app.schemas.rooms import (
 from app.services.account_events import AccountEvents
 from app.services.auth_service import AuthService
 from app.services.chat_service import ChatService
+from app.services.friend_service import FriendService
 from app.services.room_service import RoomService
 from app.services.settings_service import SettingsService
 from app.sfu.control import SfuClient
@@ -61,6 +63,8 @@ class RealtimeServer(AccountEvents):
             max_http_buffer_size=32 * 1024,
         )
         self.state = RoomStateStore()
+        self.social = FriendRealtime(self.sio, self.state, settings)
+        self.friends = FriendService(settings, self.social)
         self.metrics = metrics
         self.rooms = RoomService(settings, self.state, self, metrics, sfu)
         self.chat = ChatService(self.rooms)
@@ -86,10 +90,12 @@ class RealtimeServer(AccountEvents):
     def start(self, sessions: async_sessionmaker[AsyncSession], auth: AuthService) -> None:
         self.sessions = sessions
         self.auth = auth
+        self.social.start(sessions)
         self._sweeper = asyncio.create_task(self.sweep())
         self._chat_writer = asyncio.create_task(self.chat.store(sessions))
 
     async def stop(self) -> None:
+        await self.social.stop()
         if self._sweeper is not None:
             self._sweeper.cancel()
             await asyncio.gather(self._sweeper, return_exceptions=True)
@@ -106,6 +112,8 @@ class RealtimeServer(AccountEvents):
             await asyncio.sleep(30)
             try:
                 await self.rooms.sweep_empty(self.sessions)
+                async with self.sessions() as db:
+                    await self.friends.expire_requests(db)
             except (OSError, PostgresError, SQLAlchemyError):
                 logger.warning("Chưa thể kiểm tra phòng trống.", extra={"request_id": str(uuid4())})
 
@@ -139,6 +147,9 @@ class RealtimeServer(AccountEvents):
                 self.state.add_connection(
                     Connection(sid, identity.subject, name, role, identity.family_id, peer_ip)
                 )
+            if identity.family_id is not None:
+                await self.sio.enter_room(sid, f"user:{identity.id}")
+                await self.social.connected(identity.id)
             logger.info(
                 "socket_connected", extra={"request_id": request_id, "user_id": identity.subject}
             )
@@ -173,6 +184,8 @@ class RealtimeServer(AccountEvents):
                     )
                 finally:
                     self.state.remove_connection(sid)
+                    if not connection.is_guest:
+                        self.social.disconnected(UUID(connection.user_id))
                     logger.info(
                         "socket_disconnected",
                         extra={"request_id": str(uuid4()), "user_id": connection.user_id},
@@ -358,6 +371,7 @@ class RealtimeServer(AccountEvents):
         only_family: UUID | None = None,
         keep_family: UUID | None = None,
     ) -> None:
+        self.social.invalidate_all()
         for connection in self.state.connections_for(str(user_id)):
             if only_family is not None and connection.family_id != only_family:
                 continue
@@ -365,6 +379,9 @@ class RealtimeServer(AccountEvents):
                 continue
             await self.emit("force_disconnect", {"reason": reason}, to=connection.peer_id)
             await self.sio.disconnect(connection.peer_id)
+
+    async def profile_changed(self, user_id: UUID) -> None:
+        await self.social.profile_changed(user_id)
 
     async def close_owned_rooms(self, db: AsyncSession, user_id: UUID, now: datetime) -> list[str]:
         return await self.rooms.close_for_deleted_owner(db, user_id, now)

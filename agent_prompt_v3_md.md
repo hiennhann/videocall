@@ -45,7 +45,7 @@ Khi thực hiện bất kỳ bước nào dưới đây, agent **bắt buộc** 
 
 ### Giai đoạn 2: Mở rộng Backend & Realtime (`docs_v3/extend.md`)
 
-> Cập nhật E1 (20/11/2026): migration `0008` đã thuộc V2, vì vậy E1 dùng `0009`, các số dự kiến tiếp theo dịch một bước. Dừng sau E1 để người dùng kiểm tra và duyệt; chưa triển khai E2–E7.
+> Cập nhật 20/11/2026: migration `0008` đã thuộc V2, vì vậy E1 dùng `0009`, E2 dùng `0010`. E1 đã kiểm thử; yêu cầu tiếp theo là triển khai E2/E3 và push nhánh `feat/phase2`, giữ E4–E7 cho các bước sau. Xem `docs/docs_v3/e2-e3-report.md`.
 
 > *Thứ tự đề xuất sau khi hoàn thành MVP (A1–A9): `E1 → E2 → E3 → E5 → E6 → E4 → E7`.*
 

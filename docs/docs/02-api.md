@@ -280,6 +280,32 @@ PUT nhận `multipart/form-data` với đúng một tệp ở trường `file`; 
 - Mật khẩu mới trùng cũ: 400 `PASSWORD_UNCHANGED`.
 - Thành công: **thu hồi refresh token của các phiên khác**, giữ phiên theo `family_id` trong access token và trả `204`. Từ A3, đặt `must_change_password = false`. Từ A4, ngắt socket của các phiên khác.
 
+### Bạn bè và chặn (V3 E2)
+
+Tất cả yêu cầu tài khoản đăng ký đang hoạt động, đã đổi mật khẩu bắt buộc; guest trả 403 `GUEST_NOT_ALLOWED`. Payload người khác chỉ gồm `id,display_name,avatar_url` và dữ liệu quan hệ tương ứng; không trả email/ngày sinh.
+
+| Method | Path | Kết quả |
+|---|---|---|
+| GET | `/users/search?email=<đầy đủ>` | `{items:[{id,display_name,avatar_url,relationship}]}`, tối đa một người; relationship `none/friend/request_sent/request_received` |
+| POST | `/friends/requests` | `{to_user_id}` → 201 `{id,from,to,status,created_at}`; tự chấp nhận khi có lời mời ngược |
+| GET | `/friends/requests?direction=incoming\|outgoing` | `{items:[...]}`; mặc định incoming |
+| POST | `/friends/requests/{id}/accept` | 200 phần tử bạn bè; chỉ người nhận |
+| POST | `/friends/requests/{id}/decline` | 204, im lặng với người gửi |
+| DELETE | `/friends/requests/{id}` | 204, chỉ người gửi |
+| GET | `/friends?q=&page=1&page_size=20` | `{items,total,page,page_size}`, page_size 1–100; mỗi item `{id,display_name,avatar_url,is_online,since}` |
+| DELETE | `/friends/{user_id}` | 204, hủy kết bạn |
+| GET | `/blocks` | `{items:[{user,created_at}]}` |
+| POST | `/blocks` | `{user_id}` → 201 `{user,created_at}`, gọi lại không tạo dòng trùng |
+| DELETE | `/blocks/{user_id}` | 204, bỏ chặn, không khôi phục bạn bè |
+
+Tìm email khớp chính xác sau chuẩn hóa lowercase; bản thân, tài khoản không tồn tại, bị ẩn, bị khóa hoặc bị chặn đều trả `{items:[]}`. Không tìm theo một phần email.
+
+Từ chối vẫn hiển thị `pending` ở phía người gửi tới TTL; không trả `responded_at`, không phát event từ chối. Cooldown 24 giờ không vượt được bằng cách hủy/gửi lại. Hạn mức mặc định: 200 bạn, 50 lời mời đã gửi đang chờ (gồm các lời mời bị che), TTL 30 ngày. Tìm kiếm: 20/phút và 200/ngày/tài khoản; 60/phút và 600/ngày/IP. Gửi: 10/phút/tài khoản, 30/phút/IP.
+
+Lỗi: 404 `USER_NOT_FOUND`, `REQUEST_NOT_FOUND`, `NOT_FRIENDS`; 409 `ALREADY_FRIENDS`, `REQUEST_ALREADY_SENT`, `FRIEND_LIMIT_REACHED`; 429 `REQUEST_COOLDOWN` hoặc `RATE_LIMITED` có `Retry-After`; 403 `FEATURE_DISABLED`. Chặn hủy quan hệ và lời mời kết bạn đang chờ, không báo người bị chặn và không thay đổi phòng đang gọi. Phần DM/lời mời gọi chờ E4/E5.
+
+`is_online` là null nếu tắt hiển thị online; HTTP giữ true trong khoảng đợi offline 5 giây để cùng trạng thái với realtime. Danh sách ưu tiên online, rồi tên (không phân biệt hoa thường), cuối cùng UUID để ổn định phân trang. Khi tắt `friends_enabled`, vẫn cho hủy/từ chối, hủy kết bạn và quản lý chặn.
+
 ## 6. Phòng
 
 Mật khẩu phòng được kiểm tra ở sự kiện socket `join_room`, **không** có endpoint HTTP riêng, để chỉ một chỗ quyết định ai được vào.

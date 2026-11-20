@@ -6,8 +6,9 @@ from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from io import BytesIO
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
@@ -15,9 +16,11 @@ import socketio
 import uvicorn
 from fastapi import FastAPI
 from httpx import AsyncClient, MockTransport, Request, Response
+from PIL import Image
 from prometheus_client.parser import text_string_to_metric_families
 
 from app.cli import create_admin
+from app.realtime import friends as friend_realtime
 from app.realtime.server import RealtimeServer
 from app.services import room_service
 from app.sfu.control import SfuClient
@@ -107,6 +110,11 @@ class Socket:
             "kicked",
             "room_closed",
             "force_disconnect",
+            "friend_request_received",
+            "friend_added",
+            "friend_removed",
+            "friend_profile_changed",
+            "presence_changed",
         ):
             self.client.on(event, self.events[event].put)
 
@@ -196,6 +204,224 @@ async def test_metrics_capture_room_activity_with_bounded_labels(live: Server) -
         kicked = await scrape()
         assert kicked["room_kicks_total", ()] == 1
         assert kicked["room_participants", ()] == 1
+
+
+async def make_friends(live: Server, first: dict, second: dict) -> None:
+    request = await live.http.post(
+        "friends/requests", headers=bearer(first), json={"to_user_id": second["user"]["id"]}
+    )
+    assert request.status_code == 201, request.text
+    accepted = await live.http.post(
+        f"friends/requests/{request.json()['id']}/accept", headers=bearer(second)
+    )
+    assert accepted.status_code == 200, accepted.text
+
+
+async def test_friend_events_reach_all_own_tabs_without_private_fields(
+    live: Server, app: FastAPI, tmp_path
+) -> None:
+    app.state.avatar_service.root = tmp_path
+    first, second, outsider = await account(live), await account(live), await account(live)
+    async with AsyncExitStack() as stack:
+        sender = await peer(live, stack, first)
+        recipient = await peer(live, stack, second)
+        tab = await peer(live, stack, second)
+        other = await peer(live, stack, outsider)
+        assert f"user:{second['user']['id']}" in live.realtime.sio.rooms(recipient.sid)
+        response = await live.http.post(
+            "friends/requests", headers=bearer(first), json={"to_user_id": second["user"]["id"]}
+        )
+        assert response.status_code == 201
+        for connection in (recipient, tab):
+            event = await connection.event("friend_request_received")
+            assert event["request"]["id"] == response.json()["id"]
+            assert set(event["request"]["from"]) == {"id", "display_name", "avatar_url"}
+        assert sender.events["friend_request_received"].empty()
+        assert other.events["friend_request_received"].empty()
+        assert (
+            await live.http.post(
+                f"friends/requests/{response.json()['id']}/accept", headers=bearer(second)
+            )
+        ).status_code == 200
+        for connection, expected in ((sender, second), (recipient, first), (tab, first)):
+            event = await connection.event("friend_added")
+            assert event["user"]["id"] == expected["user"]["id"]
+        changed = await live.http.patch(
+            "me",
+            headers=bearer(first),
+            json={"display_name": "Current DB Name", "birth_date": "2004-05-20"},
+        )
+        assert changed.status_code == 200
+        for connection in (recipient, tab):
+            event = await connection.event("friend_profile_changed")
+            assert event == {
+                "user_id": first["user"]["id"],
+                "display_name": "Current DB Name",
+                "avatar_url": None,
+            }
+        assert other.events["friend_profile_changed"].empty()
+        data = BytesIO()
+        with Image.new("RGB", (64, 100), "red") as image:
+            image.save(data, format="PNG")
+        uploaded = await live.http.put(
+            "me/avatar",
+            headers=bearer(first),
+            files={"file": ("test.png", data.getvalue(), "image/png")},
+        )
+        assert uploaded.status_code == 200
+        for connection in (recipient, tab):
+            assert (await connection.event("friend_profile_changed"))["avatar_url"].endswith(
+                "-64.webp"
+            )
+        assert (await live.http.delete("me/avatar", headers=bearer(first))).status_code == 204
+        for connection in (recipient, tab):
+            assert (await connection.event("friend_profile_changed"))["avatar_url"] is None
+        removed = await live.http.delete(f"friends/{second['user']['id']}", headers=bearer(first))
+        assert removed.status_code == 204
+        for connection in (recipient, tab):
+            assert await connection.event("friend_removed") == {"user_id": first["user"]["id"]}
+        assert sender.events["friend_removed"].empty()
+
+
+async def test_presence_first_last_socket_and_quick_reconnect_are_debounced(
+    live: Server, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(friend_realtime, "OFFLINE_DELAY", 0.15)
+    first, second = await account(live), await account(live)
+    await make_friends(live, first, second)
+    user_id = second["user"]["id"]
+    async with AsyncExitStack() as stack:
+        observer = await peer(live, stack, first)
+        tab1 = await peer(live, stack, second)
+        assert await observer.event("presence_changed") == {"user_id": user_id, "online": True}
+        tab2 = await peer(live, stack, second)
+        await tab1.client.disconnect()
+        await asyncio.sleep(0.03)
+        assert observer.events["presence_changed"].empty()
+        await tab2.client.disconnect()
+        await asyncio.sleep(0.02)
+        page = (await live.http.get("friends", headers=bearer(first))).json()
+        assert page["items"][0]["is_online"] is True  # Trong khoảng chờ offline.
+        tab3 = await peer(live, stack, second)
+        await asyncio.sleep(0.2)
+        assert observer.events["presence_changed"].empty()
+        await tab3.client.disconnect()
+        assert await observer.event("presence_changed") == {"user_id": user_id, "online": False}
+        assert UUID(user_id) not in live.realtime.social._friends
+        await peer(live, stack, second)
+        assert await observer.event("presence_changed") == {"user_id": user_id, "online": True}
+
+
+async def test_hidden_online_status_is_cleared_and_not_broadcast_on_disconnect(
+    live: Server, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(friend_realtime, "OFFLINE_DELAY", 0.04)
+    first, second = await account(live), await account(live)
+    await make_friends(live, first, second)
+    async with AsyncExitStack() as stack:
+        observer = await peer(live, stack, first)
+        hidden = await peer(live, stack, second)
+        await observer.event("presence_changed", online=True)
+        changed = await live.http.patch(
+            "me", headers=bearer(second), json={"privacy": {"show_online_status": False}}
+        )
+        assert changed.status_code == 200
+        assert await observer.event("presence_changed") == {
+            "user_id": second["user"]["id"],
+            "online": None,
+        }
+        assert (await live.http.get("friends", headers=bearer(first))).json()["items"][0][
+            "is_online"
+        ] is None
+        await hidden.client.disconnect()
+        await asyncio.sleep(0.1)
+        assert observer.events["presence_changed"].empty()
+        await peer(live, stack, second)
+        await asyncio.sleep(0.04)
+        assert observer.events["presence_changed"].empty()
+        await live.http.patch(
+            "me", headers=bearer(second), json={"privacy": {"show_online_status": True}}
+        )
+        assert await observer.event("presence_changed") == {
+            "user_id": second["user"]["id"],
+            "online": True,
+        }
+
+
+async def test_block_invalidates_presence_cache_silently_without_kicking_room(
+    live: Server, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(friend_realtime, "OFFLINE_DELAY", 0.04)
+    first, second = await account(live), await account(live)
+    await make_friends(live, first, second)
+    code = await room(live, first)
+    async with AsyncExitStack() as stack:
+        observer, blocked = await peer(live, stack, first), await peer(live, stack, second)
+        await observer.event("presence_changed", online=True)
+        for connection in (observer, blocked):
+            assert (await connection.call("join_room", {"code": code}))["ok"]
+        assert UUID(second["user"]["id"]) in live.realtime.social._friends
+        response = await live.http.post(
+            "blocks", headers=bearer(first), json={"user_id": second["user"]["id"]}
+        )
+        assert response.status_code == 201
+        assert len(live.realtime.state.get_room(code).peers) == 2
+        assert blocked.events["friend_removed"].empty()
+        await live.http.patch("me", headers=bearer(first), json={"display_name": "Blocked Profile"})
+        await asyncio.sleep(0.03)
+        assert blocked.events["friend_profile_changed"].empty()
+        await blocked.client.disconnect()
+        await asyncio.sleep(0.1)
+        assert observer.events["presence_changed"].empty()
+
+
+async def test_http_snapshot_recovers_friend_requests_missed_while_offline(live: Server) -> None:
+    first, second = await account(live), await account(live)
+    async with AsyncExitStack() as stack:
+        old = await peer(live, stack, second)
+        await old.client.disconnect()
+        sent = await live.http.post(
+            "friends/requests", headers=bearer(first), json={"to_user_id": second["user"]["id"]}
+        )
+        assert sent.status_code == 201
+        restored = await peer(live, stack, second)
+        snapshot = await live.http.get(
+            "friends/requests?direction=incoming", headers=bearer(second)
+        )
+        assert snapshot.status_code == 200
+        assert snapshot.json()["items"][0]["id"] == sent.json()["id"]
+        assert restored.events["friend_request_received"].empty()  # Không giả lập phát lại event.
+
+
+async def test_socket_delivery_failure_keeps_committed_request_for_http_resync(
+    live: Server, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    first, second = await account(live), await account(live)
+    async with AsyncExitStack() as stack:
+        await peer(live, stack, second)
+
+        async def broken_emit(*args, **kwargs):
+            raise OSError("simulated delivery failure")
+
+        monkeypatch.setattr(live.realtime.sio, "emit", broken_emit)
+        sent = await live.http.post(
+            "friends/requests", headers=bearer(first), json={"to_user_id": second["user"]["id"]}
+        )
+        assert sent.status_code == 201
+        snapshot = (await live.http.get("friends/requests", headers=bearer(second))).json()
+        assert snapshot["items"][0]["id"] == sent.json()["id"]
+
+
+async def test_guests_do_not_join_user_notification_rooms(live: Server) -> None:
+    visitor = await guest(live)
+    async with AsyncExitStack() as stack:
+        connection = await peer(live, stack, visitor)
+        assert live.realtime.sio.rooms(connection.sid) == [connection.sid]
+        assert not live.realtime.social._friends
+        response = await live.http.get("friends", headers=bearer(visitor))
+        assert (
+            response.status_code == 403 and response.json()["error"]["code"] == "GUEST_NOT_ALLOWED"
+        )
 
 
 async def test_profile_name_is_snapshotted_until_next_room_join(live: Server) -> None:

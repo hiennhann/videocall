@@ -7,6 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 class AccountEvents:
     """Các điểm tích hợp vòng đời tài khoản với realtime."""
 
+    async def profile_changed(self, user_id: UUID) -> None:
+        pass
+
     async def sessions_revoked(
         self,
         user_id: UUID,

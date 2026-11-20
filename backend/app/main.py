@@ -22,6 +22,7 @@ from app.api.errors import (
     rate_limit_error_handler,
     validation_error_handler,
 )
+from app.api.friends import router as friends_router
 from app.api.me import router as me_router
 from app.api.media import router as media_router
 from app.api.rooms import admin_router as admin_rooms_router
@@ -84,6 +85,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Video Call / Livestream", lifespan=lifespan)
     app.state.demo_admin = settings.env == "dev"
     app.state.realtime = realtime
+    app.state.friend_service = realtime.friends
     app.state.metrics = metrics
     app.state.avatar_service = AvatarService(settings.avatar_storage_dir)
     app.state.turn_service = TurnService(
@@ -98,6 +100,7 @@ def create_app() -> FastAPI:
     app.include_router(system_router)
     app.include_router(create_auth_router(limiter), prefix="/api/v1")
     app.include_router(me_router, prefix="/api/v1")
+    app.include_router(friends_router, prefix="/api/v1")
     app.include_router(media_router)
     app.include_router(admin_router, prefix="/api/v1")
     app.include_router(public_router, prefix="/api/v1")

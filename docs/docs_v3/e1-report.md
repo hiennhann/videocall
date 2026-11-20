@@ -1,6 +1,6 @@
 # E1 — Hồ sơ cá nhân và ảnh đại diện
 
-Ngày triển khai: 20/11/2026. Nhánh làm việc: `feat/update-ui-v3`.
+Ngày triển khai: 20/11/2026. E1 ban đầu làm tại `feat/update-ui-v3`, sau đó được lưu thành commit `e0ce967` trên `feat/phase2` làm nền cho E2/E3 theo yêu cầu tiếp theo.
 
 Phạm vi được yêu cầu: **chỉ E1, dừng để người dùng kiểm tra và duyệt**. E2–E7 chưa triển khai. Giao diện chỉnh hồ sơ/upload thuộc U6 trong lộ trình, chưa thêm vào hai web ở E1.
 
@@ -74,7 +74,7 @@ Hai quyền riêng tư hiện được lưu và trả về đúng; tìm bạn v�
 
 Kiểm thử dùng PostgreSQL riêng `videocall_e1_test`, tài khoản app hạn quyền; thao tác downgrade chỉ thực hiện trên DB kiểm thử. Không downgrade dữ liệu của dự án.
 
-Môi trường local đã áp dụng migration `0009`, container `app`, `db`, `sfu` đang healthy. Mở `http://localhost:8000/docs` để nghiệm thu E1. Thay đổi hiện nằm ở checkout local trên nhánh nêu đầu báo cáo, chưa commit/push/merge trong bước này.
+Tại thời điểm kết thúc E1, môi trường local đã áp dụng migration `0009`, container `app`, `db`, `sfu` healthy, thay đổi chưa commit/push. Theo yêu cầu kế tiếp, E1 được commit cùng nhánh giai đoạn 2; trạng thái mới nhất xem [báo cáo E2/E3](e2-e3-report.md).
 
 ## 5. Cách người dùng nghiệm thu E1
 

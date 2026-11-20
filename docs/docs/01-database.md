@@ -270,6 +270,15 @@ Danh sách `action`: xem `02-api.md` mục 8.
 | `0007` | `create_messages` | Bảng `messages` + index | A8 | |
 | `0008` | `device_transfers` | Phân loại phiên và xác nhận chuyển thiết bị | V2 | Đã triển khai, không sửa lại |
 | `0009` | `add_user_profile` | Hồ sơ, avatar và hai quyền riêng tư | V3 E1 | Cột mới có NULL/default, giữ nguyên dữ liệu cũ |
+| `0010` | `create_friends` | `friend_requests`, `friendships`, `user_blocks` | V3 E2 | FK CASCADE; cặp bạn bè chuẩn hóa, unique lời mời đang chờ |
+
+V3 E2 thêm ba bảng, chi tiết tại [`extend.md` mục 3.3](../docs_v3/extend.md#33-friend_requests-và-friendships-migration-0010):
+
+- `friend_requests`: UUID; người gửi/nhận FK `users`, khác nhau; status `pending/accepted/declined/cancelled/expired`; `created_at`, `responded_at`. Unique một phần `(from_user_id,to_user_id) WHERE status='pending'`; index theo người gửi/nhận và status.
+- `friendships`: PK `(user_a_id,user_b_id)`, CHECK `a < b`, thời điểm tạo; index riêng `user_b_id`. Service khóa hai tài khoản theo thứ tự UUID trước khi kiểm tra hạn mức và ghi để tránh race.
+- `user_blocks`: PK `(blocker_id,blocked_id)`, CHECK khác nhau, thời điểm tạo; index `blocked_id`. Chặn một chiều, tìm kiếm/gửi lời mời kiểm tra cả hai chiều.
+
+App có quyền SELECT/INSERT/UPDATE/DELETE trên ba bảng; migration cấp quyền cho `POSTGRES_APP_USER`. Khi xóa tài khoản, dữ liệu liên quan được CASCADE. Không thêm bảng DM/lời mời gọi trong E2/E3.
 
 Quy tắc (nhắc lại từ phần phân tích):
 1. Mỗi migration làm một việc nhỏ, tên rõ ràng.

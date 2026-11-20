@@ -38,8 +38,17 @@ async def me(principal: CurrentPrincipal) -> MemberProfile | GuestProfile:
 
 
 @router.patch("")
-async def patch_me(body: UpdateProfileRequest, member: CurrentMember, db: DB) -> MemberProfile:
+async def patch_me(
+    request: Request, body: UpdateProfileRequest, member: CurrentMember, db: DB
+) -> MemberProfile:
     user = await update_profile(db, member.user.id, body)
+    visibility_changed = (
+        body.privacy is not None and "show_online_status" in body.privacy.model_fields_set
+    )
+    if "display_name" in body.model_fields_set or visibility_changed:
+        await request.app.state.realtime.social.profile_changed(
+            user.id, visibility_changed=visibility_changed
+        )
     return MemberProfile.from_user(user)
 
 
@@ -98,12 +107,14 @@ async def put_avatar(
     await service.upload_policy(db, member.user.id, policy)
     data = await read_avatar(request, policy.avatar_max_kb * 1024)
     user = await service.replace(db, member.user.id, data, policy)
+    await request.app.state.realtime.social.profile_changed(user.id)
     return MemberProfile.from_user(user)
 
 
 @router.delete("/avatar", status_code=204)
 async def delete_avatar(request: Request, member: CurrentMember, db: DB) -> Response:
     await request.app.state.avatar_service.delete(db, member.user.id)
+    await request.app.state.realtime.social.profile_changed(member.user.id)
     return Response(status_code=204)
 
 

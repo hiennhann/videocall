@@ -1,6 +1,6 @@
 # Extend: Chức năng mở rộng
 
-> Bổ sung cho bộ `docs/` (README, 01-09). Trạng thái: **E1 đã triển khai để nghiệm thu; E2–E7 vẫn là thiết kế**. Xem [báo cáo E1](e1-report.md). Người dùng yêu cầu dừng sau E1 để duyệt.
+> Bổ sung cho bộ `docs/` (README, 01-09). Trạng thái: **E1–E3 đã triển khai; E4–E7 vẫn là thiết kế**. Xem [báo cáo E1](e1-report.md) và [báo cáo E2/E3](e2-e3-report.md). Yêu cầu mới ngày 20/11/2026: triển khai E2/E3 và push nhánh `feat/phase2`.
 > Quy tắc làm việc giữ nguyên như cũ: thiết kế xong rồi mới code; migration tạo dần; phân tầng `api/realtime → services → models`; tài liệu là bản sống (sửa code đổi thiết kế thì sửa docs trong cùng commit).
 > Giao diện của các chức năng này nằm ở `ui.md`; ý tưởng chưa chốt nằm ở `idea.md`.
 
@@ -321,6 +321,12 @@ URL ảnh **công khai nhưng không đoán được** (`user_id` + mã băm). �
 - **Chặn** (`block`): xóa quan hệ bạn bè, hủy lời mời kết bạn và lời mời gọi đang chờ giữa hai người, ẩn nhau khỏi tìm kiếm, không nhắn tin được. Người bị chặn **không được báo**; các thao tác nhắm vào người chặn trả lỗi chung `USER_NOT_FOUND`.
 - Hủy kết bạn: xóa `friendships`; lịch sử tin nhắn **giữ lại ở chế độ chỉ đọc**, không gửi thêm được.
 
+Chi tiết E2 đã triển khai: khóa hai dòng tài khoản theo thứ tự UUID trước mọi thay đổi quan hệ để giữ đúng hạn mức khi có yêu cầu đồng thời. Từ chối được che thành `pending` trong API của người gửi, không trả `responded_at`; lời mời bị che cũng tính vào hạn mức gửi. Hủy lời mời không vượt được cooldown 24 giờ. Gửi lại sau cooldown chỉ hiển thị lời mời mới nhất mỗi người nhận. Nếu người kia chủ động gửi ngược lại thì có thể chấp nhận ngay; lời mời cũ bị che được kết thúc để không xuất hiện lại sau khi hủy kết bạn.
+
+Thời hạn áp dụng ngay khi đọc/chấp nhận, không cần chờ job; sweep hiện có đánh dấu lời mời `pending` quá hạn mỗi khoảng 30 giây. Lịch sử `declined` giữ mốc người nhận phản hồi để kiểm tra cooldown. Bản E2/E3 chưa có tin nhắn riêng hay lời mời gọi; phần chặn gửi DM/hủy lời mời gọi sẽ nối với E4/E5 khi các bảng đó được triển khai.
+
+Khi `friends_enabled=false`, tìm kiếm, danh sách bạn/lời mời, gửi và chấp nhận bị chặn; hủy/từ chối, hủy kết bạn và quản lý chặn vẫn dùng được. Tìm kiếm bị giới hạn 20/phút và 200/ngày mỗi tài khoản, thêm 60/phút và 600/ngày mỗi IP. Gửi lời mời giới hạn 10/phút mỗi tài khoản và 30/phút mỗi IP.
+
 ### 5.2 API
 
 | Method | Path | Mô tả | Lỗi chính |
@@ -349,6 +355,8 @@ Phần tử danh sách bạn:
 ```
 `is_online` là `null` nếu người kia tắt `show_online_status`. Sắp xếp: trực tuyến trước, rồi theo tên.
 
+POST lời mời trả 201 với `{id, from, to, status, created_at}` (`status` là `pending` hoặc `accepted` nếu tự chấp nhận chiều ngược). GET lời mời trả `{items:[...]}` với người gửi/nhận chỉ gồm hồ sơ công khai. Accept trả 200 với phần tử bạn bè; decline/cancel/unfriend/unblock trả 204; block trả 201 với `{user, created_at}`, gọi lại vẫn 201. GET bạn bè trả `{items,total,page,page_size}`; `page_size` 1–100.
+
 ## 6. E3: Realtime theo người dùng
 
 Hiện tại mỗi socket chỉ vào "phòng gọi" (room Socket.io theo `code`). Thêm một room riêng theo người dùng để đẩy thông báo.
@@ -359,6 +367,10 @@ Hiện tại mỗi socket chỉ vào "phòng gọi" (room Socket.io theo `code`)
 - Server giữ **bộ nhớ đệm danh sách bạn** của người đang online (xóa khi bạn bè thay đổi) để không truy vấn DB mỗi lần phát trạng thái.
 - Thông báo là **cố gắng tối đa (best-effort)**. Sau khi nối lại, client gọi: `GET /friends/requests`, `GET /invites`, `GET /conversations` rồi `GET /conversations/{id}/messages?after=<id>` để đồng bộ phần bỏ lỡ.
 
+E3 hiện tự đồng bộ `/friends` (đủ các trang), `/friends/requests?direction=incoming` và `outgoing` khi socket web kết nối/kết nối lại. Module `client/js/friends-sync.js` được gắn vào sảnh và phòng gọi cho thành viên; thông báo cấu trúc thay đổi cũng làm mới snapshot. Kết quả phát nội bộ qua `videocall:friends-synced` cho phần UI U5 kết nối sau; lỗi đồng bộ phát `videocall:friends-sync-error`. Phản hồi của kết nối cũ bị bỏ, các lần làm mới đồng thời được gộp. Không gọi các API DM/lời mời gọi chưa có ở E4/E5.
+
+HTTP danh sách bạn giữ trạng thái online trong khoảng chờ 5 giây giống sự kiện realtime. Tắt hiển thị online gửi `online: null` để bạn bè bỏ trạng thái cũ, sau đó không phát online/offline tới khi bật lại. Tên/ảnh thay đổi trên API người dùng hoặc sửa tên bằng admin được phát cho bạn bè; ngày sinh/email không nằm trong payload. Cache chỉ giữ cho người đang online; xóa khi quan hệ/quyền thay đổi, khi offline và khi shutdown. Khách không vào room `user:<id>`.
+
 ### 6.1 Sự kiện server → client
 
 | Event | Dữ liệu | Gửi cho | Khi nào |
@@ -367,7 +379,7 @@ Hiện tại mỗi socket chỉ vào "phòng gọi" (room Socket.io theo `code`)
 | `friend_added` | `{ user }` | Cả hai | Lời mời được chấp nhận |
 | `friend_removed` | `{ user_id }` | Người còn lại | Bị hủy kết bạn |
 | `friend_profile_changed` | `{ user_id, display_name, avatar_url }` | Bạn bè | Đổi tên/avatar |
-| `presence_changed` | `{ user_id, online }` | Bạn bè | Mục 6 |
+| `presence_changed` | `{ user_id, online: true\|false\|null }` | Bạn bè | `null` khi người dùng vừa tắt hiển thị online; mục 6 |
 | `dm_message` | `{ conversation_id, message }` | Người nhận (và các tab khác của người gửi) | Có tin nhắn mới |
 | `dm_read` | `{ conversation_id, by_user_id, up_to_id }` | Người kia | Đã đọc tới tin |
 | `dm_typing` | `{ conversation_id, from_user_id, typing }` | Người kia | Đang nhập (tùy chọn) |
@@ -579,7 +591,7 @@ Bổ sung vào `02-api.md` mục 8:
 
 Phần công khai cho client (`/config/public`) thêm: `friends_enabled`, `dm_enabled`, `call_history_enabled`, `allow_avatar_upload`, `avatar_max_kb`.
 
-Hai khóa `allow_avatar_upload` và `avatar_max_kb` được đưa vào E1 vì API tải ảnh cần áp dụng ngay. Các khóa chức năng còn lại và phần quản trị mở rộng vẫn chờ E7. Quyền riêng tư ở E1 mới được lưu; việc tìm bạn/ẩn hiện online được thực thi ở E2/E3.
+Hai khóa `allow_avatar_upload` và `avatar_max_kb` được đưa vào E1. Năm khóa bạn bè (`friends_enabled`, `friend_search_enabled`, hai hạn mức và TTL) được đưa vào E2 vì service cần dùng ngay, nằm trong nhóm `access`. Public config trả hai cờ bạn bè. Các khóa DM/lời mời/lịch sử và phần quản trị mở rộng vẫn chờ E4–E7. Hai quyền riêng tư được thực thi ở E2/E3.
 
 **Hằng số trong code:** độ dài tin 1-2000; cooldown sau khi bị từ chối 24 giờ; tìm kiếm 20/phút và 200/ngày; `dm_send` 10 tin / 10 giây; mời gọi 20 lần / phút; `dm_typing` 1 lần / 2 giây; tối đa 20 người mỗi lần mời; giới hạn điểm ảnh 25 triệu.
 

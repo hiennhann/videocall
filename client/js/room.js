@@ -1,4 +1,5 @@
-import { accessToken, api, requireSession, sessionEnded } from "./api.js";
+import { accessToken, api, requireSession, session, sessionEnded } from "./api.js";
+import { bindFriendsSync } from "./friends-sync.js";
 import { LiveConnection } from "./live.js";
 import { PeerTile } from "./peer-tile.js";
 import { element, message, onForm } from "./ui.js";
@@ -41,6 +42,7 @@ class RoomCall {
         this.fail(error);
       }),
     });
+    if (session()?.user?.role !== "guest") this.stopFriendsSync = bindFriendsSync(this.socket);
     this.socket.on("connect", () => this.join());
     this.socket.on("connect_error", error => {
       if (this.accepted && this.socket.active) return;
@@ -481,6 +483,7 @@ class RoomCall {
     element("stats-toggle").setAttribute("aria-pressed", String(this.statsVisible));
     for (const {tile} of this.peers.values()) tile.showStats(this.statsVisible);
     clearInterval(this.statsTimer);
+    this.stopFriendsSync?.();
     if (this.statsVisible) {
       this.statsTimer = setInterval(() => this.sampleStats(), 1000);
       this.sampleStats();

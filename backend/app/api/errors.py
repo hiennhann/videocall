@@ -51,6 +51,12 @@ AUTH_ERRORS = {
     ErrorCode.INVALID_IMAGE: (400, "Ảnh phải là JPEG, PNG hoặc WebP hợp lệ."),
     ErrorCode.IMAGE_TOO_LARGE: (413, "Ảnh vượt quá dung lượng hoặc số điểm ảnh cho phép."),
     ErrorCode.FEATURE_DISABLED: (403, "Tính năng này đang tắt."),
+    ErrorCode.ALREADY_FRIENDS: (409, "Hai tài khoản đã là bạn bè."),
+    ErrorCode.REQUEST_ALREADY_SENT: (409, "Lời mời đã được gửi."),
+    ErrorCode.FRIEND_LIMIT_REACHED: (409, "Đã đạt giới hạn bạn bè hoặc lời mời đang chờ."),
+    ErrorCode.REQUEST_COOLDOWN: (429, "Chưa thể gửi lại lời mời vào lúc này."),
+    ErrorCode.REQUEST_NOT_FOUND: (404, "Không tìm thấy lời mời."),
+    ErrorCode.NOT_FRIENDS: (404, "Không tìm thấy quan hệ bạn bè."),
 }
 
 

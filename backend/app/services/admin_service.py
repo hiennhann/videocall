@@ -136,6 +136,8 @@ class AdminService:
         await db.commit()
         if locked:
             await self.events.sessions_revoked(user.id, "ACCOUNT_DISABLED")
+        if "display_name" in changes or "is_active" in changes:
+            await self.events.profile_changed(user.id)
         return user
 
     async def reset_password(self, db: AsyncSession, actor: AuditActor, user_id: UUID) -> str:
