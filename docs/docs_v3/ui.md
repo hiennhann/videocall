@@ -172,6 +172,8 @@ Mục tiêu: dùng tốt trên điện thoại bằng trình duyệt (phục v�
 - Dữ liệu cấu hình lấy từ `GET /config/public`. Lỗi hiển thị ngay dưới ô nhập; thông báo chung cho "sai email hoặc mật khẩu" (không lộ email nào tồn tại).
 - Đăng ký có thanh đo độ mạnh mật khẩu và hiển thị yêu cầu tối thiểu theo `password_min_length`.
 
+U2 dùng hai tab trên trang xác thực, biểu mẫu tên khách và luồng chuyển thiết bị hiện có. Máy chủ tiếp tục xác thực phiên trước khi phục vụ các trang bên trong, kể cả khi mở liên kết trực tiếp.
+
 ### 6.2 Trang chủ
 
 ```
@@ -202,6 +204,8 @@ Mục tiêu: dùng tốt trên điện thoại bằng trình duyệt (phục v�
 - **Nút "Tạo phòng họp mới":** hộp thoại (tên phòng, mật khẩu tùy chọn, số người tối đa, chế độ) → `POST /rooms` → vào phòng; sau khi vào có thể mời bạn (mục 6.8).
 - Trạng thái rỗng thân thiện: chưa có phòng/lịch sử thì hiện lời gợi ý "Tạo phòng đầu tiên" và "Thêm bạn bè".
 
+Trang chủ dùng lối tắt đến `/rooms/join` và `/rooms/create` theo quyết định tách trang. Các thẻ phòng và lời mời dùng dữ liệu thật, tối đa ba thẻ mỗi nhóm. Trang chủ hiển thị năm mục lịch sử mới nhất, mở chi tiết và tải chat nếu có. Luồng chấp nhận lời mời chuyển cùng tab sang màn hình chờ của phòng, giữ ID lời mời trong phiên tab.
+
 ### 6.3 Phòng họp
 
 Trang liệt kê **phòng của tôi đang mở** (`/rooms/mine`) dưới dạng thẻ, kèm ô nhập mã để vào phòng người khác. Mỗi thẻ: tên, mã phòng (nút sao chép), số người, nhãn "Có mật khẩu", nút *Vào*, *Mời bạn*, *Đóng phòng* (viền đỏ, có xác nhận). Nhãn **Live** ở sidebar bật khi danh sách này khác rỗng.
@@ -209,6 +213,8 @@ Trang liệt kê **phòng của tôi đang mở** (`/rooms/mine`) dưới dạng
 ### 6.4 Màn hình chờ (lobby) và phòng gọi
 
 **Lobby (trước khi vào):** hai cột: bên trái xem trước camera với thanh đo âm lượng mic và nút bật/tắt; bên phải chọn camera/mic/loa, ô nhập tên (nếu là khách), mật khẩu phòng (nếu cần), nút chính *Vào phòng*. Hiển thị lỗi quyền camera/mic bằng lời dễ hiểu.
+
+U3 hiển thị tên của phiên đã xác thực, kể cả tên đã nhập khi vào bằng khách. Camera và mic mở khi người dùng bấm kiểm tra thiết bị hoặc vào cuộc gọi. Sau khi cấp quyền, có thể chọn camera/mic và chọn loa trên trình duyệt có hỗ trợ. Đối với livestream, camera/mic của người phát vẫn xin quyền khi họ bắt đầu phát. Người có lời mời hợp lệ có thể dùng mã mời thay mật khẩu. Kết nối lại trong thời gian giữ chỗ được kiểm tra theo phiên và lời mời đã dùng cho lượt tham gia đó.
 
 **Phòng gọi (`room.html`):**
 
@@ -486,7 +492,7 @@ Mục tiêu tham khảo: điểm Lighthouse mục Accessibility ≥ 90 cho các 
 | Bước | Nội dung | Làm sau |
 |---|---|---|
 | **U1** | `tokens.css`, `base.css`, `components.css`, sprite biểu tượng, trang `styleguide.html` | A1 (có thể làm song song với A2-A4) |
-| **U2** | `index.html` (đăng nhập/đăng ký/khách), khung `app.html`, Trang chủ, Phòng họp | A2, A4, U1 |
+| **U2** | `index.html` (đăng nhập/đăng ký/khách), Trang chủ, Phòng của tôi, Vào/Tạo phòng trên URL riêng | A2, A4, U1 |
 | **U3** | Lobby và phòng gọi theo phong cách mới | A5 (A9 cho lưới nhóm), U1 |
 | **U4** | Trang admin: khung, Tổng quan, Phòng trực tiếp, Thành viên, Cấu hình & Bảo mật | A6, U1 |
 | **U5** | Bạn bè, Tin nhắn, Lời mời gọi, Mời bạn vào phòng | E2, E3, E4, E5, U2 |
@@ -531,7 +537,7 @@ Thứ tự đề xuất: **U1 → U2 → U3 → U4**, rồi U5/U6 khi các bư�
 | Bước | Câu lệnh |
 |---|---|
 | U1 | `Thực hiện bước U1 theo docs_v3/ui.md mục 3, 4, 9.1: tokens.css (hai chủ đề), base.css, components.css, sprite biểu tượng, styleguide.html. Không framework, không build. Trình bày kế hoạch trước và chốt bảng màu bằng cách đối chiếu ảnh mockup.` |
-| U2 | `Thực hiện bước U2 theo ui.md mục 5, 6.1-6.3: index.html, khung app.html có router theo hash, Trang chủ, Phòng họp. Dùng textContent cho mọi dữ liệu người dùng. Trình bày kế hoạch trước.` |
+| U2 | `Thực hiện bước U2 theo ui.md mục 5, 6.1-6.3: index.html và các trang riêng Trang chủ, Phòng của tôi, Vào/Tạo phòng. Dùng textContent cho dữ liệu người dùng. Trình bày kế hoạch trước.` |
 | U3 | `Thực hiện bước U3 theo ui.md mục 6.4: restyle lobby và room.html, lưới video, thanh điều khiển, khung bên phải 3 tab, bong bóng chỉ số mạng. Trình bày kế hoạch trước.` |
 | U4 | `Thực hiện bước U4 theo ui.md mục 7: base_admin.html dùng chung tokens.css, Tổng quan, Phòng trực tiếp, Thành viên, Cấu hình & Bảo mật với HTMX cập nhật 5 giây, CSP chặt, HTMX lưu cục bộ. Trình bày kế hoạch trước.` |
 | U5 | `Thực hiện bước U5 theo ui.md mục 6.5-6.8: Bạn bè, Tin nhắn, thẻ lời mời gọi, hộp thoại mời bạn; kết nối sự kiện socket vào store. Chỉ làm khi E2-E5 đã xong. Trình bày kế hoạch trước.` |

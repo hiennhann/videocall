@@ -31,6 +31,7 @@ class RoomCreated(BaseModel):
     mode: str
     is_private: bool
     max_participants: int
+    participants: int = 0
     host_id: UUID | None
     status: str
     created_at: datetime

@@ -7,11 +7,15 @@ function rate(report, previous, key) {
 const ms = value => Number.isFinite(value) ? (value * 1000).toFixed(1) + " ms" : "—";
 const kbps = value => Number.isFinite(value) ? Math.round(value) + " kbps" : "—";
 
-export function networkStats(report, previous) {
+export function selectedPair(report) {
   const rows = [...report.values()];
   const transport = rows.find(row => row.type === "transport" && row.selectedCandidatePairId);
-  const pair = report.get(transport?.selectedCandidatePairId)
+  return report.get(transport?.selectedCandidatePairId)
     ?? rows.find(row => row.type === "candidate-pair" && row.nominated && row.state === "succeeded");
+}
+
+export function networkStats(report, previous, pair = selectedPair(report)) {
+  const rows = [...report.values()];
   if (!pair) return "Đang chờ số liệu mạng…";
   const candidates = [report.get(pair.localCandidateId), report.get(pair.remoteCandidateId)];
   const path = candidates.some(candidate => candidate?.candidateType === "relay") ? "TURN" : "P2P";
@@ -31,8 +35,19 @@ export function networkStats(report, previous) {
   const loss = received + lost > 0 ? (100 * lost / (received + lost)).toFixed(1) + "%" : "—";
   const before = previous?.get(pair.id);
   return [
-    path, "RTT " + ms(pair.currentRoundTripTime), "Jitter " + ms(Math.max(...jitters)),
+    path + " (" + candidates.map(candidate => candidate?.candidateType ?? "—").join(" / ") + ")",
+    "RTT " + ms(pair.currentRoundTripTime), "Jitter " + ms(Math.max(...jitters)),
     "Mất gói " + loss, "Nhận " + kbps(rate(pair, before, "bytesReceived")),
     "Gửi " + kbps(rate(pair, before, "bytesSent")), "FPS " + (fps.length ? Math.max(...fps) : "—"),
   ].join(" · ");
+}
+
+export function incomingAudioLevel(report, previous) {
+  const audio = [...report.values()].find(row => row.type === "inbound-rtp" && (row.kind ?? row.mediaType) === "audio");
+  if (!audio) return 0;
+  if (Number.isFinite(audio.audioLevel)) return audio.audioLevel;
+  const before = previous?.get(audio.id);
+  const duration = audio.totalSamplesDuration - before?.totalSamplesDuration;
+  const energy = audio.totalAudioEnergy - before?.totalAudioEnergy;
+  return duration > 0 && energy >= 0 ? Math.sqrt(energy / duration) : 0;
 }

@@ -1,5 +1,5 @@
 import { element } from "./ui.js";
-import { networkStats } from "./stats.js";
+import { incomingAudioLevel, networkStats, selectedPair } from "./stats.js";
 
 export class PeerTile {
   constructor(peer, mute) {
@@ -72,16 +72,16 @@ export class PeerTile {
 
   showStats(visible) {
     this.stats.hidden = !visible;
-    this.previous = null;
-    this.stats.textContent = "Đang chờ số liệu mạng…";
   }
 
   async sample(pc) {
     const report = await pc.getStats();
-    if (!this.stats.hidden) {
-      this.stats.textContent = networkStats(report, this.previous);
-      this.previous = report;
-    }
+    const pair = selectedPair(report);
+    const text = networkStats(report, this.previous, pair);
+    this.stats.textContent = text;
+    this.card.classList.toggle("peer-speaking", this.media.audio && incomingAudioLevel(report, this.previous) >= 0.035);
+    this.previous = report;
+    return {roundTrip: pair?.currentRoundTripTime, text};
   }
 
   close() {

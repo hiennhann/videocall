@@ -27,10 +27,18 @@
     <div class="workspace-body">
       <header class="topbar"><div class="shell"><span class="eyebrow" data-i18n="workspace">Không gian của bạn</span><a class="brand mobile-brand" href="/lobby"><span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg></span><span data-project-name>Videocall</span></a><div class="header-actions"><label class="theme-picker"><span data-i18n="theme">Giao diện</span><select data-theme-select aria-label="Giao diện"><option value="light" data-i18n="light">Sáng</option><option value="dark" data-i18n="dark">Tối</option><option value="system" data-i18n="system">Theo hệ thống</option></select></label><button id="logout" class="secondary" type="button">Đăng xuất</button></div></div></header>
       <main class="workspace-main" id="main" tabindex="-1">
-        <div class="heading-row"><div><p class="eyebrow" data-i18n="workspace">Không gian của bạn</p><h1 id="page-title" data-i18n="myRooms">Phòng của tôi</h1><p data-i18n="roomsDescription"></p></div></div>
+        <div class="heading-row"><div><p class="eyebrow" data-i18n="workspace">Không gian của bạn</p><h1 id="page-title" data-i18n="myRooms" tabindex="-1">Phòng của tôi</h1><p data-i18n="roomsDescription"></p></div></div>
         <p id="message" class="notice" role="status" hidden></p>
         <div class="page-actions"><a class="button button--secondary" href="/rooms/join" data-i18n="joinRoom">Vào phòng</a><a class="button" href="/rooms/create" data-member-only hidden><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#plus"></use></svg><span data-i18n="createRoom">Tạo phòng</span></a></div>
 <section id="mine-panel" hidden><div class="panel empty-state" id="no-rooms"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg><h2 data-i18n="emptyTitle">Chưa có phòng nào</h2><p data-i18n="emptyBody">Phòng của bạn sẽ xuất hiện tại đây khi được tạo.</p><a class="text-link" href="/rooms/join" data-i18n="joinRoom">Vào phòng</a></div><ul id="mine" class="room-links room-cards"></ul></section>
+        <dialog id="close-room-dialog" aria-labelledby="close-room-title">
+          <h2 id="close-room-title">Đóng phòng?</h2>
+          <p id="close-room-description"></p>
+          <div class="controls">
+            <button class="secondary" type="button" data-close autofocus>Giữ phòng</button>
+            <button id="confirm-close-room" class="danger" type="button">Đóng phòng</button>
+          </div>
+        </dialog>
         <footer class="workspace-footer"><p id="presence-state" class="status-pill" role="status">Đang kết nối…</p></footer>
       </main>
     </div>

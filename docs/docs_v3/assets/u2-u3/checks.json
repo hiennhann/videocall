@@ -1,0 +1,1021 @@
+{
+  "cases": [
+    {
+      "channel": "chrome",
+      "name": "login",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "login",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "login",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "login",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "login",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "login",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "lobby",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "lobby",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "lobby",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "lobby",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "lobby",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "lobby",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "rooms",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "rooms",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "rooms",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "rooms",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "rooms",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "rooms",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "account",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "account",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "account",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "account",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "account",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "account",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "create",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "create",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "create",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "create",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "create",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "create",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "precall",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "precall",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "precall",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "precall",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "precall",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "precall",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "preview",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "preview",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "preview",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "preview",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "preview",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "preview",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "join",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "join",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "join",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "join",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "join",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "join",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "call",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "call",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "call",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "call",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "call",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "call",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "invite-room",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "invite-room",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "invite-room",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "invite-room",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "invite-room",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "invite-room",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "livestream",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "livestream",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "livestream",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "livestream",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "livestream",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "livestream",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "home-active",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "home-active",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "home-active",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "home-active",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "home-active",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "chrome",
+      "name": "home-active",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "login",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "login",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "login",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "login",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "login",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "login",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "lobby",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "lobby",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "lobby",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "lobby",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "lobby",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "lobby",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "rooms",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "rooms",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "rooms",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "rooms",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "rooms",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "rooms",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "account",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "account",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "account",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "account",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "account",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "account",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "create",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "create",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "create",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "create",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "create",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "create",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "precall",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "precall",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "precall",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "precall",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "precall",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "precall",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "preview",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "preview",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "preview",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "preview",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "preview",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "preview",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "join",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "join",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "join",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "join",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "join",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "join",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "call",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "call",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "call",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "call",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "call",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "call",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "invite-room",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "invite-room",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "invite-room",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "invite-room",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "invite-room",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "invite-room",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "livestream",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "livestream",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "livestream",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "livestream",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "livestream",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "livestream",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "home-active",
+      "width": 1440,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "home-active",
+      "width": 1440,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "home-active",
+      "width": 900,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "home-active",
+      "width": 900,
+      "theme": "dark",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "home-active",
+      "width": 390,
+      "theme": "light",
+      "result": "passed"
+    },
+    {
+      "channel": "msedge",
+      "name": "home-active",
+      "width": 390,
+      "theme": "dark",
+      "result": "passed"
+    }
+  ],
+  "functionality": [
+    "chrome: independent home/rooms/account/join/create documents, navigation/back/forward/reload, guest create restriction, registration/login, private room, P2P decoded video both ways, escaped chat, mic/camera, stats, members",
+    "chrome: authenticated friend invited from call, real home card, private room joined without password",
+    "chrome: camera preview, mic preference, call timer, mobile drawer, SFU livestream, real call history, close room confirmation",
+    "msedge: independent home/rooms/account/join/create documents, navigation/back/forward/reload, guest create restriction, registration/login, private room, P2P decoded video both ways, escaped chat, mic/camera, stats, members",
+    "msedge: authenticated friend invited from call, real home card, private room joined without password",
+    "msedge: camera preview, mic preference, call timer, mobile drawer, SFU livestream, real call history, close room confirmation"
+  ],
+  "errors": []
+}

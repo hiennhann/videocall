@@ -155,3 +155,76 @@ dialog .controls { margin-top: var(--space-6); }
   .room-chat ol { height: 280px; }
 }
 .mobile-brand { display: none; }
+
+.auth-tabs { margin-block: var(--space-4); }
+.auth-tabs button { flex: 1; }
+.field-error { color: var(--danger); }
+#password-help { margin: 0; }
+#password-strength { display: flex; align-items: center; gap: var(--space-3); }
+#password-meter { width: min(100%, 10rem); }
+#password-strength-text { margin: 0; }
+.home-section { margin-top: var(--space-8); }
+.room-card { display: grid; align-content: start; justify-items: start; gap: var(--space-3); padding: var(--space-4); overflow-wrap: anywhere; }
+.room-card h3, .room-card p, .history-row p { margin: 0; }
+.room-cards .room-card .button { display: inline-flex; padding: var(--space-2) var(--space-3); color: var(--on-primary); }
+.room-cards .room-card .button:hover { background: var(--primary-hover); }
+.history-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-2); }
+.history-row > div:first-child { min-width: 0; overflow-wrap: anywhere; }
+#call-history-attendees { max-height: 45svh; overflow: auto; }
+#call-history-attendees li { padding-block: var(--space-2); border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+
+.precall { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(16rem, .85fr); gap: var(--space-6); max-width: 900px; }
+.precall:not(:has(#preview-area:not([hidden]))) { grid-template-columns: 1fr; max-width: 440px; }
+.precall-visual { position: relative; min-height: 0; aspect-ratio: 16 / 9; margin-bottom: var(--space-3); overflow: hidden; padding: 0; background: var(--media-surface); color: var(--media-text); }
+.precall-visual video { width: 100%; height: 100%; object-fit: cover; }
+.preview-controls { gap: var(--space-2); }
+#preview-level { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-3); }
+#preview-meter { width: min(100%, 12rem); }
+#media-devices { display: grid; gap: var(--space-3); }
+#media-devices select { max-width: 100%; }
+.call-meta { justify-content: end; flex-wrap: wrap; }
+#network-panel { margin-bottom: var(--space-4); }
+#network-report { overflow-wrap: anywhere; }
+.video-grid figure.peer-speaking { outline: 2px solid var(--primary); outline-offset: -2px; }
+.video-grid .shared-screen:not([hidden]) { order: -1; }
+.video-grid .shared-screen video { max-height: 58svh; }
+@media (min-width: 768px) {
+  .video-grid:has(.shared-screen:not([hidden])) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.video-grid .peer-camera video, #local-panel video { max-height: 54svh; }
+.room-member { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); overflow-wrap: anywhere; padding-block: var(--space-2); }
+.room-member button { flex-shrink: 0; }
+#invite-options { display: grid; gap: var(--space-2); max-height: 40svh; overflow-y: auto; }
+.invite-option { display: flex; align-items: center; gap: var(--space-2); overflow-wrap: anywhere; }
+.invite-option input { width: auto; flex: none; }
+#room-drawer-toggle, #room-drawer-close { display: none; }
+.call-controls [aria-expanded="true"] { border-color: var(--primary); }
+
+@media (max-width: 767px) {
+  .home-actions:has([data-member-only]:not([hidden])) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-actions .home-action { padding: var(--space-4); gap: var(--space-2); }
+  .home-actions .home-action h2 { font-size: var(--text-md); }
+  .home-actions .home-action p, .home-actions .home-action__arrow { display: none; }
+  body[data-page="home"] .topbar .eyebrow { display: none; }
+  .precall { grid-template-columns: 1fr; }
+  .call-meta { justify-content: start; }
+  .call-workspace .heading-row { flex-wrap: wrap; }
+  #room-drawer-toggle, #room-drawer-close { display: inline-flex; }
+  #room-drawer-close { margin: var(--space-2); }
+  .room-sidebar { display: none; }
+  .room-sidebar.drawer-open {
+    display: block;
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 6;
+    max-height: 72svh;
+    overflow: auto;
+    border: 1px solid var(--border-control);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background: var(--surface);
+    padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+    box-shadow: var(--shadow-card);
+  }
+  .room-sidebar .tabs { overflow-x: auto; }
+  .preview-controls button { flex: 1 0 auto; }
+}

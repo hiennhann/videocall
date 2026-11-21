@@ -28,3 +28,18 @@ export function onForm(id, handler) {
 export function roomUrl(code) {
   return "/room?" + new URLSearchParams({code});
 }
+
+export function openInvite(invite) {
+  sessionStorage.setItem("videocall.room-invite", JSON.stringify({code: invite.room.code, id: invite.id}));
+  location.assign(roomUrl(invite.room.code));
+}
+
+export function takeInvite(code) {
+  const raw = sessionStorage.getItem("videocall.room-invite");
+  if (!raw) return null;
+  sessionStorage.removeItem("videocall.room-invite");
+  try {
+    const invite = JSON.parse(raw);
+    return invite.code === code ? invite.id : null;
+  } catch { return null; }
+}

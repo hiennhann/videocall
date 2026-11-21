@@ -34,6 +34,7 @@ class Peer:
         default_factory=lambda: MediaState(audio=True, video=True, screen=False)
     )
     history: "CallParticipant | None" = None
+    invite_id: UUID | None = None
 
     @property
     def id(self) -> str:
@@ -58,6 +59,8 @@ class Peer:
 class HeldSeat:
     joined_at: datetime
     expires_at: float
+    invite_id: UUID | None = None
+    family_id: UUID | None = None
 
 
 @dataclass(slots=True)

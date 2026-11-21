@@ -67,7 +67,7 @@ Khi thực hiện bất kỳ bước nào dưới đây, agent **bắt buộc** 
 
 | Bước | Phụ thuộc | Câu lệnh gợi ý cho Agent |
 |---|---|---|
-| **U2** | A2, A4, U1 | `Thực hiện bước U2 theo docs_v3/ui.md mục 5, 6.1–6.3 và mục 9: xây dựng index.html (đăng nhập/đăng ký/khách), khung app.html có router theo hash (#/home, #/rooms...), store trạng thái, i18n/vi.js, màn hình Trang chủ và Phòng họp. Dùng textContent cho mọi dữ liệu người dùng. Trình bày kế hoạch trước.` |
+| **U2** | A2, A4, U1 | `Thực hiện bước U2 theo docs_v3/ui.md mục 5, 6.1–6.3: đăng nhập/đăng ký/khách, Trang chủ, Phòng của tôi, các trang Vào/Tạo phòng trên URL riêng. Dùng textContent cho dữ liệu người dùng. Trình bày kế hoạch trước.` |
 | **U3** | A5 (A9), U1 | `Thực hiện bước U3 theo docs_v3/ui.md mục 6.4: thiết kế lại màn hình chờ (lobby) và room.html theo phong cách mới gồm lưới video tự co giãn, thanh điều khiển đáy, khung bên phải 3 tab (Chat/Người/Mời) và bong bóng chỉ số mạng (RTT, packet loss, bitrate). Trình bày kế hoạch trước.` |
 | **U4** | A6, U1 | `Thực hiện bước U4 theo docs_v3/ui.md mục 7 và 9.3: xây dựng base_admin.html (chủ đề tối dùng chung tokens.css), các trang Tổng quan, Phòng trực tiếp, Thành viên, Cấu hình & Bảo mật với HTMX lưu cục bộ cập nhật mỗi 5 giây và tuân thủ CSP chặt. Trình bày kế hoạch trước.` |
 | **U5** | E2–E5, U2 | `Thực hiện bước U5 theo docs_v3/ui.md mục 6.5–6.8: xây dựng màn hình Bạn bè, Tin nhắn (1-1), thẻ thông báo lời mời gọi nổi có đếm ngược, chuông thông báo và hộp thoại/tab Mời bạn vào phòng; kết nối toàn bộ sự kiện Socket.io vào store. Chỉ thực hiện khi E2–E5 đã xong. Trình bày kế hoạch trước.` |

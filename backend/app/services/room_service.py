@@ -55,13 +55,14 @@ def capacity(room: Room, settings: SettingsSchema) -> int:
     return min(room.max_participants or maximum, maximum)
 
 
-def room_result(room: Room, settings: SettingsSchema) -> RoomCreated:
+def room_result(room: Room, settings: SettingsSchema, participants: int = 0) -> RoomCreated:
     return RoomCreated(
         code=room.code,
         name=room.name,
         mode=room.mode,
         is_private=room.is_private,
         max_participants=capacity(room, settings),
+        participants=participants,
         host_id=room.host_id,
         status=room.status,
         created_at=room.created_at,
@@ -172,7 +173,11 @@ class RoomService:
             .where(Room.host_id == user_id, Room.status == "active")
             .order_by(Room.created_at.desc(), Room.code)
         )
-        return [room_result(room, settings) for room in rows]
+        result = []
+        for room in rows:
+            presence = self.state.get_room(room.code)
+            result.append(room_result(room, settings, len(presence.peers) if presence else 0))
+        return result
 
     async def join(
         self,
@@ -206,8 +211,14 @@ class RoomService:
             self.require_mode(settings, room.mode)
 
             member_id = None if connection.is_guest else UUID(connection.user_id)
+            presence.expire_seats(monotonic())
+            held = presence.held_seats.get(connection.user_id)
             if invite_id is not None:
-                await self.invites.validate_join(db, room, member_id, invite_id)
+                resume = (
+                    held and held.invite_id == invite_id and held.family_id == connection.family_id
+                )
+                if not resume:
+                    await self.invites.validate_join(db, room, member_id, invite_id)
             elif room.password_hash is not None:
                 key = (connection.user_id, connection.ip)
                 if not self.limiter.test(PASSWORD_FAILURES, *key):
@@ -220,8 +231,6 @@ class RoomService:
                 (peer for peer in presence.peers.values() if peer.user_id == connection.user_id),
                 None,
             )
-            presence.expire_seats(monotonic())
-            held = presence.held_seats.get(connection.user_id)
             occupied = len(presence.peers) + len(presence.held_seats)
             if previous is None and held is None and occupied >= capacity(room, settings):
                 raise AuthError(ErrorCode.ROOM_FULL)
@@ -239,6 +248,7 @@ class RoomService:
             presence.held_seats.pop(connection.user_id, None)
             prior = previous or held
             peer = Peer(connection, prior.joined_at if prior else datetime.now(UTC))
+            peer.invite_id = invite_id
             self.state.add_peer(presence, peer)
             if settings.call_history_enabled:
                 peer.history = CallParticipant(
@@ -342,7 +352,10 @@ class RoomService:
                         now = monotonic()
                         presence.expire_seats(now)
                         presence.held_seats[connection.user_id] = HeldSeat(
-                            peer.joined_at, now + REJOIN_GRACE_SECONDS
+                            peer.joined_at,
+                            now + REJOIN_GRACE_SECONDS,
+                            peer.invite_id,
+                            connection.family_id,
                         )
                     await self.remove(presence, peer, reason)
                     await self.host_changed(presence, host)

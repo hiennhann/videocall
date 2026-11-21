@@ -2,23 +2,44 @@ import { accessToken, api, requireSession, session, sessionEnded } from "./api.j
 import { bindFriendsSync } from "./friends-sync.js";
 import { LiveConnection } from "./live.js";
 import { PeerTile } from "./peer-tile.js";
-import { element, message, onForm } from "./ui.js";
+import { element, message, onForm, takeInvite } from "./ui.js";
 import { PeerCall } from "./webrtc.js";
 import { applyBranding } from "./theme.js";
 import { initTabs } from "./app/components/primitives.js";
 import { loginUrl } from "./auth-navigation.js";
+import { Precall, mediaButtons, mediaError, setButton } from "./precall.js";
+import { bindRoomInvites, roomMemberRow } from "./room-extras.js";
 
 initTabs(document.querySelector("[data-room-sidebar]"));
 
 const code = new URLSearchParams(location.search).get("code") || "";
-const mediaButtons = {audio: ["mic", "Mic"], video: ["camera", "Camera"]};
 let active;
 let roomMode;
+let roomConfig;
+let roomProfile;
+let inviteId = takeInvite(code);
+let privateRoom = false;
+const precall = new Precall();
+const updateInviteTab = bindRoomInvites(code, () => Boolean(active?.joined && roomProfile && !roomProfile.is_guest && roomConfig?.friends_enabled));
+
+function showAdmission() {
+  element("invite-ready").hidden = !inviteId;
+  element("password-label").hidden = !privateRoom || Boolean(inviteId);
+  element("enter-form").elements.password.required = privateRoom && !inviteId;
+  element("use-password").hidden = !privateRoom || !inviteId;
+}
+element("use-password").addEventListener("click", () => {
+  inviteId = null;
+  showAdmission();
+  element("enter-form").elements.password.focus();
+});
 
 class RoomCall {
   constructor(password) {
     this.password = password;
     this.mode = roomMode;
+    this.inviteId = inviteId;
+    this.output = element("speaker-device").value;
     this.liveMembers = new Map();
     this.accepted = false;
     this.joined = false;
@@ -28,7 +49,8 @@ class RoomCall {
     this.peers = new Map();
     this.pendingEvents = [];
     this.statsVisible = false;
-    element("stats-toggle").setAttribute("aria-pressed", "false");
+    element("stats-toggle").setAttribute("aria-expanded", "false");
+    element("network-panel").hidden = true;
     this.chatIds = new Set();
     element("chat-messages").replaceChildren();
     element("older-messages").hidden = true;
@@ -123,9 +145,7 @@ class RoomCall {
     await this.loadIceServers();
     if (this.stopped) return;
     if (this.mode !== "livestream") {
-      this.local = await navigator.mediaDevices.getUserMedia({
-        audio: true, video: {width: {ideal: 1280}, height: {ideal: 720}},
-      });
+      this.local = await precall.forCall();
     }
     if (this.stopped) {
       this.local?.getTracks().forEach(track => track.stop());
@@ -175,14 +195,18 @@ class RoomCall {
   async emit(event, payload, timeout = 6000) {
     if (!this.socket.connected) throw new Error("Kết nối phòng đang gián đoạn.");
     const result = await this.socket.timeout(timeout).emitWithAck(event, payload);
-    if (!result?.ok) throw new Error(result?.error?.message || "Không thể xử lý sự kiện phòng.");
+    if (!result?.ok) {
+      const error = new Error(result?.error?.message || "Không thể xử lý sự kiện phòng.");
+      error.code = result?.error?.code;
+      throw error;
+    }
     return result.data;
   }
 
   async join() {
     const sid = this.socket.id;
     try {
-      const info = await this.emit("join_room", {code, password: this.password || null});
+      const info = await this.emit("join_room", {code, password: this.password || null, invite_id: this.inviteId});
       if (this.stopped || this.socket.id !== sid) return;
       this.policy = info.media_policy;
       this.features = info.features;
@@ -193,6 +217,12 @@ class RoomCall {
       element("join-panel").hidden = true;
       element("call-panel").hidden = false;
       element("live-panel").hidden = this.mode !== "livestream";
+      if (!this.startedAt) {
+        this.startedAt = Date.now();
+        this.clockTimer = setInterval(() => this.renderClock(), 1000);
+        if (this.mode !== "livestream") this.statsTimer = setInterval(() => this.sampleStats(), 1000);
+      }
+      this.renderClock();
       const track = this.local?.getVideoTracks()[0];
       const maxHeight = parseInt(this.policy.max_video_resolution, 10);
       if (track && Number.isFinite(maxHeight)) {
@@ -217,7 +247,13 @@ class RoomCall {
       this.firstJoin?.resolve();
       this.firstJoin = null;
     } catch (error) {
-      if (this.socket.id === sid) this.fail(error);
+      if (this.socket.id === sid) {
+        if (["INVITE_INVALID", "INVITE_EXPIRED"].includes(error.code)) {
+          inviteId = null;
+          showAdmission();
+        }
+        this.fail(error);
+      }
     }
   }
 
@@ -226,19 +262,22 @@ class RoomCall {
     element("call-state").textContent = this.joined ? "Đã kết nối" :
       this.accepted && !this.stopped ? "Đang kết nối lại…" : "Chưa vào phòng";
     const members = live ? [...this.liveMembers.values()] : [...this.peers.values()].map(entry => entry.peer);
-    element("room-members").replaceChildren(...(this.joined ? [{display_name: "Bạn"}, ...members] : [])
-      .map(peer => {
-        const row = document.createElement("li");
-        row.textContent = peer.display_name;
-        return row;
-      }));
     const canMute = this.joined && this.hostId === this.socket.id;
+    element("room-members").replaceChildren(...(this.joined ? [{display_name: "Bạn"}, ...members] : [])
+      .map(peer => roomMemberRow(peer, canMute, (event, payload) => this.emit(event, payload))));
+    updateInviteTab();
     for (const {tile} of this.peers.values()) tile.mute.hidden = !canMute;
     element("screen").hidden = !this.joined || !this.features.screen_share;
     element("chat-form").hidden = !this.joined || !this.features.chat;
-    element("stats-toggle").hidden = live;
+    element("stats-toggle").hidden = live || !this.joined;
     element("local-panel").hidden = live && !this.local;
     for (const [button] of Object.values(mediaButtons)) element(button).hidden = live && !this.local;
+    if (this.local) {
+      for (const track of this.local.getTracks()) {
+        const [button, label] = mediaButtons[track.kind];
+        setButton(element(button), label, track.enabled);
+      }
+    }
     element("live-start").hidden = !live || !this.joined || this.speaker !== this.socket.id;
     element("live-start").textContent = this.local ? "Dừng phát" : "Bắt đầu phát";
     const form = element("live-speaker-form");
@@ -269,8 +308,7 @@ class RoomCall {
     if (!track) return;
     track.enabled = enabled ?? !track.enabled;
     const [button, label] = mediaButtons[kind];
-    element(button).setAttribute("aria-pressed", String(track.enabled));
-    element(button).textContent = label + (track.enabled ? " bật" : " tắt");
+    setButton(element(button), label, track.enabled);
     this.publishMedia().catch(error => message(error.message, true));
   }
 
@@ -444,6 +482,9 @@ class RoomCall {
     const tile = new PeerTile(peer, kind => {
       this.emit("mute_peer", {peer_id: id, kind}).catch(error => message(error.message, true));
     });
+    if (this.output) {
+      for (const video of [tile.video, tile.screen]) video.setSinkId?.(this.output).catch(() => {});
+    }
     const call = new PeerCall({
       id,
       initiates,
@@ -480,21 +521,40 @@ class RoomCall {
 
   toggleStats() {
     this.statsVisible = !this.statsVisible;
-    element("stats-toggle").setAttribute("aria-pressed", String(this.statsVisible));
+    element("stats-toggle").setAttribute("aria-expanded", String(this.statsVisible));
+    element("network-panel").hidden = !this.statsVisible;
     for (const {tile} of this.peers.values()) tile.showStats(this.statsVisible);
-    clearInterval(this.statsTimer);
-    this.stopFriendsSync?.();
-    if (this.statsVisible) {
-      this.statsTimer = setInterval(() => this.sampleStats(), 1000);
-      this.sampleStats();
-    }
+    if (this.statsVisible) this.sampleStats();
+  }
+
+  renderClock() {
+    const total = Math.max(0, Math.floor((Date.now() - this.startedAt) / 1000));
+    const clock = element("call-timer");
+    const pair = [Math.floor(total / 60) % 60, total % 60];
+    if (total >= 3600) pair.unshift(Math.floor(total / 3600));
+    clock.textContent = pair.map(part => String(part).padStart(2, "0")).join(":");
+    clock.hidden = false;
   }
 
   async sampleStats() {
-    if (this.sampling) return;
+    if (this.sampling || !this.joined) return;
     this.sampling = true;
     try {
-      await Promise.allSettled([...this.peers.values()].map(({call, tile}) => tile.sample(call.pc)));
+      const peers = [...this.peers.values()];
+      const sampled = await Promise.allSettled(peers.map(({call, tile}) => tile.sample(call.pc)));
+      if (this.stopped || !this.joined) return;
+      const rtt = sampled.map(result => result.value?.roundTrip).filter(Number.isFinite);
+      element("stats-toggle").textContent = rtt.length ? `Mạng · ${Math.round(Math.max(...rtt) * 1000)} ms` : "Chỉ số mạng";
+      this.networkReport = sampled.flatMap((result, index) => result.status === "fulfilled" ?
+        [`${peers[index].peer.display_name}: ${result.value.text}`] : []);
+      if (this.statsVisible) {
+        const rows = this.networkReport.length ? this.networkReport : ["Đang chờ người tham gia…"];
+        element("network-report").replaceChildren(...rows.map(text => {
+          const row = document.createElement("li");
+          row.textContent = text;
+          return row;
+        }));
+      }
     } finally {
       this.sampling = false;
     }
@@ -506,6 +566,10 @@ class RoomCall {
     this.joined = false;
     clearTimeout(this.iceRefresh);
     clearInterval(this.statsTimer);
+    clearInterval(this.clockTimer);
+    this.stopFriendsSync?.();
+    element("call-timer").hidden = true;
+    element("network-panel").hidden = true;
     this.socket.disconnect();
     this.stopScreen();
     this.closeLive();
@@ -556,14 +620,15 @@ onForm("enter-form", async (fields, form) => {
   camera.textContent = "Camera bật";
   mic.setAttribute("aria-pressed", "true");
   camera.setAttribute("aria-pressed", "true");
+  element("preview-area").inert = element("media-devices").inert = true;
   try {
     await call.start();
     form.reset();
   } catch (error) {
     call.stop();
-    if (error.name === "NotAllowedError") throw new Error("Hãy cho phép trang dùng camera và mic.");
-    if (error.name === "NotFoundError") throw new Error("Không tìm thấy camera hoặc mic.");
-    throw error;
+    throw new Error(mediaError(error));
+  } finally {
+    element("preview-area").inert = element("media-devices").inert = false;
   }
 });
 
@@ -571,6 +636,15 @@ for (const [kind, [button]] of Object.entries(mediaButtons)) {
   element(button).addEventListener("click", () => active?.setTrack(kind));
 }
 element("stats-toggle").addEventListener("click", () => active?.toggleStats());
+element("copy-network").addEventListener("click", async () => {
+  if (!active?.networkReport?.length) return message("Chưa có số liệu để sao chép.");
+  try {
+    await navigator.clipboard.writeText([`Phòng ${code}`, ...active.networkReport].join("\n"));
+    message("Đã sao chép báo cáo mạng.");
+  } catch {
+    message("Không sao chép được. Bạn có thể chọn nội dung trong bảng chỉ số.");
+  }
+});
 element("live-start").addEventListener("click", async event => {
   const button = event.currentTarget;
   button.disabled = true;
@@ -645,17 +719,26 @@ element("copy-code").addEventListener("click", async () => {
 
 if (await requireSession()) {
   try {
-    applyBranding(await api("/config/public").catch(() => null));
     if (!/^[a-z]{3}-[a-z]{4}-[a-z]{3}$/.test(code)) throw new Error("Mã phòng không hợp lệ.");
-    const room = await api("/rooms/" + code, {authenticated: true});
+    const [room, profile, config] = await Promise.all([
+      api("/rooms/" + code, {authenticated: true}),
+      api("/me", {authenticated: true}),
+      api("/config/public").catch(() => null),
+    ]);
+    roomConfig = config;
+    roomProfile = profile;
+    applyBranding(config);
     roomMode = room.mode;
+    element("preview-area").hidden = roomMode === "livestream";
+    element("join-as").textContent = `Tham gia với tên ${profile.display_name}`;
     if (roomMode === "livestream") element("enter-room").textContent = "Vào livestream";
     element("room-name").textContent = room.name || "Phòng gọi";
     element("room-code").textContent = "Mã phòng " + room.code;
+    element("precall-room-status").textContent = `${room.participants}/${room.max_participants} người${room.has_password ? " · Có mật khẩu" : ""}`;
     if (room.status === "closed") throw new Error("Phòng đã đóng.");
     element("copy-code").hidden = false;
-    element("password-label").hidden = !room.has_password;
-    element("enter-form").elements.password.required = room.has_password;
+    privateRoom = room.has_password;
+    showAdmission();
     element("join-panel").hidden = false;
   } catch (error) {
     if (error.status === 401) location.replace(loginUrl());

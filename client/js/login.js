@@ -1,10 +1,58 @@
 import { api, clearSession, restoreSession, saveSession, takeSessionNotice } from "./api.js";
 import { element, message, onForm } from "./ui.js";
 import { applyBranding } from "./theme.js";
-import { initDialogs } from "./app/components/primitives.js";
+import { initDialogs, initTabs } from "./app/components/primitives.js";
 import { loginDestination } from "./auth-navigation.js";
 
 initDialogs();
+initTabs();
+
+const registerPassword = element("register-form").elements.password;
+function showPasswordStrength() {
+  const value = registerPassword.value;
+  element("password-strength").hidden = !value;
+  const variety = [/[a-z]/i, /\d/, /[^\p{L}\p{N}\s]/u].filter(pattern => pattern.test(value)).length;
+  const score = value.trim().length < registerPassword.minLength ? 0 :
+    value.length >= 16 || (value.length >= 12 && variety >= 2) ? 3 : variety >= 2 ? 2 : 1;
+  element("password-meter").value = score;
+  element("password-strength-text").textContent = ["Chưa đủ dài", "Yếu", "Trung bình", "Mạnh"][score];
+}
+registerPassword.addEventListener("input", showPasswordStrength);
+
+function authForm(id, handler) {
+  const form = element(id);
+  function clearErrors() {
+    for (const note of form.querySelectorAll("[data-field-error]")) {
+      const input = note.previousElementSibling;
+      input.removeAttribute("aria-invalid");
+      const ids = input.getAttribute("aria-describedby").split(" ").filter(id => id !== note.id);
+      if (ids.length) input.setAttribute("aria-describedby", ids.join(" "));
+      else input.removeAttribute("aria-describedby");
+      note.remove();
+    }
+  }
+  form.addEventListener("input", clearErrors);
+  onForm(id, async (fields, form) => {
+    clearErrors();
+    try {
+      await handler(fields, form);
+    } catch (error) {
+      for (const [name, description] of Object.entries(error.details?.fields ?? {})) {
+        const input = form.elements.namedItem(name);
+        if (!(input instanceof HTMLInputElement)) continue;
+        const note = document.createElement("span");
+        note.id = `${id}-${name}-error`;
+        note.dataset.fieldError = "";
+        note.className = "field-error text-small";
+        note.textContent = description;
+        input.after(note);
+        input.setAttribute("aria-invalid", "true");
+        input.setAttribute("aria-describedby", [input.getAttribute("aria-describedby"), note.id].filter(Boolean).join(" "));
+      }
+      throw error;
+    }
+  });
+}
 
 const transfer = element("device-transfer");
 const destination = loginDestination(new URLSearchParams(location.search).get("next"));
@@ -19,7 +67,7 @@ async function signIn(path, body) {
   location.assign(destination);
 }
 
-onForm("account-form", async fields => {
+authForm("account-form", async fields => {
   try {
     await signIn("/auth/login", {...fields, client_type: "web"});
   } catch (error) {
@@ -59,21 +107,24 @@ transfer.addEventListener("cancel", event => {
   event.preventDefault();
   finishTransfer("cancel");
 });
-onForm("guest-form", fields => signIn("/auth/guest", {...fields, client_type: "web"}));
-onForm("register-form", async (fields, form) => {
+authForm("guest-form", fields => signIn("/auth/guest", {...fields, client_type: "web"}));
+authForm("register-form", async (fields, form) => {
   await api("/auth/register", { method: "POST", body: fields });
   element("account-form").elements.email.value = fields.email;
   form.reset();
-  element("register-panel").open = false;
+  showPasswordStrength();
+  element("login-tab").click();
+  element("account-form").elements.password.focus();
   message("Đã tạo tài khoản. Bạn có thể đăng nhập.");
 });
 
 try {
   const config = await api("/config/public");
   applyBranding(config);
-  element("register-panel").hidden = !config.allow_registration;
+  element("register-tab").hidden = !config.allow_registration;
   element("guest-panel").hidden = !config.allow_guest || config.maintenance_mode;
-  element("register-form").elements.password.minLength = config.password_min_length;
+  registerPassword.minLength = config.password_min_length;
+  element("password-help").textContent = `Ít nhất ${config.password_min_length} ký tự.`;
   if (config.maintenance_mode) message(config.maintenance_message || "Hệ thống đang bảo trì.");
 } catch (error) {
   message(error.message, true);

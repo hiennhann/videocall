@@ -482,9 +482,13 @@ async def test_private_room_invite_is_bound_to_recipient_and_used_once(live: Ser
         member = await peer(live, stack, target)
         assert (await member.call("join_room", {"code": code, "invite_id": invite_id}))["ok"]
         assert (await host.event("call_invite_responded"))["status"] == "accepted"
-        assert (await member.call("leave_room"))["ok"]
+        await live.realtime.disconnect(member.sid, live.realtime.sio.reason.TRANSPORT_CLOSE)
+        resumed = await peer(live, stack, target)
+        assert (await resumed.call("join_room", {"code": code, "invite_id": invite_id}))["ok"]
+        assert (await resumed.call("leave_room"))["ok"]
         assert_socket_error(
-            await member.call("join_room", {"code": code, "invite_id": invite_id}), "INVITE_INVALID"
+            await resumed.call("join_room", {"code": code, "invite_id": invite_id}),
+            "INVITE_INVALID",
         )
 
 

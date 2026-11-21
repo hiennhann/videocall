@@ -33,10 +33,11 @@ async function snapshot(page, channel, name) {
 async function register(page, suffix) {
   const email = `ui-${run}-${suffix}@example.com`;
   await page.goto(base);
-  await page.locator("#register-panel summary").click();
+  await page.locator("#register-tab").click();
   await page.locator('#register-form [name=display_name]').fill(`UI ${suffix}`);
   await page.locator('#register-form [name=email]').fill(email);
   await page.locator('#register-form [name=password]').fill(password);
+  assert.equal(await page.locator("#password-meter").evaluate(node => node.value), 3);
   await page.locator('#register-form button').click();
   await page.waitForFunction(() => document.getElementById("message").textContent.includes("Đã tạo tài khoản"));
   await page.locator('#account-form [name=email]').fill(email);
@@ -131,9 +132,18 @@ async function mediaContext(browser) {
       const code = new URL(roomUrl).searchParams.get("code");
       await page.locator("#join-panel").waitFor({state:"visible"});
       await snapshot(page,channel,"precall");
+      await page.locator("#preview-start").click();
+      await page.locator("#media-devices").waitFor({state:"visible"});
+      await page.locator("#preview").waitFor({state:"visible"});
+      await page.locator("#preview-mic").click();
+      assert.equal(await page.locator("#preview-mic").getAttribute("aria-pressed"),"false");
+      await snapshot(page,channel,"preview");
       await page.locator('#enter-form [name=password]').fill("room-test");
       await page.locator("#enter-room").click();
       await page.locator("#call-panel").waitFor({state:"visible"});
+      await page.locator("#call-timer").waitFor({state:"visible"});
+      assert.equal(await page.locator("#mic").getAttribute("aria-pressed"),"false");
+      await page.locator("#mic").click();
       const other = await mediaContext(browser); contexts.push(other);
       const guest = await other.newPage(); monitor(guest);
       await guest.goto(base); await guest.locator("#guest-panel summary").click();
@@ -165,11 +175,56 @@ async function mediaContext(browser) {
       await page.locator("#camera").click(); assert.equal(await page.locator("#camera").getAttribute("aria-pressed"),"false");
       await page.locator("#camera").click();
       await page.locator("#stats-toggle").click(); await page.locator(".network-stats").first().waitFor({state:"visible"});
+      await page.locator("#network-report li").first().waitFor({state:"visible"});
+      assert.match(await page.locator("#network-report").textContent(), /RTT|chờ số liệu/);
       await page.locator("#members-tab").click(); assert.equal(await page.locator("#room-members li").count(),2);
       await page.locator("#chat-tab").click();
       await snapshot(page,channel,"call");
+      await page.setViewportSize({width:390,height:900});
+      assert.equal(await page.locator("#room-sidebar").isVisible(),false);
+      await page.locator("#room-drawer-toggle").click();
+      await page.locator("#room-sidebar").waitFor({state:"visible"});
+      await page.keyboard.press("Escape");
+      assert.equal(await page.locator("#room-sidebar").isVisible(),false);
+      assert.equal(await page.locator("#room-drawer-toggle").evaluate(node=>document.activeElement===node),true);
+      await page.setViewportSize({width:1440,height:1000});
       report.functionality.push(`${channel}: independent home/rooms/account/join/create documents, navigation/back/forward/reload, guest create restriction, registration/login, private room, P2P decoded video both ways, escaped chat, mic/camera, stats, members`);
 
+      if (process.env.UI_USER_ONLY) {
+        const friendContext = await mediaContext(browser);
+        contexts.push(friendContext);
+        const friend = await friendContext.newPage();
+        monitor(friend);
+        await register(friend, channel + "-friend");
+        const friendId = await friend.evaluate(async () => {
+          const {api} = await import("/client/js/api.js");
+          return (await api("/me", {authenticated:true})).id;
+        });
+        const invitation = await page.evaluate(async to_user_id => {
+          const {api} = await import("/client/js/api.js");
+          return api("/friends/requests", {authenticated:true, method:"POST", body:{to_user_id}});
+        }, friendId);
+        await friend.evaluate(async id => {
+          const {api} = await import("/client/js/api.js");
+          await api(`/friends/requests/${id}/accept`, {authenticated:true, method:"POST"});
+        }, invitation.id);
+        await page.locator("#invite-tab").click();
+        await page.locator("#invite-options input").first().check();
+        await page.locator("#call-invite-form button").click();
+        await page.waitForFunction(() => document.querySelector("#invite-status").textContent.includes("Đã gửi 1"));
+        await snapshot(page, channel, "invite-room");
+        await friend.locator("#home-room-cards").getByRole("button", {name:"Tham gia", exact:true}).click();
+        await friend.waitForURL("**/room?code=*");
+        await friend.locator("#invite-ready").waitFor();
+        assert.equal(await friend.locator("#password-label").isVisible(), false);
+        await friend.locator("#enter-room").click();
+        await friend.locator("#call-panel").waitFor();
+        await friend.locator("#leave").click();
+        await friend.waitForURL("**/lobby");
+        report.functionality.push(`${channel}: authenticated friend invited from call, real home card, private room joined without password`);
+      }
+
+      if (!process.env.UI_USER_ONLY) {
       const adminContext = await browser.newContext({reducedMotion:"reduce"}); contexts.push(adminContext);
       const admin = await adminContext.newPage(); monitor(admin);
       await admin.goto(base+"/admin/login");
@@ -194,6 +249,7 @@ async function mediaContext(browser) {
       await admin.locator("#admin-confirm").waitFor({state:"visible"});
       await admin.keyboard.press("Escape");
       assert.equal(await admin.locator("#admin-confirm").evaluate(n=>n.open),false);
+      }
       await guest.locator("#leave").click();
       await page.locator("#leave").click();
       await guest.waitForURL("**/lobby"); await page.waitForURL("**/lobby");
@@ -211,7 +267,21 @@ async function mediaContext(browser) {
       await snapshot(guest,channel,"livestream");
       await guest.locator("#leave").click(); await page.locator("#leave").click();
       await guest.waitForURL("**/lobby"); await page.waitForURL("**/lobby");
-      report.functionality.push(`${channel}: admin full-page navigation/filter/detail and HTMX forms, SSE dashboard, CSRF, confirmation cancellation, SFU livestream decoded, leave`);
+      await page.locator("#home-history-items li").first().waitFor({state:"visible"});
+      await snapshot(page,channel,"home-active");
+      await page.locator("#home-history-items").getByRole("button",{name:"Chi tiết"}).first().click();
+      await page.locator("#call-history-dialog").waitFor({state:"visible"});
+      await page.locator("#call-history-attendees li").first().waitFor({state:"visible"});
+      await page.keyboard.press("Escape");
+      await page.goto(base+"/rooms");
+      const close = page.locator("#mine").getByRole("button",{name:"Đóng phòng"}).first();
+      await close.click();
+      await page.locator("#close-room-dialog").waitFor({state:"visible"});
+      await page.keyboard.press("Escape");
+      await close.click();
+      await page.locator("#confirm-close-room").click();
+      await page.waitForFunction(() => document.querySelector("#message").textContent === "Đã đóng phòng.");
+      report.functionality.push(`${channel}: camera preview, mic preference, call timer, mobile drawer, SFU livestream, real call history, close room confirmation`);
     } finally {
       for (const context of contexts) await context.close();
       await browser.close();

@@ -27,17 +27,29 @@
     <div class="workspace-body">
       <header class="topbar"><div class="shell"><span class="eyebrow" data-i18n="workspace">Không gian của bạn</span><a class="brand mobile-brand" href="/lobby"><span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg></span><span data-project-name>Videocall</span></a><div class="header-actions"><label class="theme-picker"><span data-i18n="theme">Giao diện</span><select data-theme-select aria-label="Giao diện"><option value="light" data-i18n="light">Sáng</option><option value="dark" data-i18n="dark">Tối</option><option value="system" data-i18n="system">Theo hệ thống</option></select></label><button id="logout" class="secondary" type="button">Đăng xuất</button></div></div></header>
       <main class="workspace-main" id="main" tabindex="-1">
-        <div class="heading-row"><div><p class="eyebrow" data-i18n="workspace">Không gian của bạn</p><h1 id="page-title" data-i18n="lobbyHeadline">Trang chủ</h1><p data-i18n="homeDescription"></p></div></div>
+        <div class="heading-row"><div><p class="eyebrow" id="today"></p><h1 id="page-title">Trang chủ</h1><p id="home-summary" role="status"></p></div></div>
         <p id="message" class="notice" role="status" hidden></p>
         <div class="home-actions"><a class="card home-action" href="/rooms/join">
       <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg></span><h2 data-i18n="joinRoom"></h2><p class="muted" data-i18n="joinActionDescription"></p><span class="home-action__arrow"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#arrow"></use></svg></span>
     </a><a class="card home-action" href="/rooms/create" data-member-only hidden>
       <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#plus"></use></svg></span><h2 data-i18n="createRoom"></h2><p class="muted" data-i18n="createActionDescription"></p><span class="home-action__arrow"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#arrow"></use></svg></span>
-    </a><a class="card home-action" href="/rooms">
-      <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#history"></use></svg></span><h2 data-i18n="myRooms"></h2><p class="muted" data-i18n="roomsActionDescription"></p><span class="home-action__arrow"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#arrow"></use></svg></span>
-    </a><a class="card home-action" href="/account">
-      <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#users"></use></svg></span><h2 data-i18n="account"></h2><p class="muted" data-i18n="accountActionDescription"></p><span class="home-action__arrow"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#arrow"></use></svg></span>
     </a></div>
+        <section class="home-section" id="home-open" aria-labelledby="home-open-title" hidden>
+          <div class="heading-row"><h2 id="home-open-title">Phòng đang mở và lời mời</h2><a class="text-link" href="/rooms">Phòng của tôi</a></div>
+          <p id="home-open-empty" class="muted" hidden>Chưa có phòng đang mở hoặc lời mời gọi.</p>
+          <ul class="room-links room-cards" id="home-room-cards"></ul>
+        </section>
+        <section class="home-section" id="home-history" aria-labelledby="home-history-title" hidden>
+          <h2 id="home-history-title">Cuộc gọi gần đây</h2>
+          <p id="home-history-empty" class="muted" hidden>Cuộc gọi của bạn sẽ xuất hiện tại đây.</p>
+          <ul id="home-history-items" class="room-links"></ul>
+        </section>
+        <dialog id="call-history-dialog" aria-labelledby="call-history-title">
+          <h2 id="call-history-title">Chi tiết cuộc gọi</h2>
+          <p id="call-history-status" role="status"></p>
+          <ul id="call-history-attendees" class="room-links"></ul>
+          <div class="controls"><button type="button" class="secondary" data-close autofocus>Đóng</button></div>
+        </dialog>
         <footer class="workspace-footer"><p id="presence-state" class="status-pill" role="status">Đang kết nối…</p></footer>
       </main>
     </div>

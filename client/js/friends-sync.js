@@ -7,7 +7,9 @@ export function bindFriendsSync(socket) {
   let queued = false;
   let stopped = false;
   const changes = ["friend_request_received", "friend_added", "friend_removed"];
+  const communicationChanges = ["call_invite", "call_invite_cancelled", "call_invite_responded", "dm_message", "dm_read"];
   let communicationsRevision = 0;
+  let communicationsRefresh;
   const lastSeen = new Map();
 
   async function syncCommunications() {
@@ -57,6 +59,13 @@ export function bindFriendsSync(socket) {
     if (message) lastSeen.set(conversation_id, Math.max(lastSeen.get(conversation_id) ?? 0, message.id));
   }
 
+  function refreshCommunications() {
+    clearTimeout(communicationsRefresh);
+    communicationsRefresh = setTimeout(() => {
+      if (!stopped && socket.connected) syncCommunications();
+    }, 200);
+  }
+
   async function sync() {
     if (stopped || !socket.connected) return;
     if (loading) { queued = true; return; }
@@ -97,16 +106,19 @@ export function bindFriendsSync(socket) {
   socket.on("connect", connected);
   socket.on("disconnect", disconnected);
   socket.on("dm_message", remember);
+  for (const event of communicationChanges) socket.on(event, refreshCommunications);
   for (const event of changes) socket.on(event, refresh);
   if (socket.connected) connected();
   return () => {
     stopped = true;
     revision++;
     communicationsRevision++;
+    clearTimeout(communicationsRefresh);
     lastSeen.clear();
     socket.off("connect", connected);
     socket.off("disconnect", disconnected);
     socket.off("dm_message", remember);
+    for (const event of communicationChanges) socket.off(event, refreshCommunications);
     for (const event of changes) socket.off(event, refresh);
   };
 }

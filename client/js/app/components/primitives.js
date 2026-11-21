@@ -60,15 +60,16 @@ export function initTabs(root = document) {
         document.getElementById(item.getAttribute("aria-controls")).hidden = !active;
       }
     }
-    tabs.forEach((tab, index) => {
+    tabs.forEach(tab => {
       tab.addEventListener("click", () => select(tab));
       tab.addEventListener("keydown", event => {
         const offsets = { ArrowRight: 1, ArrowLeft: -1 };
         if (!(event.key in offsets) && event.key !== "Home" && event.key !== "End") return;
         event.preventDefault();
-        const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : (index + offsets[event.key] + tabs.length) % tabs.length;
-        tabs[next].focus();
-        select(tabs[next]);
+        const visible = tabs.filter(item => !item.hidden && !item.disabled);
+        const next = event.key === "Home" ? 0 : event.key === "End" ? visible.length - 1 : (visible.indexOf(tab) + offsets[event.key] + visible.length) % visible.length;
+        visible[next].focus();
+        select(visible[next]);
       });
     });
   }

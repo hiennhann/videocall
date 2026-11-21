@@ -27,6 +27,8 @@ Swagger vẫn có tại [`/docs`](http://localhost:8000/docs) để thử API.
 
 Giai đoạn 2 V3 bổ sung hồ sơ, bạn bè, trạng thái online, lời mời gọi, lịch sử cuộc gọi, tin nhắn riêng và API quản trị. Migration mới nhất là `0013`. Xem [cách nghiệm thu trên nhánh feat/phase2](docs/docs_v3/phase2-completion.md). Các màn hình cho tính năng mới thuộc U5/U6.
 
+Nhánh `feat/ui_v3` bổ sung U2/U3 cho web người dùng. Xem [hướng dẫn kiểm tra giao diện và luồng gọi](docs/docs_v3/u2-u3-report.md).
+
 Trong môi trường dev, [`/metrics`](http://localhost:8000/metrics) trả chỉ số HTTP, Socket.IO và phòng ở định dạng Prometheus. Xem log JSON bằng `docker compose logs app` và tra từng yêu cầu bằng header `X-Request-ID`.
 
 Tạo quản trị viên A3 bằng lệnh sau. Nhập mật khẩu hai lần khi được hỏi, rồi đăng nhập qua `/api/v1/auth/login` để dùng các API `/api/v1/admin`.

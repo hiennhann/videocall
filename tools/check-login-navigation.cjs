@@ -57,7 +57,7 @@ async function atLogin(page, destination) {
 
       await atLogin(page,"/rooms");
       const email = `ui-${Date.now()}-${channel}@example.com`;
-      await page.locator('#register-panel summary').click();
+      await page.locator('#register-tab').click();
       await page.locator('#register-form [name=display_name]').fill(`UI ${channel}`);
       await page.locator('#register-form [name=email]').fill(email);
       await page.locator('#register-form [name=password]').fill(password);

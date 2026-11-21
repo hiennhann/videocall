@@ -27,11 +27,17 @@
     <section class="panel auth-panel">
       <h2 data-i18n="authWelcome">Chào mừng trở lại</h2><p class="muted" data-i18n="authSignIn">Đăng nhập để tiếp tục cuộc trò chuyện.</p>
       <p id="message" class="notice" role="status" hidden></p>
+      <div class="tabs auth-tabs" role="tablist" aria-label="Tài khoản">
+        <button id="login-tab" type="button" role="tab" aria-selected="true" aria-controls="login-panel">Đăng nhập</button>
+        <button id="register-tab" type="button" role="tab" aria-selected="false" aria-controls="register-panel" tabindex="-1" hidden>Đăng ký</button>
+      </div>
+      <section id="login-panel" role="tabpanel" aria-labelledby="login-tab">
       <form id="account-form">
         <label>Email <input name="email" type="email" autocomplete="username" maxlength="254" required></label>
         <label>Mật khẩu <input name="password" type="password" autocomplete="current-password" maxlength="128" required></label>
         <button>Đăng nhập</button>
       </form>
+      </section>
       <dialog id="device-transfer" aria-labelledby="device-transfer-title">
         <h2 id="device-transfer-title">Chuyển thiết bị</h2>
         <p>Tiếp tục sẽ đăng xuất thiết bị đang dùng tài khoản này và kết thúc cuộc gọi trên thiết bị đó.</p>
@@ -40,16 +46,20 @@
           <button id="transfer-cancel" class="secondary" type="button" autofocus>Hủy</button>
         </div>
       </dialog>
-      <details id="register-panel">
-        <summary>Tạo tài khoản</summary>
+      <section id="register-panel" role="tabpanel" aria-labelledby="register-tab" hidden>
         <form id="register-form">
           <label>Tên hiển thị <input name="display_name" minlength="2" maxlength="50" autocomplete="name" required></label>
           <label>Email <input name="email" type="email" autocomplete="email" maxlength="254" required></label>
-          <label>Mật khẩu <input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required></label>
+          <label>Mật khẩu <input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" aria-describedby="password-help password-strength-text" required></label>
+          <p id="password-help" class="muted text-small">Ít nhất 8 ký tự.</p>
+          <div id="password-strength" hidden>
+            <meter id="password-meter" min="0" max="3" value="0" aria-label="Ước tính độ mạnh mật khẩu"></meter>
+            <p id="password-strength-text" class="text-small muted"></p>
+          </div>
           <button>Tạo tài khoản</button>
         </form>
-      </details>
-      <details id="guest-panel">
+      </section>
+      <details id="guest-panel" hidden>
         <summary>Vào bằng tên khách</summary>
         <form id="guest-form">
           <label>Tên hiển thị <input name="display_name" minlength="2" maxlength="50" required></label>

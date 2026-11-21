@@ -34,6 +34,9 @@
             <select name="mode"><option value="meeting">Gọi nhóm</option><option value="livestream">Livestream</option></select>
           </label>
           <label>Tên phòng <input name="name" maxlength="100"></label>
+          <label id="capacity-label">Số người tối đa <select name="max_participants">
+            <option value="">Mặc định</option><option value="2">2 người</option><option value="3">3 người</option><option value="4">4 người</option>
+          </select></label>
           <label>Mật khẩu phòng <input name="password" type="password" minlength="4" maxlength="64" autocomplete="new-password"></label>
           <button>Tạo phòng</button>
         </form></section>

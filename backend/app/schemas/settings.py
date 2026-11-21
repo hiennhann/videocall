@@ -261,6 +261,7 @@ class PublicSettings(BaseModel):
     maintenance_mode: bool
     maintenance_message: str
     password_min_length: int
+    max_participants_per_room: int
     allow_screen_share: bool
     chat_enabled: bool
     allow_avatar_upload: bool
