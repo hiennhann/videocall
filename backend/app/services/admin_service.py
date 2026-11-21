@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AuthError, ErrorCode
 from app.core.security import hash_password
-from app.models import RefreshToken, User
+from app.models import CallParticipant, FriendRequest, Friendship, RefreshToken, User
 from app.services.account_events import AccountEvents
 from app.services.audit_service import AuditActor, record_audit
 from app.services.auth_service import AuthService
@@ -77,6 +77,67 @@ async def user_counts(db: AsyncSession) -> tuple[int, list[tuple[date, int]]]:
     return total or 0, [
         (day, by_day.get(day, 0)) for day in (start + timedelta(days=i) for i in range(7))
     ]
+
+
+async def user_activity(db: AsyncSession, user_id: UUID) -> dict:
+    friends = await db.scalar(
+        select(func.count())
+        .select_from(Friendship)
+        .where(or_(Friendship.user_a_id == user_id, Friendship.user_b_id == user_id))
+    )
+    calls, latest = (
+        await db.execute(
+            select(
+                func.count(func.distinct(CallParticipant.room_id)),
+                func.max(CallParticipant.joined_at),
+            ).where(CallParticipant.user_id == user_id)
+        )
+    ).one()
+    return {"friends_count": friends, "calls_count": calls, "latest_call_at": latest}
+
+
+async def dashboard_activity(db: AsyncSession, ttl_days: int) -> dict:
+    now = datetime.now(UTC)
+    today = datetime.combine(now.date(), datetime.min.time(), UTC)
+    # Một cuộc gọi là một phòng, không cộng trùng thời gian của từng người tham gia.
+    calls = (
+        select(
+            CallParticipant.room_id,
+            func.min(CallParticipant.joined_at).label("started"),
+            func.max(func.coalesce(CallParticipant.left_at, now)).label("ended"),
+        )
+        .group_by(CallParticipant.room_id)
+        .subquery()
+    )
+    count, duration = (
+        await db.execute(
+            select(
+                func.count(),
+                func.coalesce(
+                    func.sum(
+                        func.extract(
+                            "epoch",
+                            func.least(calls.c.ended, now) - func.greatest(calls.c.started, today),
+                        )
+                    ),
+                    0,
+                ),
+            ).where(calls.c.ended > today, calls.c.started <= now)
+        )
+    ).one()
+    pending = await db.scalar(
+        select(func.count())
+        .select_from(FriendRequest)
+        .where(
+            FriendRequest.status == "pending",
+            FriendRequest.created_at >= now - timedelta(days=ttl_days),
+        )
+    )
+    return {
+        "calls_today": count,
+        "call_minutes_today": int(duration // 60),
+        "friend_requests_pending": pending,
+    }
 
 
 class AdminService:

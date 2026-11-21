@@ -1,10 +1,13 @@
 from asyncio import Event, Lock
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from app.schemas.rooms import MediaState
+
+if TYPE_CHECKING:
+    from app.models import CallParticipant
 
 
 @dataclass(slots=True)
@@ -30,6 +33,7 @@ class Peer:
     media: MediaState = field(
         default_factory=lambda: MediaState(audio=True, video=True, screen=False)
     )
+    history: "CallParticipant | None" = None
 
     @property
     def id(self) -> str:

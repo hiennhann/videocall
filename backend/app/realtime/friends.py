@@ -7,7 +7,7 @@ import socketio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.models import FriendRequest, Friendship, User
+from app.models import FriendRequest, Friendship, RoomInvite, User
 from app.realtime.state import RoomStateStore
 from app.schemas.friends import FriendItem, PublicUser, RequestItem
 from app.services.friend_events import FriendEvents
@@ -74,10 +74,23 @@ class FriendRealtime(FriendEvents):
     def invalidate_all(self) -> None:
         self._friends.clear()
 
+    async def call_invites_cancelled(self, invites: list[RoomInvite]) -> None:
+        for invite in invites:
+            await self._emit(
+                "call_invite_cancelled",
+                {
+                    "invite_id": str(invite.id),
+                    "reason": "expired" if invite.status == "expired" else "unavailable",
+                },
+                invite.invitee_id,
+            )
+
     @best_effort
-    async def _emit(self, event: str, payload: dict, user_id: UUID) -> None:
+    async def _emit(
+        self, event: str, payload: dict, user_id: UUID, *, skip: str | None = None
+    ) -> None:
         if self.state.connections_for(str(user_id)):
-            await self.sio.emit(event, payload, to=f"user:{user_id}")
+            await self.sio.emit(event, payload, to=f"user:{user_id}", skip_sid=skip)
 
     @best_effort
     async def _presence(

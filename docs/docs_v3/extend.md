@@ -1,6 +1,6 @@
 # Extend: Chức năng mở rộng
 
-> Bổ sung cho bộ `docs/` (README, 01-09). Trạng thái: **E1–E3 đã triển khai; E4–E7 vẫn là thiết kế**. Xem [báo cáo E1](e1-report.md) và [báo cáo E2/E3](e2-e3-report.md). Yêu cầu mới ngày 20/11/2026: triển khai E2/E3 và push nhánh `feat/phase2`.
+> Bổ sung cho bộ `docs/` (README, 01-09). Trạng thái: **E1–E7 đã triển khai**. Xem [báo cáo E1](e1-report.md) và [báo cáo E2/E3](e2-e3-report.md). Xem [hướng dẫn nghiệm thu các bước cuối](phase2-completion.md) trên nhánh `feat/phase2`.
 > Quy tắc làm việc giữ nguyên như cũ: thiết kế xong rồi mới code; migration tạo dần; phân tầng `api/realtime → services → models`; tài liệu là bản sống (sửa code đổi thiết kế thì sửa docs trong cùng commit).
 > Giao diện của các chức năng này nằm ở `ui.md`; ý tưởng chưa chốt nằm ở `idea.md`.
 
@@ -154,7 +154,7 @@ Service luôn sắp xếp cặp trước khi ghi (`a = min(x, y)`, `b = max(x, y
 
 Index: `(blocked_id)`.
 
-### 3.4 `conversations` và `direct_messages` (migration `0011`)
+### 3.4 `conversations` và `direct_messages` (migration `0013`)
 
 **`conversations`**: mỗi cặp bạn bè có tối đa một cuộc trò chuyện, tạo khi gửi tin đầu tiên.
 
@@ -184,7 +184,7 @@ Số tin chưa đọc của X = số tin của người kia có `id > X_last_rea
 Index: `ix_direct_messages_conversation_id_id (conversation_id, id DESC)`.
 Khi xóa tài khoản: các `conversations` liên quan bị xóa (CASCADE), nên cả hai phía mất lịch sử. Chấp nhận ở bản này.
 
-### 3.5 `room_invites` (migration `0012`)
+### 3.5 `room_invites` (migration `0011`)
 
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
@@ -198,7 +198,7 @@ Khi xóa tài khoản: các `conversations` liên quan bị xóa (CASCADE), nên
 
 Index: UNIQUE một phần `(room_id, invitee_id) WHERE status = 'pending'`; `(invitee_id, status, expires_at)`; `(room_id)`.
 
-### 3.6 `call_participants` (migration `0013`)
+### 3.6 `call_participants` (migration `0012`)
 
 Mỗi **lần vào phòng** là một dòng (vào lại thì thêm dòng mới).
 
@@ -220,15 +220,15 @@ Index: `(user_id, joined_at DESC) WHERE user_id IS NOT NULL`; `(room_id, joined_
 
 ### 3.7 Kế hoạch migration
 
-V2 đã dùng `0008` cho chuyển thiết bị. E1 dùng `0009` thay cho số trong bản nháp cũ; các số dự kiến phía sau dịch một bước. Chỉ `0009` được triển khai ở E1; `down_revision` của bước sau phải nối head thực tế khi triển khai, theo thứ tự đã duyệt.
+V2 đã dùng `0008` cho chuyển thiết bị. E1 dùng `0009` thay cho số trong bản nháp cũ; các số dự kiến phía sau dịch một bước. Chuỗi từ `0010` nối lần lượt E5 (`0011`), E6 (`0012`) và E4 (`0013`).
 
 | Rev | Tên | Nội dung | Bước |
 |---|---|---|---|
 | `0009` | `add_user_profile` | 5 cột mục 3.2 (đều có default hoặc NULL nên an toàn với dữ liệu cũ) | E1 |
 | `0010` | `create_friends` | `friend_requests`, `friendships`, `user_blocks` | E2 |
-| `0011` | `create_direct_messages` | `conversations`, `direct_messages` | E4 |
-| `0012` | `create_room_invites` | `room_invites` | E5 |
-| `0013` | `create_call_participants` | `call_participants` | E6 |
+| `0011` | `create_room_invites` | `room_invites` | E5 |
+| `0012` | `create_call_participants` | `call_participants` | E6 |
+| `0013` | `create_direct_messages` | `conversations`, `direct_messages` | E4 |
 
 Giữ nguyên quy tắc cũ: mỗi migration một việc, đọc lại bản autogenerate, viết `downgrade()`, CI chạy `alembic check`. Index một phần (`WHERE ...`) và CHECK có hàm Alembic **không tự sinh đúng**, viết tay.
 
@@ -323,7 +323,7 @@ URL ảnh **công khai nhưng không đoán được** (`user_id` + mã băm). �
 
 Chi tiết E2 đã triển khai: khóa hai dòng tài khoản theo thứ tự UUID trước mọi thay đổi quan hệ để giữ đúng hạn mức khi có yêu cầu đồng thời. Từ chối được che thành `pending` trong API của người gửi, không trả `responded_at`; lời mời bị che cũng tính vào hạn mức gửi. Hủy lời mời không vượt được cooldown 24 giờ. Gửi lại sau cooldown chỉ hiển thị lời mời mới nhất mỗi người nhận. Nếu người kia chủ động gửi ngược lại thì có thể chấp nhận ngay; lời mời cũ bị che được kết thúc để không xuất hiện lại sau khi hủy kết bạn.
 
-Thời hạn áp dụng ngay khi đọc/chấp nhận, không cần chờ job; sweep hiện có đánh dấu lời mời `pending` quá hạn mỗi khoảng 30 giây. Lịch sử `declined` giữ mốc người nhận phản hồi để kiểm tra cooldown. Bản E2/E3 chưa có tin nhắn riêng hay lời mời gọi; phần chặn gửi DM/hủy lời mời gọi sẽ nối với E4/E5 khi các bảng đó được triển khai.
+Thời hạn áp dụng ngay khi đọc/chấp nhận, không cần chờ job; sweep hiện có đánh dấu lời mời `pending` quá hạn mỗi khoảng 30 giây. Lịch sử `declined` giữ mốc người nhận phản hồi để kiểm tra cooldown. E4/E5 áp dụng chặn lên tin nhắn riêng và lời mời gọi. Lịch sử tin nhắn đã có vẫn đọc được.
 
 Khi `friends_enabled=false`, tìm kiếm, danh sách bạn/lời mời, gửi và chấp nhận bị chặn; hủy/từ chối, hủy kết bạn và quản lý chặn vẫn dùng được. Tìm kiếm bị giới hạn 20/phút và 200/ngày mỗi tài khoản, thêm 60/phút và 600/ngày mỗi IP. Gửi lời mời giới hạn 10/phút mỗi tài khoản và 30/phút mỗi IP.
 
@@ -367,7 +367,7 @@ Hiện tại mỗi socket chỉ vào "phòng gọi" (room Socket.io theo `code`)
 - Server giữ **bộ nhớ đệm danh sách bạn** của người đang online (xóa khi bạn bè thay đổi) để không truy vấn DB mỗi lần phát trạng thái.
 - Thông báo là **cố gắng tối đa (best-effort)**. Sau khi nối lại, client gọi: `GET /friends/requests`, `GET /invites`, `GET /conversations` rồi `GET /conversations/{id}/messages?after=<id>` để đồng bộ phần bỏ lỡ.
 
-E3 hiện tự đồng bộ `/friends` (đủ các trang), `/friends/requests?direction=incoming` và `outgoing` khi socket web kết nối/kết nối lại. Module `client/js/friends-sync.js` được gắn vào sảnh và phòng gọi cho thành viên; thông báo cấu trúc thay đổi cũng làm mới snapshot. Kết quả phát nội bộ qua `videocall:friends-synced` cho phần UI U5 kết nối sau; lỗi đồng bộ phát `videocall:friends-sync-error`. Phản hồi của kết nối cũ bị bỏ, các lần làm mới đồng thời được gộp. Không gọi các API DM/lời mời gọi chưa có ở E4/E5.
+E3 hiện tự đồng bộ `/friends` (đủ các trang), `/friends/requests?direction=incoming` và `outgoing` khi socket web kết nối/kết nối lại. Module `client/js/friends-sync.js` được gắn vào sảnh và phòng gọi cho thành viên; thông báo cấu trúc thay đổi cũng làm mới snapshot. Kết quả phát nội bộ qua `videocall:friends-synced` cho phần UI U5 kết nối sau; lỗi đồng bộ phát `videocall:friends-sync-error`. Phản hồi của kết nối cũ bị bỏ, các lần làm mới đồng thời được gộp. Sau E4/E5, cùng kết nối tải danh sách lời mời gọi và cuộc trò chuyện, rồi lấy tin mới theo con trỏ đã biết.
 
 HTTP danh sách bạn giữ trạng thái online trong khoảng chờ 5 giây giống sự kiện realtime. Tắt hiển thị online gửi `online: null` để bạn bè bỏ trạng thái cũ, sau đó không phát online/offline tới khi bật lại. Tên/ảnh thay đổi trên API người dùng hoặc sửa tên bằng admin được phát cho bạn bè; ngày sinh/email không nằm trong payload. Cache chỉ giữ cho người đang online; xóa khi quan hệ/quyền thay đổi, khi offline và khi shutdown. Khách không vào room `user:<id>`.
 
@@ -591,7 +591,7 @@ Bổ sung vào `02-api.md` mục 8:
 
 Phần công khai cho client (`/config/public`) thêm: `friends_enabled`, `dm_enabled`, `call_history_enabled`, `allow_avatar_upload`, `avatar_max_kb`.
 
-Hai khóa `allow_avatar_upload` và `avatar_max_kb` được đưa vào E1. Năm khóa bạn bè (`friends_enabled`, `friend_search_enabled`, hai hạn mức và TTL) được đưa vào E2 vì service cần dùng ngay, nằm trong nhóm `access`. Public config trả hai cờ bạn bè. Các khóa DM/lời mời/lịch sử và phần quản trị mở rộng vẫn chờ E4–E7. Hai quyền riêng tư được thực thi ở E2/E3.
+Hai khóa `allow_avatar_upload` và `avatar_max_kb` được đưa vào E1. Năm khóa bạn bè (`friends_enabled`, `friend_search_enabled`, hai hạn mức và TTL) được đưa vào E2 vì service cần dùng ngay, nằm trong nhóm `access`. Public config trả hai cờ bạn bè. Các khóa DM/lời mời/lịch sử và phần quản trị đã nối vào E4–E7. Hai quyền riêng tư được thực thi ở E2/E3.
 
 **Hằng số trong code:** độ dài tin 1-2000; cooldown sau khi bị từ chối 24 giờ; tìm kiếm 20/phút và 200/ngày; `dm_send` 10 tin / 10 giây; mời gọi 20 lần / phút; `dm_typing` 1 lần / 2 giây; tối đa 20 người mỗi lần mời; giới hạn điểm ảnh 25 triệu.
 
@@ -603,7 +603,8 @@ Hai khóa `allow_avatar_upload` và `avatar_max_kb` được đưa vào E1. Năm
 | 409 | `ALREADY_FRIENDS`, `REQUEST_ALREADY_SENT`, `FRIEND_LIMIT_REACHED` | |
 | 404 | `REQUEST_NOT_FOUND`, `INVITE_NOT_FOUND` | |
 | 429 | `REQUEST_COOLDOWN` | Chưa hết 24 giờ sau khi bị từ chối |
-| 403 | `NOT_FRIENDS`, `DM_DISABLED`, `NOT_IN_CONVERSATION`, `FEATURE_DISABLED` | |
+| 403 | `DM_DISABLED`, `NOT_IN_CONVERSATION`, `FEATURE_DISABLED` | |
+| 404 | `NOT_FRIENDS`, `MESSAGE_NOT_FOUND`, `HISTORY_NOT_FOUND` | |
 | 410 | `INVITE_EXPIRED` | Lời mời đã hết hạn |
 | socket | `INVITE_INVALID` | `invite_id` sai người/phòng hoặc đã dùng |
 | 400 | `INVALID_IMAGE` | |
@@ -635,9 +636,9 @@ Hai khóa `allow_avatar_upload` và `avatar_max_kb` được đưa vào E1. Năm
 | E1 | Hồ sơ và avatar | `0009` | A3 |
 | E2 | Bạn bè, tìm kiếm, chặn (HTTP) | `0010` | E1 |
 | E3 | Realtime theo người dùng, trạng thái online, thông báo kết bạn | | A4, E2 |
-| E5 | Mời vào cuộc gọi nhóm | `0012` | A4, E3 |
-| E6 | Lịch sử cuộc gọi | `0013` | A4 (và A8 để xuất chat) |
-| E4 | Nhắn tin qua bạn bè | `0011` | E3 |
+| E5 | Mời vào cuộc gọi nhóm | `0011` | A4, E3 |
+| E6 | Lịch sử cuộc gọi | `0012` | A4 (và A8 để xuất chat) |
+| E4 | Nhắn tin qua bạn bè | `0013` | E3 |
 | E7 | Admin và cấu hình | | A6 |
 
 Thứ tự đề xuất: **hoàn thành MVP (A1-A9) rồi mới làm E1 → E2 → E3 → E5 → E6 → E4 → E7**. E1 có thể làm sớm hơn nếu muốn có giao diện hồ sơ. Các bước E không chặn B1-B7.
@@ -647,7 +648,7 @@ Thứ tự đề xuất: **hoàn thành MVP (A1-A9) rồi mới làm E1 → E2 �
 | File | Cập nhật |
 |---|---|
 | `docs/README.md` | Phạm vi (mục 2), lộ trình thêm E1-E7, bảng công nghệ không đổi |
-| `docs/01-database.md` | Thêm 5 cột `users`, 7 bảng mới, ERD, migration `0009`-`0013`, việc dọn dẹp |
+| `docs/01-database.md` | Thêm 5 cột `users`, 7 bảng mới, ERD, migration `0009`–`0013`, việc dọn dẹp |
 | `docs/02-api.md` | Mở rộng `/me`; thêm các nhóm endpoint mục 4-9 và 11; mã lỗi mục 13; rate limit |
 | `docs/03-socket-events.md` | Room `user:<id>`, sự kiện mục 6, mở rộng `join_room` (`invite_id`), ghi `call_participants` khi vào/ra |
 | `docs/04-settings.md` | Cấu hình mục 12 |
@@ -688,7 +689,7 @@ Thứ tự đề xuất: **hoàn thành MVP (A1-A9) rồi mới làm E1 → E2 �
 | E1 | `Thực hiện bước E1 theo docs_v3/extend.md mục 3.2 và 4: migration 0009, mở rộng GET/PATCH /me, PUT/DELETE /me/avatar với xử lý ảnh an toàn, phục vụ /media/avatars. Trình bày kế hoạch trước.` |
 | E2 | `Thực hiện bước E2 theo extend.md mục 3.3 và 5: migration 0010, tìm kiếm email chính xác, lời mời kết bạn, danh sách bạn, chặn, rate limit, test không lộ email ẩn. Trình bày kế hoạch trước.` |
 | E3 | `Thực hiện bước E3 theo extend.md mục 6: room user:<id>, presence có trì hoãn, sự kiện kết bạn, bộ nhớ đệm danh sách bạn, đồng bộ sau khi nối lại. Trình bày kế hoạch trước.` |
-| E5 | `Thực hiện bước E5 theo extend.md mục 8: migration 0012, POST /rooms/{code}/invites, GET /invites, mở rộng join_room với invite_id, hết hạn lời mời, test invite của người khác bị từ chối. Trình bày kế hoạch trước.` |
-| E6 | `Thực hiện bước E6 theo extend.md mục 3.6 và 9: migration 0013, ghi call_participants khi vào/ra, đóng dòng treo khi khởi động, API lịch sử, xuất chat. Trình bày kế hoạch trước.` |
-| E4 | `Thực hiện bước E4 theo extend.md mục 3.4 và 7: migration 0011, dm_send có ack và client_msg_id, dm_read, lịch sử theo con trỏ, xóa mềm. Trình bày kế hoạch trước.` |
+| E5 | `Thực hiện bước E5 theo extend.md mục 8: migration 0011, POST /rooms/{code}/invites, GET /invites, mở rộng join_room với invite_id, hết hạn lời mời, test invite của người khác bị từ chối. Trình bày kế hoạch trước.` |
+| E6 | `Thực hiện bước E6 theo extend.md mục 3.6 và 9: migration 0012, ghi call_participants khi vào/ra, đóng dòng treo khi khởi động, API lịch sử, xuất chat. Trình bày kế hoạch trước.` |
+| E4 | `Thực hiện bước E4 theo extend.md mục 3.4 và 7: migration 0013, dm_send có ack và client_msg_id, dm_read, lịch sử theo con trỏ, xóa mềm. Trình bày kế hoạch trước.` |
 | E7 | `Thực hiện bước E7 theo extend.md mục 11 và 12: API admin mở rộng, cấu hình mới trong SettingsSchema, audit user.avatar_remove. Trình bày kế hoạch trước.` |

@@ -57,6 +57,8 @@ Cột "Áp dụng" cho biết thay đổi có tác dụng với đối tượng 
 
 Hai cờ `friends_enabled` và `friend_search_enabled` có trong `/config/public`. Nhóm bạn bè được triển khai ở E2/E3 để áp dụng chính sách ngay; các phần quản trị còn lại thuộc E7.
 
+E7 áp dụng các khóa `dm_enabled`, `dm_retention_days`, `invite_ttl_seconds`, `max_invites_per_call`, `call_history_enabled` và `call_history_retention_days` theo [bảng cấu hình V3](../docs_v3/extend.md#12-cấu-hình-mới-bổ-sung-04-settingsmd-mục-3). Public config có thêm hai cờ `dm_enabled` và `call_history_enabled`.
+
 ### 3.2 Phòng và chat (`rooms`)
 
 | Khóa | Kiểu | Mặc định | Khoảng hợp lệ | Áp dụng | Mô tả |

@@ -302,11 +302,13 @@ Tìm email khớp chính xác sau chuẩn hóa lowercase; bản thân, tài kho�
 
 Từ chối vẫn hiển thị `pending` ở phía người gửi tới TTL; không trả `responded_at`, không phát event từ chối. Cooldown 24 giờ không vượt được bằng cách hủy/gửi lại. Hạn mức mặc định: 200 bạn, 50 lời mời đã gửi đang chờ (gồm các lời mời bị che), TTL 30 ngày. Tìm kiếm: 20/phút và 200/ngày/tài khoản; 60/phút và 600/ngày/IP. Gửi: 10/phút/tài khoản, 30/phút/IP.
 
-Lỗi: 404 `USER_NOT_FOUND`, `REQUEST_NOT_FOUND`, `NOT_FRIENDS`; 409 `ALREADY_FRIENDS`, `REQUEST_ALREADY_SENT`, `FRIEND_LIMIT_REACHED`; 429 `REQUEST_COOLDOWN` hoặc `RATE_LIMITED` có `Retry-After`; 403 `FEATURE_DISABLED`. Chặn hủy quan hệ và lời mời kết bạn đang chờ, không báo người bị chặn và không thay đổi phòng đang gọi. Phần DM/lời mời gọi chờ E4/E5.
+Lỗi: 404 `USER_NOT_FOUND`, `REQUEST_NOT_FOUND`, `NOT_FRIENDS`; 409 `ALREADY_FRIENDS`, `REQUEST_ALREADY_SENT`, `FRIEND_LIMIT_REACHED`; 429 `REQUEST_COOLDOWN` hoặc `RATE_LIMITED` có `Retry-After`; 403 `FEATURE_DISABLED`. Chặn hủy quan hệ, lời mời kết bạn và lời mời gọi đang chờ. Thông báo hủy lời mời gọi dùng lý do chung. Phòng đang gọi tiếp tục hoạt động, DM cũ còn đọc được.
 
 `is_online` là null nếu tắt hiển thị online; HTTP giữ true trong khoảng đợi offline 5 giây để cùng trạng thái với realtime. Danh sách ưu tiên online, rồi tên (không phân biệt hoa thường), cuối cùng UUID để ổn định phân trang. Khi tắt `friends_enabled`, vẫn cho hủy/từ chối, hủy kết bạn và quản lý chặn.
 
 ## 6. Phòng
+
+Giai đoạn 2 V3 bổ sung API [lời mời gọi](../docs_v3/extend.md#83-api), [lịch sử và xuất chat](../docs_v3/extend.md#93-api), [tin nhắn riêng](../docs_v3/extend.md#72-api-lịch-sử-và-trạng-thái-đọc) và [lịch sử quản trị](../docs_v3/extend.md#11-admin-e7). Xem [cách nghiệm thu](../docs_v3/phase2-completion.md).
 
 Mật khẩu phòng được kiểm tra ở sự kiện socket `join_room`, **không** có endpoint HTTP riêng, để chỉ một chỗ quyết định ai được vào.
 

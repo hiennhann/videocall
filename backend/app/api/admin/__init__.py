@@ -15,12 +15,15 @@ from app.schemas.admin import (
     Page,
     UserPatch,
 )
+from app.schemas.friends import avatar_url
 from app.schemas.settings import PublicSettings, SettingsPatch
 from app.services.admin_service import (
     AdminService,
     count_user_sessions,
+    dashboard_activity,
     get_admin_target,
     list_users,
+    user_activity,
     user_counts,
 )
 from app.services.audit_service import list_audit
@@ -46,7 +49,9 @@ async def public_config(db: DB, settings: OperationalSettings) -> PublicSettings
 
 
 @router.get("/dashboard")
-async def dashboard(actor: CurrentAdmin, db: DB, service: AdminOps) -> Dashboard:
+async def dashboard(
+    actor: CurrentAdmin, db: DB, service: AdminOps, settings: OperationalSettings
+) -> Dashboard:
     total, daily = await user_counts(db)
     connections, rooms, participants = await service.events.room_counts(db)
     return Dashboard(
@@ -55,6 +60,7 @@ async def dashboard(actor: CurrentAdmin, db: DB, service: AdminOps) -> Dashboard
         active_participants=participants,
         total_users=total,
         new_users_per_day=[DailyUsers(date=day, count=count) for day, count in daily],
+        **await dashboard_activity(db, (await settings.get(db)).friend_request_ttl_days),
     )
 
 
@@ -88,7 +94,44 @@ async def user_detail(
         **AdminUser.model_validate(user).model_dump(),
         active_sessions=await count_user_sessions(db, user_id),
         is_online=service.events.is_online(user_id),
+        birth_date=user.birth_date,
+        avatar_url=avatar_url(user, 256),
+        **await user_activity(db, user_id),
     )
+
+
+@router.delete("/users/{user_id}/avatar", status_code=204)
+async def remove_avatar(
+    user_id: UUID, request: Request, actor: CurrentAdmin, db: DB, service: AdminOps
+) -> Response:
+    await request.app.state.avatar_service.delete(db, user_id, actor=actor)
+    await service.events.profile_changed(user_id)
+    return Response(status_code=204)
+
+
+@router.get("/call-history")
+async def call_history(
+    request: Request,
+    actor: CurrentAdmin,
+    db: DB,
+    start: Annotated[AwareDatetime | None, Query(alias="from")] = None,
+    end: Annotated[AwareDatetime | None, Query(alias="to")] = None,
+    host: UUID | None = None,
+    page: PageNumber = 1,
+    page_size: PageSize = 20,
+) -> dict:
+    if start and end and start > end:
+        raise AuthError(
+            ErrorCode.VALIDATION_ERROR, fields={"to": "Phải từ thời điểm bắt đầu trở đi."}
+        )
+    return await request.app.state.realtime.history.listing(
+        db, None, None, start, end, page, page_size, host
+    )
+
+
+@router.get("/call-history/{code}")
+async def call_detail(code: str, request: Request, actor: CurrentAdmin, db: DB) -> dict:
+    return await request.app.state.realtime.history.detail(db, code, None)
 
 
 @router.patch("/users/{user_id}")

@@ -29,6 +29,9 @@ async def prometheus_metrics(request: Request, db: DB) -> Response:
     metrics: Metrics = request.app.state.metrics
     connections, rooms, participants = await request.app.state.realtime.room_counts(db)
     metrics.connections.set(connections)
+    metrics.presence_online_users.set(
+        request.app.state.realtime.state.presence_counts()["online_accounts"]
+    )
     metrics.rooms.set(rooms)
     metrics.participants.set(participants)
     return Response(

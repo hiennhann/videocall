@@ -15,7 +15,9 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from app.api.admin import public_router
 from app.api.admin import router as admin_router
 from app.api.auth import create_auth_router
+from app.api.call_history import router as call_history_router
 from app.api.client import mount_client
+from app.api.direct_messages import router as direct_messages_router
 from app.api.errors import (
     auth_error_handler,
     internal_error_handler,
@@ -23,6 +25,7 @@ from app.api.errors import (
     validation_error_handler,
 )
 from app.api.friends import router as friends_router
+from app.api.invites import router as invites_router
 from app.api.me import router as me_router
 from app.api.media import router as media_router
 from app.api.rooms import admin_router as admin_rooms_router
@@ -57,7 +60,10 @@ def create_app() -> FastAPI:
         if settings.sfu_url
         else None
     )
+    avatars = AvatarService(settings.avatar_storage_dir)
     realtime = RealtimeServer(origins, operational_settings, sfu, metrics)
+    if settings.env != "test":
+        realtime.avatar_maintenance = avatars
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -75,6 +81,7 @@ def create_app() -> FastAPI:
         app.state.session_factory = async_sessionmaker(engine, expire_on_commit=False)
         realtime.start(app.state.session_factory, app.state.auth_service)
         try:
+            await realtime.recover_history()
             yield
         finally:
             try:
@@ -87,7 +94,7 @@ def create_app() -> FastAPI:
     app.state.realtime = realtime
     app.state.friend_service = realtime.friends
     app.state.metrics = metrics
-    app.state.avatar_service = AvatarService(settings.avatar_storage_dir)
+    app.state.avatar_service = avatars
     app.state.turn_service = TurnService(
         settings.turn_secret.get_secret_value(), settings.turn_urls
     )
@@ -101,6 +108,9 @@ def create_app() -> FastAPI:
     app.include_router(create_auth_router(limiter), prefix="/api/v1")
     app.include_router(me_router, prefix="/api/v1")
     app.include_router(friends_router, prefix="/api/v1")
+    app.include_router(invites_router, prefix="/api/v1")
+    app.include_router(direct_messages_router, prefix="/api/v1")
+    app.include_router(call_history_router, prefix="/api/v1")
     app.include_router(media_router)
     app.include_router(admin_router, prefix="/api/v1")
     app.include_router(public_router, prefix="/api/v1")

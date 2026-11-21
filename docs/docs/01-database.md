@@ -271,6 +271,9 @@ Danh sách `action`: xem `02-api.md` mục 8.
 | `0008` | `device_transfers` | Phân loại phiên và xác nhận chuyển thiết bị | V2 | Đã triển khai, không sửa lại |
 | `0009` | `add_user_profile` | Hồ sơ, avatar và hai quyền riêng tư | V3 E1 | Cột mới có NULL/default, giữ nguyên dữ liệu cũ |
 | `0010` | `create_friends` | `friend_requests`, `friendships`, `user_blocks` | V3 E2 | FK CASCADE; cặp bạn bè chuẩn hóa, unique lời mời đang chờ |
+| `0011` | `create_room_invites` | `room_invites`, lời mời gắn phòng và người nhận | V3 E5 | Một lời mời đang chờ cho mỗi cặp phòng/người nhận |
+| `0012` | `create_call_participants` | `call_participants`, mỗi lượt vào là một dòng | V3 E6 | Xóa tài khoản giữ tên đã chụp, gỡ liên kết user |
+| `0013` | `create_direct_messages` | `conversations`, `direct_messages` | V3 E4 | Cặp UUID chuẩn hóa, chống ghi trùng theo ID phía client |
 
 V3 E2 thêm ba bảng, chi tiết tại [`extend.md` mục 3.3](../docs_v3/extend.md#33-friend_requests-và-friendships-migration-0010):
 

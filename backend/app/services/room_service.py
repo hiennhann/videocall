@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.errors import AuthError, ErrorCode
 from app.core.security import hash_password, verify_password
 from app.metrics import Metrics
-from app.models import Room, User
+from app.models import CallParticipant, Room, RoomInvite, User
 from app.realtime.state import Connection, HeldSeat, Peer, RoomPresence, RoomStateStore
 from app.schemas.rooms import CreateRoom, MediaState, RoomCreated, RoomSummary, SessionDescription
 from app.schemas.settings import SettingsSchema
@@ -175,7 +175,12 @@ class RoomService:
         return [room_result(room, settings) for room in rows]
 
     async def join(
-        self, db: AsyncSession, connection: Connection, code: str, password: str | None
+        self,
+        db: AsyncSession,
+        connection: Connection,
+        code: str,
+        password: str | None,
+        invite_id: UUID | None = None,
     ) -> dict[str, Any]:
         settings = await self.settings.get(db)
         room = await find_room(db, code)
@@ -200,7 +205,10 @@ class RoomService:
                 )
             self.require_mode(settings, room.mode)
 
-            if room.password_hash is not None:
+            member_id = None if connection.is_guest else UUID(connection.user_id)
+            if invite_id is not None:
+                await self.invites.validate_join(db, room, member_id, invite_id)
+            elif room.password_hash is not None:
                 key = (connection.user_id, connection.ip)
                 if not self.limiter.test(PASSWORD_FAILURES, *key):
                     raise AuthError(ErrorCode.RATE_LIMITED)
@@ -226,10 +234,21 @@ class RoomService:
             if previous is not None:
                 await self.events.emit("kicked", {"reason": "SESSION_REPLACED"}, to=previous.id)
                 await self.remove(presence, previous, "session_replaced")
+            if member_id is not None:
+                await self.invites.joined(db, room, member_id)
             presence.held_seats.pop(connection.user_id, None)
             prior = previous or held
             peer = Peer(connection, prior.joined_at if prior else datetime.now(UTC))
             self.state.add_peer(presence, peer)
+            if settings.call_history_enabled:
+                peer.history = CallParticipant(
+                    room_id=room.id,
+                    user_id=member_id,
+                    display_name=connection.display_name,
+                    is_guest=connection.is_guest,
+                    joined_at=datetime.now(UTC),
+                )
+                self.history.queue("join", peer.history)
             if presence.owner_id == peer.user_id:
                 presence.preferred_host = None
             await self.events.enter(peer.id, code)
@@ -299,6 +318,8 @@ class RoomService:
             if speaker_left:
                 presence.speaker_id = None
         self.state.remove_peer(presence, peer)
+        if peer.history is not None:
+            self.history.queue("leave", peer.history, reason)
         if presence.preferred_host == peer.user_id and reason != "session_replaced":
             presence.preferred_host = None
         await self.events.leave(peer.id, presence.code)
@@ -567,7 +588,11 @@ class RoomService:
                 room.closed_at = datetime.now(UTC)
                 if actor is not None:
                     record_audit(db, actor, "room.close", "room", code)
+                cancelled = await self.invites.transition(
+                    db, "cancelled", RoomInvite.room_id == room.id
+                )
                 await db.commit()
+                await self.invites.cancelled(cancelled, "room_closed")
             await self.finish_close(presence, room.closed_reason or reason)
 
     async def finish_close(self, presence: RoomPresence, reason: str) -> None:
@@ -575,6 +600,8 @@ class RoomService:
             await self.sfu.remove(presence.code)
         await self.events.emit("room_closed", {"reason": reason}, to=presence.code)
         for peer in list(presence.peers.values()):
+            if peer.history is not None:
+                self.history.queue("leave", peer.history, "room_closed")
             await self.events.leave(peer.id, presence.code)
         self.state.remove_room(presence)
 

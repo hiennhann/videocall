@@ -37,6 +37,11 @@ class AdminUser(BaseModel):
 class AdminUserDetail(AdminUser):
     active_sessions: int
     is_online: bool
+    birth_date: date | None = None
+    avatar_url: str | None = None
+    friends_count: int = 0
+    calls_count: int = 0
+    latest_call_at: datetime | None = None
 
 
 class DailyUsers(BaseModel):
@@ -49,6 +54,9 @@ class Dashboard(BaseModel):
     active_rooms: int
     active_participants: int
     total_users: int
+    calls_today: int = 0
+    call_minutes_today: int = 0
+    friend_requests_pending: int = 0
     new_users_per_day: list[DailyUsers]
     turn: Any | None = None
 

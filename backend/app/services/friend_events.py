@@ -1,10 +1,14 @@
 from uuid import UUID
 
+from app.models import RoomInvite
 from app.schemas.friends import RequestItem
 
 
 class FriendEvents:
     """Điểm tích hợp bạn bè với realtime; thông báo được gửi sau commit."""
+
+    async def call_invites_cancelled(self, invites: list[RoomInvite]) -> None:
+        pass
 
     async def request_received(self, recipient: UUID, request: RequestItem) -> None:
         pass

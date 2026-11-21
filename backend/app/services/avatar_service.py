@@ -1,17 +1,22 @@
 import asyncio
+import re
+from collections.abc import Iterator
 from datetime import UTC, datetime
 from hashlib import sha256
 from io import BytesIO
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from time import time
 from uuid import UUID
 
 from PIL import Image, ImageOps, UnidentifiedImageError
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AuthError, ErrorCode
 from app.models import User
 from app.schemas.settings import SettingsSchema
+from app.services.audit_service import AuditActor, record_audit
 from app.services.user_service import editable_user
 
 MAX_PIXELS = 25_000_000
@@ -76,6 +81,35 @@ class AvatarService:
         for size in SIZES:
             self.path(user_id, key, size).unlink(missing_ok=True)
 
+    def _old_files(self, before: float) -> Iterator[Path]:
+        if not self.root.is_dir():
+            return
+        for directory in self.root.iterdir():
+            if directory.is_symlink() or not directory.is_dir():
+                continue
+            for path in directory.iterdir():
+                if path.is_symlink() or not path.is_file():
+                    continue
+                if (
+                    re.fullmatch(r"[0-9a-f]{64}-(64|256)\.webp", path.name)
+                    and path.stat().st_mtime < before
+                ):
+                    yield path
+
+    async def prune(self, db: AsyncSession) -> None:
+        async with self._writes:
+            rows = await db.execute(
+                select(User.id, User.avatar_key).where(User.avatar_key.is_not(None))
+            )
+            keep = {(str(user_id), key) for user_id, key in rows}
+
+            def clean() -> None:
+                for path in self._old_files(time() - 7 * 86400):
+                    if (path.parent.name, path.name.split("-")[0]) not in keep:
+                        path.unlink(missing_ok=True)
+
+            await asyncio.to_thread(clean)
+
     async def replace(
         self, db: AsyncSession, user_id: UUID, data: bytes, policy: SettingsSchema
     ) -> User:
@@ -105,12 +139,24 @@ class AvatarService:
                 await asyncio.to_thread(self._remove, user_id, old_key)
             return user
 
-    async def delete(self, db: AsyncSession, user_id: UUID) -> None:
+    async def delete(
+        self, db: AsyncSession, user_id: UUID, *, actor: AuditActor | None = None
+    ) -> None:
         async with self._writes:
-            user = await editable_user(db, user_id, lock=True)
+            if actor is None:
+                user = await editable_user(db, user_id, lock=True)
+            else:
+                admin = await editable_user(db, actor.id, lock=True)
+                if admin.role != "admin":
+                    raise AuthError(ErrorCode.FORBIDDEN)
+                user = await db.get(User, user_id, with_for_update=True, populate_existing=True)
+                if user is None:
+                    raise AuthError(ErrorCode.USER_NOT_FOUND)
             old_key = user.avatar_key
             user.avatar_key = None
             user.avatar_updated_at = None
+            if actor is not None and old_key is not None:
+                record_audit(db, actor, "user.avatar_remove", "user", str(user_id))
             await db.commit()
             if old_key:
                 await asyncio.to_thread(self._remove, user_id, old_key)

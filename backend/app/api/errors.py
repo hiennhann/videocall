@@ -57,6 +57,13 @@ AUTH_ERRORS = {
     ErrorCode.REQUEST_COOLDOWN: (429, "Chưa thể gửi lại lời mời vào lúc này."),
     ErrorCode.REQUEST_NOT_FOUND: (404, "Không tìm thấy lời mời."),
     ErrorCode.NOT_FRIENDS: (404, "Không tìm thấy quan hệ bạn bè."),
+    ErrorCode.INVITE_INVALID: (403, "Lời mời không hợp lệ cho phòng hoặc tài khoản này."),
+    ErrorCode.INVITE_EXPIRED: (410, "Lời mời gọi đã hết hạn."),
+    ErrorCode.INVITE_NOT_FOUND: (404, "Không tìm thấy lời mời gọi."),
+    ErrorCode.HISTORY_NOT_FOUND: (404, "Không tìm thấy lịch sử cuộc gọi."),
+    ErrorCode.DM_DISABLED: (403, "Tính năng nhắn tin riêng đang tắt."),
+    ErrorCode.NOT_IN_CONVERSATION: (403, "Bạn không tham gia cuộc trò chuyện này."),
+    ErrorCode.MESSAGE_NOT_FOUND: (404, "Không tìm thấy tin nhắn."),
 }
 
 

@@ -29,6 +29,22 @@ class Metrics:
         self.connections = Gauge(
             "socket_connections", "Current Socket.IO connections.", registry=self.registry
         )
+        self.presence_online_users = Gauge(
+            "presence_online_users",
+            "Registered accounts with an active socket.",
+            registry=self.registry,
+        )
+        self.dm_messages = Counter(
+            "dm_messages_total",
+            "New direct messages committed.",
+            registry=self.registry,
+        )
+        self.call_invites = Counter(
+            "call_invites_total",
+            "Committed call invitation transitions.",
+            ("status",),
+            registry=self.registry,
+        )
         self.rooms = Gauge("rooms_active", "Current active rooms.", registry=self.registry)
         self.participants = Gauge(
             "room_participants", "Participants across all rooms.", registry=self.registry

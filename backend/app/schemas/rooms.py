@@ -47,6 +47,7 @@ class RoomSummary(BaseModel):
 
 
 class JoinRoom(BaseModel):
+    invite_id: Annotated[UUID, Field(strict=False)] | None = None
     model_config = ConfigDict(extra="forbid", strict=True)
 
     code: RoomCode

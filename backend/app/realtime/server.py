@@ -24,6 +24,7 @@ from app.models import Room
 from app.realtime.friends import FriendRealtime
 from app.realtime.state import Connection, RoomStateStore
 from app.schemas.chat import SendMessage
+from app.schemas.direct_messages import DirectRead, DirectSend, DirectTyping
 from app.schemas.rooms import (
     JoinRoom,
     KickPeer,
@@ -36,8 +37,12 @@ from app.schemas.rooms import (
 )
 from app.services.account_events import AccountEvents
 from app.services.auth_service import AuthService
+from app.services.avatar_service import AvatarService
+from app.services.call_history import CallHistory
 from app.services.chat_service import ChatService
+from app.services.direct_messages import DirectMessages
 from app.services.friend_service import FriendService
+from app.services.invite_service import InviteService
 from app.services.room_service import RoomService
 from app.services.settings_service import SettingsService
 from app.sfu.control import SfuClient
@@ -67,9 +72,16 @@ class RealtimeServer(AccountEvents):
         self.friends = FriendService(settings, self.social)
         self.metrics = metrics
         self.rooms = RoomService(settings, self.state, self, metrics, sfu)
+        self.invites = InviteService(self.state, settings, self.social._emit, metrics)
+        self.rooms.invites = self.invites
+        self.history = CallHistory(settings)
+        self.rooms.history = self.history
+        self.dm = DirectMessages(settings, self.social._emit, metrics)
         self.chat = ChatService(self.rooms)
         self._sweeper: asyncio.Task[None] | None = None
         self._chat_writer: asyncio.Task[None] | None = None
+        self._history_writer: asyncio.Task[None] | None = None
+        self.avatar_maintenance: AvatarService | None = None
         self.sio.on("connect", self.connect)
         self.sio.on("disconnect", self.disconnect)
         self._bind("join_room", self.join)
@@ -86,6 +98,9 @@ class RealtimeServer(AccountEvents):
         self._bind("kick", self.kick)
         self._bind("transfer_host", self.transfer)
         self._bind("close_room", self.close_room)
+        self._bind("dm_send", self.dm_send)
+        self._bind("dm_read", self.dm_read)
+        self._bind("dm_typing", self.dm_typing)
 
     def start(self, sessions: async_sessionmaker[AsyncSession], auth: AuthService) -> None:
         self.sessions = sessions
@@ -93,6 +108,15 @@ class RealtimeServer(AccountEvents):
         self.social.start(sessions)
         self._sweeper = asyncio.create_task(self.sweep())
         self._chat_writer = asyncio.create_task(self.chat.store(sessions))
+        self._history_writer = asyncio.create_task(self.history.store(sessions))
+
+    async def recover_history(self) -> None:
+        try:
+            async with self.sessions() as db:
+                await self.history.recover(db)
+        except (OSError, PostgresError, SQLAlchemyError):
+            # Readiness vẫn báo lỗi DB/migration theo cơ chế hiện có.
+            logger.warning("call_history_recovery_failed")
 
     async def stop(self) -> None:
         await self.social.stop()
@@ -106,14 +130,28 @@ class RealtimeServer(AccountEvents):
             await asyncio.gather(self._chat_writer, return_exceptions=True)
         if self.rooms.sfu is not None:
             await self.rooms.sfu.http.aclose()
+        if self._history_writer is not None:
+            await self.history.pending.join()
+            self._history_writer.cancel()
+            await asyncio.gather(self._history_writer, return_exceptions=True)
 
     async def sweep(self) -> None:
+        next_prune = 0.0
+        next_avatar_prune = 0.0
         while True:
             await asyncio.sleep(30)
             try:
                 await self.rooms.sweep_empty(self.sessions)
                 async with self.sessions() as db:
                     await self.friends.expire_requests(db)
+                    await self.invites.sweep(db)
+                    if perf_counter() >= next_prune:
+                        await self.history.prune(db)
+                        await self.dm.prune(db)
+                        next_prune = perf_counter() + 86400
+                    if self.avatar_maintenance is not None and perf_counter() >= next_avatar_prune:
+                        await self.avatar_maintenance.prune(db)
+                        next_avatar_prune = perf_counter() + 7 * 86400
             except (OSError, PostgresError, SQLAlchemyError):
                 logger.warning("Chưa thể kiểm tra phòng trống.", extra={"request_id": str(uuid4())})
 
@@ -259,7 +297,7 @@ class RealtimeServer(AccountEvents):
         request = JoinRoom.model_validate(data)
         password = request.password.get_secret_value() if request.password is not None else None
         async with self.sessions() as db:
-            return await self.rooms.join(db, connection, request.code, password)
+            return await self.rooms.join(db, connection, request.code, password, request.invite_id)
 
     async def leave_room(self, connection: Connection, data: Any) -> None:
         if data not in (None, {}):
@@ -357,6 +395,27 @@ class RealtimeServer(AccountEvents):
     ) -> None:
         await self.sio.emit(event, payload, to=to, skip_sid=skip)
 
+    @staticmethod
+    def member_id(connection: Connection) -> UUID:
+        if connection.is_guest:
+            raise AuthError(ErrorCode.GUEST_NOT_ALLOWED)
+        return UUID(connection.user_id)
+
+    async def dm_send(self, connection: Connection, data: Any) -> dict:
+        body = DirectSend.model_validate(data)
+        async with self.sessions() as db:
+            return await self.dm.send(db, self.member_id(connection), body, connection.peer_id)
+
+    async def dm_read(self, connection: Connection, data: Any) -> None:
+        body = DirectRead.model_validate(data)
+        async with self.sessions() as db:
+            await self.dm.read(db, self.member_id(connection), body.conversation_id, body.up_to_id)
+
+    async def dm_typing(self, connection: Connection, data: Any) -> None:
+        body = DirectTyping.model_validate(data)
+        async with self.sessions() as db:
+            await self.dm.typing(db, self.member_id(connection), body.to_user_id, body.typing)
+
     async def enter(self, peer_id: str, code: str) -> None:
         await self.sio.enter_room(peer_id, code)
 
@@ -379,6 +438,9 @@ class RealtimeServer(AccountEvents):
                 continue
             await self.emit("force_disconnect", {"reason": reason}, to=connection.peer_id)
             await self.sio.disconnect(connection.peer_id)
+        if reason == "ACCOUNT_DISABLED":
+            async with self.sessions() as db:
+                await self.invites.sweep(db)
 
     async def profile_changed(self, user_id: UUID) -> None:
         await self.social.profile_changed(user_id)
@@ -392,6 +454,8 @@ class RealtimeServer(AccountEvents):
             if presence is not None:
                 async with presence.lock:
                     await self.rooms.finish_close(presence, "owner_deleted")
+        async with self.sessions() as db:
+            await self.invites.sweep(db)
 
     def is_online(self, user_id: UUID) -> bool:
         return bool(self.state.connections_for(str(user_id)))

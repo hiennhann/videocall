@@ -10,6 +10,43 @@ BrandFont = Literal["system", "serif", "monospace"]
 class SettingsSchema(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid", frozen=True)
 
+    dm_enabled: bool = Field(
+        True, description="Cho phép gửi tin nhắn riêng.", json_schema_extra={"category": "access"}
+    )
+    dm_retention_days: int = Field(
+        0,
+        ge=0,
+        le=3650,
+        description="Số ngày giữ tin nhắn riêng (0: không tự xóa).",
+        json_schema_extra={"category": "access"},
+    )
+    invite_ttl_seconds: int = Field(
+        600,
+        ge=30,
+        le=3600,
+        description="Thời hạn lời mời gọi (giây).",
+        json_schema_extra={"category": "rooms"},
+    )
+    max_invites_per_call: int = Field(
+        20,
+        ge=1,
+        le=50,
+        description="Số lời mời gọi đang chờ mỗi phòng.",
+        json_schema_extra={"category": "rooms"},
+    )
+    call_history_enabled: bool = Field(
+        True,
+        description="Ghi và hiển thị lịch sử cuộc gọi.",
+        json_schema_extra={"category": "rooms"},
+    )
+    call_history_retention_days: int = Field(
+        90,
+        ge=7,
+        le=730,
+        description="Số ngày giữ lịch sử cuộc gọi.",
+        json_schema_extra={"category": "rooms"},
+    )
+
     project_name: ProjectName = Field(
         "Videocall",
         description="Tên hiển thị của dự án.",
@@ -218,6 +255,8 @@ class PublicSettings(BaseModel):
     allow_registration: bool
     allow_guest: bool
     friends_enabled: bool
+    dm_enabled: bool
+    call_history_enabled: bool
     friend_search_enabled: bool
     maintenance_mode: bool
     maintenance_message: str

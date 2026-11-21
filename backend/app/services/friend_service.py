@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from app.core.errors import AuthError, ErrorCode
-from app.models import FriendRequest, Friendship, User, UserBlock
+from app.models import FriendRequest, Friendship, RoomInvite, User, UserBlock
 from app.schemas.friends import (
     BlockItem,
     FriendItem,
@@ -24,6 +24,12 @@ from app.services.user_service import editable_user
 
 def canonical_pair(first: UUID, second: UUID) -> tuple[UUID, UUID]:
     return min(first, second), max(first, second)
+
+
+async def are_friends(db: AsyncSession, first: UUID, second: UUID) -> bool:
+    return await db.get(
+        Friendship, canonical_pair(first, second)
+    ) is not None and not await db.scalar(select(blocked_between(first, second)))
 
 
 def blocked_between(first, second):
@@ -72,6 +78,28 @@ def latest_sent(user_id: UUID):
 
 
 class FriendService:
+    async def _cancel_call_invites(
+        self, db: AsyncSession, actor: UUID, target: UUID
+    ) -> list[RoomInvite]:
+        pair = (actor, target)
+        return list(
+            await db.scalars(
+                update(RoomInvite)
+                .where(
+                    RoomInvite.inviter_id.in_(pair),
+                    RoomInvite.invitee_id.in_(pair),
+                    RoomInvite.status == "pending",
+                )
+                .values(
+                    status=case(
+                        (RoomInvite.expires_at <= func.now(), "expired"), else_="cancelled"
+                    ),
+                    responded_at=func.now(),
+                )
+                .returning(RoomInvite)
+            )
+        )
+
     def __init__(self, settings: SettingsService, events: FriendEvents) -> None:
         self.settings = settings
         self.events = events
@@ -369,8 +397,10 @@ class FriendService:
         )
         if not result.rowcount:
             raise AuthError(ErrorCode.NOT_FRIENDS)
+        invites = await self._cancel_call_invites(db, actor, target)
         await db.commit()
         await self.events.friendship_removed(actor, target, notify=target)
+        await self.events.call_invites_cancelled(invites)
 
     async def blocks(self, db: AsyncSession, actor: UUID) -> list[BlockItem]:
         await self._policy(db, actor, enabled=False)
@@ -409,8 +439,10 @@ class FriendService:
             )
             .values(status="cancelled")
         )
+        invites = await self._cancel_call_invites(db, actor, target)
         await db.commit()
         await self.events.friendship_removed(actor, target, notify=None)
+        await self.events.call_invites_cancelled(invites)
         return BlockItem(user=PublicUser.from_user(other), created_at=block.created_at)
 
     async def unblock(self, db: AsyncSession, actor: UUID, target: UUID) -> None:

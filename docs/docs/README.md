@@ -4,7 +4,7 @@
 > **Công nghệ chính:** Python (FastAPI, python-socketio, aiortc), PostgreSQL, coturn, Docker, Caddy.
 > **Định hướng:** backend + devops. Client chỉ là JS thuần tối giản để kiểm tra backend.
 
-> **Cập nhật V3 (20/11/2026):** đã triển khai hồ sơ/ảnh đại diện E1, bạn bè E2 và realtime E3. Xem [báo cáo E1](../docs_v3/e1-report.md) và [báo cáo E2/E3](../docs_v3/e2-e3-report.md). Những phần mở rộng E4–E7 vẫn là lộ trình.
+> **Cập nhật V3 (21/11/2026).** Giai đoạn 2 đã triển khai E1–E7. Xem [hướng dẫn nghiệm thu](../docs_v3/phase2-completion.md).
 
 ## 1. Mục lục
 

@@ -60,7 +60,11 @@ Sau khi xác thực, socket thành viên tự vào room nội bộ `user:<UUID>`
 
 Chỉ phát online lần socket đầu tiên; socket cuối ngắt thì chờ 5 giây trước offline. Nối lại trong khoảng chờ hủy offline và không lặp online. Cache danh sách bạn chỉ giữ cho người đang online; quan hệ/quyền thay đổi làm mất hiệu lực cache. Shutdown hủy các timer và giải phóng cache.
 
-Thông báo best-effort, lỗi phát không làm thất bại API đã commit. `client/js/friends-sync.js` tự lấy đủ trang `/friends` và hai chiều `/friends/requests` lúc kết nối/kết nối lại, gộp làm mới đồng thời và bỏ kết quả từ kết nối cũ. Snapshot phát dưới dạng sự kiện trình duyệt `videocall:friends-synced`; lỗi là `videocall:friends-sync-error`. Module gắn vào workspace và socket cuộc gọi của thành viên, sẵn cho UI U5. DM/lời mời gọi sẽ được nối sau E4/E5.
+Thông báo best-effort, lỗi phát không làm thất bại API đã commit. `client/js/friends-sync.js` tự lấy đủ trang `/friends` và hai chiều `/friends/requests` lúc kết nối/kết nối lại, gộp làm mới đồng thời và bỏ kết quả từ kết nối cũ. Snapshot bạn bè phát qua `videocall:friends-synced`, lỗi là `videocall:friends-sync-error`. Module gắn vào workspace và socket cuộc gọi của thành viên.
+
+### 1.5 Lời mời gọi và tin nhắn riêng
+
+Các sự kiện `call_invite`, `call_invite_cancelled`, `call_invite_responded`, `dm_message`, `dm_read` và `dm_typing` dùng room riêng theo tài khoản. `join_room` nhận thêm `invite_id` tùy chọn. `dm_send` trả `{ok,data:{conversation_id,message}}` và giữ lại kết quả khi client thử lại cùng `client_msg_id`. Xóa mềm phát lại `dm_message` cùng ID với `text:null` và `deleted_at` để các tab thay thế tin cũ. Xem [payload và quy tắc E4/E5](../docs_v3/extend.md#7-e4-nhắn-tin-qua-bạn-bè).
 
 ## 2. Quy ước sự kiện
 

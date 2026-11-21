@@ -18,8 +18,10 @@ from fastapi import FastAPI
 from httpx import AsyncClient, MockTransport, Request, Response
 from PIL import Image
 from prometheus_client.parser import text_string_to_metric_families
+from sqlalchemy import select, update
 
 from app.cli import create_admin
+from app.models import CallParticipant, DirectMessage, Room, RoomInvite
 from app.realtime import friends as friend_realtime
 from app.realtime.server import RealtimeServer
 from app.services import room_service
@@ -115,6 +117,12 @@ class Socket:
             "friend_removed",
             "friend_profile_changed",
             "presence_changed",
+            "call_invite",
+            "call_invite_responded",
+            "call_invite_cancelled",
+            "dm_message",
+            "dm_read",
+            "dm_typing",
         ):
             self.client.on(event, self.events[event].put)
 
@@ -441,6 +449,304 @@ async def test_profile_name_is_snapshotted_until_next_room_join(live: Server) ->
         assert (await host.call("leave_room"))["ok"]
         assert (await host.call("join_room", {"code": code}))["ok"]
         assert connection.display_name == "Updated Profile"
+
+
+async def send_call_invite(live: Server, code: str, owner: dict, target: dict) -> str:
+    response = await live.http.post(
+        f"rooms/{code}/invites", headers=bearer(owner), json={"user_ids": [target["user"]["id"]]}
+    )
+    assert response.status_code == 201, response.text
+    return response.json()["sent"][0]["invite_id"]
+
+
+async def test_private_room_invite_is_bound_to_recipient_and_used_once(live: Server) -> None:
+    owner, target, outsider = await account(live), await account(live), await account(live)
+    await make_friends(live, owner, target)
+    code = await room(live, owner, is_private=True, password="required-pass")
+    async with AsyncExitStack() as stack:
+        host, other = await peer(live, stack, owner), await peer(live, stack, outsider)
+        not_joined = await live.http.post(
+            f"rooms/{code}/invites",
+            headers=bearer(owner),
+            json={"user_ids": [target["user"]["id"]]},
+        )
+        assert not_joined.status_code == 403
+        assert (await host.call("join_room", {"code": code, "password": "required-pass"}))["ok"]
+        invite_id = await send_call_invite(live, code, owner, target)
+        inbox = await live.http.get("invites", headers=bearer(target))
+        assert inbox.json()["items"][0]["id"] == invite_id
+        assert (await live.http.get("invites", headers=bearer(outsider))).json()["items"] == []
+        assert_socket_error(
+            await other.call("join_room", {"code": code, "invite_id": invite_id}), "INVITE_INVALID"
+        )
+        member = await peer(live, stack, target)
+        assert (await member.call("join_room", {"code": code, "invite_id": invite_id}))["ok"]
+        assert (await host.event("call_invite_responded"))["status"] == "accepted"
+        assert (await member.call("leave_room"))["ok"]
+        assert_socket_error(
+            await member.call("join_room", {"code": code, "invite_id": invite_id}), "INVITE_INVALID"
+        )
+
+
+async def test_invite_decline_block_expiry_and_missed_history(live: Server) -> None:
+    owner, target = await account(live), await account(live)
+    await make_friends(live, owner, target)
+    code = await room(live, owner)
+    async with AsyncExitStack() as stack:
+        host, member = await peer(live, stack, owner), await peer(live, stack, target)
+        assert (await host.call("join_room", {"code": code}))["ok"]
+        invite_id = await send_call_invite(live, code, owner, target)
+        assert (await member.event("call_invite"))["invite"]["id"] == invite_id
+        assert (
+            await live.http.post(f"invites/{invite_id}/decline", headers=bearer(target))
+        ).status_code == 204
+        assert (await host.event("call_invite_responded"))["status"] == "declined"
+        expired = await send_call_invite(live, code, owner, target)
+        async with live.realtime.sessions.begin() as db:
+            await db.execute(
+                update(RoomInvite)
+                .where(RoomInvite.id == UUID(expired))
+                .values(expires_at=datetime.now(UTC) - timedelta(seconds=1))
+            )
+        assert_socket_error(
+            await member.call("join_room", {"code": code, "invite_id": expired}), "INVITE_EXPIRED"
+        )
+        history = await live.http.get(
+            "me/call-history", params={"type": "missed_invite"}, headers=bearer(target)
+        )
+        assert history.status_code == 200, history.text
+        assert history.json()["items"][0]["type"] == "missed_invite"
+        assert history.json()["items"][0]["participants_preview"] == []
+        assert (
+            await live.http.get(f"me/call-history/{code}/chat-export", headers=bearer(target))
+        ).status_code == 404
+        blocked = await send_call_invite(live, code, owner, target)
+        assert (
+            await live.http.post(
+                "blocks", headers=bearer(target), json={"user_id": owner["user"]["id"]}
+            )
+        ).status_code == 201
+        await member.event("call_invite_cancelled", invite_id=blocked)
+        assert_socket_error(
+            await member.call("join_room", {"code": code, "invite_id": blocked}), "INVITE_INVALID"
+        )
+        assert (
+            await live.http.delete("me/call-history", headers=bearer(target))
+        ).status_code == 204
+        assert (await live.http.get("me/call-history", headers=bearer(target))).json()["total"] == 0
+
+
+async def test_closing_room_preserves_already_missed_invite(live: Server) -> None:
+    owner, target = await account(live), await account(live)
+    await make_friends(live, owner, target)
+    code = await room(live, owner)
+    async with AsyncExitStack() as stack:
+        host = await peer(live, stack, owner)
+        assert (await host.call("join_room", {"code": code}))["ok"]
+        invite_id = await send_call_invite(live, code, owner, target)
+        async with live.realtime.sessions.begin() as db:
+            await db.execute(
+                update(RoomInvite)
+                .where(RoomInvite.id == UUID(invite_id))
+                .values(expires_at=datetime.now(UTC) - timedelta(seconds=1))
+            )
+        assert (await host.call("close_room"))["ok"]
+    history = await live.http.get(
+        "me/call-history", headers=bearer(target), params={"type": "missed_invite"}
+    )
+    assert history.status_code == 200, history.text
+    assert history.json()["items"][0]["room_code"] == code
+
+
+async def test_participant_history_export_clear_and_admin_summary(live: Server) -> None:
+    owner, member, admin = await account(live), await account(live), await account(live, admin=True)
+    code = await room(live, owner, name="History test")
+    async with AsyncExitStack() as stack:
+        host, guest_peer = await peer(live, stack, owner), await peer(live, stack, member)
+        for connection in (host, guest_peer):
+            assert (await connection.call("join_room", {"code": code}))["ok"]
+        assert (await host.call("chat_message", {"text": "History export test"}))["ok"]
+        assert (await guest_peer.call("leave_room"))["ok"]
+        assert (await guest_peer.call("join_room", {"code": code}))["ok"]
+        assert (await host.call("close_room"))["ok"]
+        await live.realtime.history.pending.join()
+        await live.realtime.chat.pending.join()
+        detail = await live.http.get(f"me/call-history/{code}", headers=bearer(member))
+        assert detail.status_code == 200, detail.text
+        data = detail.json()
+        assert (
+            data["type"] == "joined" and data["participants_count"] == 2 and data["chat_available"]
+        )
+        assert [row["leave_reason"] for row in data["participants"]] == [
+            "room_closed",
+            "left",
+            "room_closed",
+        ]
+        export = await live.http.get(f"me/call-history/{code}/chat-export", headers=bearer(member))
+        assert export.status_code == 200, export.text
+        assert (
+            export.headers["content-type"].startswith("text/plain")
+            and "History export test" in export.text
+        )
+        assert (
+            await live.http.get(f"me/call-history/{code}/chat-export", headers=bearer(admin))
+        ).status_code == 404
+        assert (
+            await live.http.get("admin/call-history", headers=bearer(member))
+        ).status_code == 403
+        listing = await live.http.get(
+            "admin/call-history", params={"host": owner["user"]["id"]}, headers=bearer(admin)
+        )
+        assert listing.status_code == 200, listing.text
+        assert listing.json()["items"][0]["room_code"] == code
+        dashboard = await live.http.get("admin/dashboard", headers=bearer(admin))
+        assert dashboard.status_code == 200, dashboard.text
+        assert dashboard.json()["calls_today"] >= 1
+        assert (
+            await live.http.delete("me/call-history", headers=bearer(member))
+        ).status_code == 204
+        assert (
+            await live.http.get(f"me/call-history/{code}", headers=bearer(member))
+        ).status_code == 404
+        still = await live.http.get(f"me/call-history/{code}", headers=bearer(owner))
+        assert len(still.json()["participants"]) == 3
+
+
+async def test_recovery_closes_incomplete_participation(live: Server) -> None:
+    owner = await account(live)
+    code = await room(live, owner)
+    async with live.realtime.sessions.begin() as db:
+        room_id = await db.scalar(select(Room.id).where(Room.code == code))
+        db.add(
+            CallParticipant(
+                room_id=room_id,
+                user_id=UUID(owner["user"]["id"]),
+                display_name="Before restart",
+                is_guest=False,
+                joined_at=datetime.now(UTC) - timedelta(minutes=2),
+            )
+        )
+    await live.realtime.recover_history()
+    history = await live.http.get(f"me/call-history/{code}", headers=bearer(owner))
+    row = history.json()["participants"][0]
+    assert row["leave_reason"] == "server_restart" and row["left_at"] is not None
+
+
+async def test_admin_removes_avatar_and_records_audit(live: Server, app: FastAPI, tmp_path) -> None:
+    app.state.avatar_service.root = tmp_path
+    member, admin = await account(live), await account(live, admin=True)
+    user_id = member["user"]["id"]
+    data = BytesIO()
+    with Image.new("RGB", (64, 64), "blue") as image:
+        image.save(data, format="PNG")
+    uploaded = await live.http.put(
+        "me/avatar",
+        headers=bearer(member),
+        files={"file": ("avatar.png", data.getvalue(), "image/png")},
+    )
+    assert uploaded.status_code == 200
+    route = f"admin/users/{user_id}/avatar"
+    assert (await live.http.delete(route, headers=bearer(member))).status_code == 403
+    detail = await live.http.get(f"admin/users/{user_id}", headers=bearer(admin))
+    assert detail.json()["avatar_url"] == uploaded.json()["avatar_url"]
+    assert detail.json()["friends_count"] == detail.json()["calls_count"] == 0
+    assert (await live.http.delete(route, headers=bearer(admin))).status_code == 204
+    assert (await live.http.get(f"{live.url}{uploaded.json()['avatar_url']}")).status_code == 404
+    audit = await live.http.get(
+        "admin/audit-logs",
+        params={"action": "user.avatar_remove", "actor": admin["user"]["id"]},
+        headers=bearer(admin),
+    )
+    assert audit.json()["items"][0]["target_id"] == user_id
+
+
+async def test_private_messages_retry_read_delete_and_block(live: Server) -> None:
+    first, second, admin = await account(live), await account(live), await account(live, admin=True)
+    await make_friends(live, first, second)
+    async with AsyncExitStack() as stack:
+        sender, sender_tab = await peer(live, stack, first), await peer(live, stack, first)
+        recipient = await peer(live, stack, second)
+        other = await peer(live, stack, admin)
+        body = {
+            "to_user_id": second["user"]["id"],
+            "text": "  <b>text only</b>  ",
+            "client_msg_id": str(uuid4()),
+        }
+        sent, retry = await asyncio.gather(
+            sender.call("dm_send", body), sender_tab.call("dm_send", body)
+        )
+        assert sent == retry and sent["ok"], sent
+        payload = sent["data"]
+        assert payload["message"]["text"] == "<b>text only</b>"
+        event = await recipient.event("dm_message")
+        assert event == payload
+        assert sum(tab.events["dm_message"].qsize() for tab in (sender, sender_tab)) == 1
+        assert other.events["dm_message"].empty()
+        conversation_id, msg_id = payload["conversation_id"], payload["message"]["id"]
+        route = f"conversations/{conversation_id}/messages"
+        assert (await live.http.get(route, headers=bearer(admin))).status_code == 403
+        listing = (await live.http.get("conversations", headers=bearer(second))).json()
+        assert listing["items"][0]["unread_count"] == 1
+        assert (
+            await recipient.call(
+                "dm_read", {"conversation_id": conversation_id, "up_to_id": msg_id}
+            )
+        )["ok"]
+        assert (await sender.event("dm_read"))["up_to_id"] == msg_id
+        assert (await live.http.get("conversations", headers=bearer(second))).json()["items"][0][
+            "unread_count"
+        ] == 0
+        assert (
+            await live.http.delete(f"{route}/{msg_id}", headers=bearer(second))
+        ).status_code == 404
+        assert (
+            await live.http.delete(f"{route}/{msg_id}", headers=bearer(first))
+        ).status_code == 204
+        assert (await recipient.event("dm_message"))["message"]["text"] is None
+        async with live.realtime.sessions() as db:
+            row = await db.get(DirectMessage, msg_id)
+            assert row.content == "" and row.deleted_at is not None
+        assert (
+            await live.http.post(
+                "blocks", headers=bearer(second), json={"user_id": first["user"]["id"]}
+            )
+        ).status_code == 201
+        assert_socket_error(
+            await sender.call("dm_send", {**body, "client_msg_id": str(uuid4())}), "NOT_FRIENDS"
+        )
+        retained = await live.http.get(route, headers=bearer(second), params={"after": 0})
+        assert retained.status_code == 200 and len(retained.json()["items"]) == 1
+
+
+async def test_dm_retention_removes_expired_messages_and_repairs_preview(live: Server) -> None:
+    first, second = await account(live), await account(live)
+    await make_friends(live, first, second)
+    async with AsyncExitStack() as stack:
+        sender = await peer(live, stack, first)
+        result = await sender.call(
+            "dm_send",
+            {
+                "to_user_id": second["user"]["id"],
+                "text": "Expiring message",
+                "client_msg_id": str(uuid4()),
+            },
+        )
+        assert result["ok"], result
+        payload = result["data"]
+        async with live.realtime.sessions.begin() as db:
+            await db.execute(
+                update(DirectMessage)
+                .where(DirectMessage.id == payload["message"]["id"])
+                .values(created_at=datetime.now(UTC) - timedelta(days=2))
+            )
+        async with live.realtime.sessions() as db:
+            settings = live.realtime.dm.settings
+            policy = await settings.get(db)
+            settings._cached = policy.model_copy(update={"dm_retention_days": 1})
+            await live.realtime.dm.prune(db)
+        listing = (await live.http.get("conversations", headers=bearer(second))).json()["items"][0]
+        assert listing["last_message"] is None and listing["last_message_at"] is None
+        assert listing["unread_count"] == 0
 
 
 async def test_mesh_capacity_and_rejoin_after_transport_loss(
