@@ -362,8 +362,8 @@ Nội dung ba thẻ chỉ số (khác mockup vì dữ liệu thật của dự �
 | Mockup | Bản này | Nguồn |
 |---|---|---|
 | Phòng họp đang chạy (số lớn, % thay đổi) | **Phòng đang chạy** + tổng số người đang trong phòng | `/admin/dashboard` (RAM); phần "so với hôm qua" chỉ có khi có Prometheus |
-| Băng thông số (Gbps, % công suất) | **Băng thông TURN** (Mbps) so với ngưỡng tham chiếu | Metric coturn qua Prometheus (`PROMETHEUS_URL`); ngưỡng đặt bằng biến môi trường `TURN_CAPACITY_MBPS`. **Media P2P không đi qua server nên không đo được tổng băng thông**; nếu chưa có Prometheus, thẻ hiện "—" và liên kết hướng dẫn |
-| Độ ổn định QoS (99,98%) | **Tỷ lệ vào phòng thành công** trong 24 giờ | Metric `room_joins_total` và `socket_errors_total`; QoS thật (RTT, mất gói) cần client gửi số liệu, để `idea.md` |
+| Băng thông số (Gbps, % công suất) | **Băng thông TURN ước tính** (Mbps, trung bình 5 phút từ bộ đếm phiên đã kết thúc) | Metric coturn qua Prometheus (`PROMETHEUS_URL`); ngưỡng tùy chọn `TURN_CAPACITY_MBPS`. Khi thiếu dữ liệu, thẻ hiện `—`. |
+| Độ ổn định QoS (99,98%) | **Tỷ lệ vào phòng thành công** trong 24 giờ | `room_joins_total` chia cho `join_room_duration_seconds_count`; QoS từ RTT và mất gói vẫn ở `idea.md`. |
 
 Bảng phòng: cột *Băng thông* và *Trạng thái E2E* của mockup được thay bằng **Thời lượng** và **Bảo mật (có mật khẩu/công khai)**, vì hệ thống không có dữ liệu băng thông theo phòng và chưa có mã hóa đầu cuối (xem `idea.md`). *Chi tiết* mở ngăn kéo (người tham gia, host, mốc vào phòng); *Ngắt phòng* mở hộp thoại xác nhận rồi gọi `DELETE /admin/rooms/{code}` (ghi audit).
 
@@ -502,6 +502,8 @@ Mục tiêu tham khảo: điểm Lighthouse mục Accessibility ≥ 90 cho các 
 Thứ tự đề xuất: **U1 → U2 → U3 → U4**, rồi U5/U6 khi các bước E tương ứng xong, cuối cùng U7. U1 và U2 mang lại thay đổi nhìn thấy sớm nhất mà không phụ thuộc E.
 
 **Điều kiện hoàn thành mỗi bước:** màn hình chạy được trên hai trình duyệt khác nhau ở ba cỡ màn hình (rộng, vừa, điện thoại); không có lỗi trong console; qua kiểm tra bàn phím; ảnh chụp màn hình đính kèm báo cáo của bước.
+
+Kết quả triển khai và nghiệm thu ở [báo cáo U2/U3](u2-u3-report.md) và [báo cáo U4–U7](u4-u7-report.md). Hai web dùng URL riêng. Các màn hình Bạn bè, Tin nhắn, Lịch sử và Hồ sơ của web người dùng lần lượt ở `/friends`, `/messages`, `/history` và `/account`. Báo cáo quản trị ở `/admin/reports`.
 
 ## 12. Tài liệu khác cần cập nhật
 

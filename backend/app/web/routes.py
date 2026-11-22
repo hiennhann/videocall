@@ -1,7 +1,9 @@
 import asyncio
+import csv
 import json
 from collections.abc import AsyncIterator, Awaitable, Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from io import StringIO
 from pathlib import Path
 from time import monotonic
 from typing import Annotated, Any, Literal
@@ -16,6 +18,7 @@ from fastapi.templating import Jinja2Templates
 from limits import parse
 from pydantic import ValidationError
 from slowapi.util import get_remote_address
+from sqlalchemy import func, select
 from starlette.datastructures import FormData
 
 from app.api.admin import AdminOps, PageSize
@@ -25,15 +28,18 @@ from app.api.rooms import Rooms
 from app.core.config import DEMO_ADMIN_EMAIL
 from app.core.errors import AuthError, ErrorCode
 from app.core.security import decode_access_token
-from app.models import User
+from app.models import CallParticipant, User
 from app.schemas.admin import UserPatch
 from app.schemas.auth import ChangePasswordRequest, LoginRequest
+from app.schemas.friends import avatar_url
 from app.schemas.rooms import AdminKick
 from app.schemas.settings import SettingsSchema
 from app.services.admin_service import (
     count_user_sessions,
+    dashboard_activity,
     get_admin_target,
     list_users,
+    user_activity,
     user_counts,
 )
 from app.services.audit_service import AuditActor, list_audit
@@ -48,6 +54,7 @@ from app.web.session import (
     redirect,
     set_session,
 )
+from app.web.telemetry import dashboard_telemetry
 
 WEB_ROOT = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=WEB_ROOT / "templates")
@@ -188,9 +195,17 @@ async def password(request: Request, form: Form, admin: Admin, db: DB, auth: Aut
 
 
 @router.get("")
-async def dashboard(request: Request, admin: Admin, db: DB, service: AdminOps) -> Response:
+async def dashboard(
+    request: Request,
+    admin: Admin,
+    db: DB,
+    service: AdminOps,
+    settings: OperationalSettings,
+    rooms_service: Rooms,
+) -> Response:
     total, daily = await user_counts(db)
     connections, rooms, participants = await service.events.room_counts(db)
+    turn_mbps, join_success = await dashboard_telemetry(request.app.state.prometheus_url)
     return page(
         request,
         "dashboard.html",
@@ -202,6 +217,37 @@ async def dashboard(request: Request, admin: Admin, db: DB, service: AdminOps) -
         rooms=rooms,
         participants=participants,
         presence=request.app.state.realtime.state.presence_counts(),
+        live_rooms=(await rooms_service.admin_rooms(db))[:8],
+        activity=await dashboard_activity(db, (await settings.get(db)).friend_request_ttl_days),
+        turn_mbps=turn_mbps,
+        turn_capacity=request.app.state.turn_capacity_mbps,
+        join_success=join_success,
+    )
+
+
+@router.get("/dashboard/summary")
+async def dashboard_summary(
+    request: Request,
+    admin: Admin,
+    db: DB,
+    service: AdminOps,
+    settings: OperationalSettings,
+    rooms_service: Rooms,
+) -> Response:
+    connections, rooms, participants = await service.events.room_counts(db)
+    turn_mbps, join_success = await dashboard_telemetry(request.app.state.prometheus_url)
+    return page(
+        request,
+        "_dashboard_summary.html",
+        "Tổng quan",
+        connections=connections,
+        rooms=rooms,
+        participants=participants,
+        live_rooms=(await rooms_service.admin_rooms(db))[:8],
+        activity=await dashboard_activity(db, (await settings.get(db)).friend_request_ttl_days),
+        turn_mbps=turn_mbps,
+        turn_capacity=request.app.state.turn_capacity_mbps,
+        join_success=join_success,
     )
 
 
@@ -272,6 +318,7 @@ async def users(
         "Tài khoản",
         active="users",
         users=rows,
+        avatars={user.id: avatar_url(user) for user in rows},
         total=total,
         q=q,
         role=role,
@@ -294,7 +341,18 @@ async def user_detail(
         user=user,
         sessions=await count_user_sessions(db, user_id),
         online=service.events.is_online(user_id),
+        avatar=avatar_url(user, 256),
+        activity=await user_activity(db, user_id),
     )
+
+
+@router.post("/users/{user_id}/avatar/remove")
+async def remove_avatar(
+    request: Request, user_id: UUID, form: Form, admin: Admin, db: DB, service: AdminOps
+) -> Response:
+    await request.app.state.avatar_service.delete(db, user_id, actor=actor(request, admin))
+    await service.events.profile_changed(user_id)
+    return redirect(request, f"/admin/users/{user_id}")
 
 
 @router.post("/users/{user_id}")
@@ -343,9 +401,38 @@ async def delete_user(
 
 
 @router.get("/rooms")
-async def rooms(request: Request, admin: Admin, db: DB, service: Rooms) -> Response:
+async def rooms(
+    request: Request,
+    admin: Admin,
+    db: DB,
+    service: Rooms,
+    q: Annotated[str, Query(max_length=100)] = "",
+    mode: Literal["", "meeting", "livestream"] = "",
+) -> Response:
+    live = await service.admin_rooms(db)
+    needle = q.strip().casefold()
+    filtered = [
+        room
+        for room in live
+        if (not mode or room["mode"] == mode)
+        and (
+            not needle
+            or needle
+            in " ".join(
+                (room["code"], room["name"] or "", (room["host"] or {}).get("display_name") or "")
+            ).casefold()
+        )
+    ]
     return page(
-        request, "rooms.html", "Phòng đang mở", active="rooms", rooms=await service.admin_rooms(db)
+        request,
+        "rooms.html",
+        "Phòng trực tiếp",
+        active="rooms",
+        rooms=filtered,
+        q=q,
+        mode=mode,
+        room_total=len(live),
+        now=datetime.now(UTC),
     )
 
 
@@ -366,13 +453,101 @@ async def kick(
     return redirect(request, "/admin/rooms")
 
 
+async def report_days(db: DB) -> tuple[list[dict], int | None]:
+    today = datetime.now(UTC).date()
+    first = today - timedelta(days=6)
+    start = datetime.combine(first, datetime.min.time(), UTC)
+    _, new_users = await user_counts(db)
+    calls = (
+        select(
+            func.min(CallParticipant.joined_at).label("started"),
+            func.max(CallParticipant.left_at).label("ended"),
+        )
+        .group_by(CallParticipant.room_id)
+        .having(func.min(CallParticipant.joined_at) >= start)
+        .subquery()
+    )
+    day = func.date(func.timezone("UTC", calls.c.started))
+    daily = await db.execute(
+        select(
+            day,
+            func.count(),
+            func.coalesce(func.sum(func.extract("epoch", calls.c.ended - calls.c.started)), 0),
+        ).group_by(day)
+    )
+    totals = {value: (count, int(seconds // 60)) for value, count, seconds in daily}
+    hour = func.extract("hour", func.timezone("UTC", calls.c.started))
+    peak = await db.scalar(select(hour).group_by(hour).order_by(func.count().desc(), hour).limit(1))
+    days = [
+        {
+            "day": date,
+            "users": count,
+            "calls": totals.get(date, (0, 0))[0],
+            "minutes": totals.get(date, (0, 0))[1],
+        }
+        for date, count in new_users
+    ]
+    return days, int(peak) if peak is not None else None
+
+
+@router.get("/reports")
+async def reports(
+    request: Request,
+    admin: Admin,
+    db: DB,
+    page_number: Annotated[int, Query(alias="page", ge=1)] = 1,
+) -> Response:
+    days, peak = await report_days(db)
+    history = await request.app.state.realtime.history.listing(
+        db, None, None, None, None, page_number, 20
+    )
+    return page(
+        request,
+        "reports.html",
+        "Báo cáo và phân tích",
+        active="reports",
+        days=days,
+        peak=peak,
+        history=history,
+        current_page=page_number,
+        page_size=20,
+        total=history["total"],
+        maxima={key: max(1, *(day[key] for day in days)) for key in ("users", "calls", "minutes")},
+    )
+
+
+@router.get("/reports/export")
+async def export_report(admin: Admin, db: DB) -> Response:
+    days, _ = await report_days(db)
+    output = StringIO()
+    writer = csv.DictWriter(output, fieldnames=["day", "users", "calls", "minutes"])
+    writer.writeheader()
+    writer.writerows(days)
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="videocall-report.csv"'},
+    )
+
+
+@router.get("/reports/calls/{code}")
+async def report_call(request: Request, code: str, admin: Admin, db: DB) -> Response:
+    call = await request.app.state.realtime.history.detail(db, code, None)
+    return page(request, "report-call.html", call["name"] or code, active="reports", call=call)
+
+
 @router.get("/settings")
 async def operational_settings(
     request: Request, admin: Admin, db: DB, settings: OperationalSettings
 ) -> Response:
     groups: dict[str, list[tuple[str, dict[str, Any]]]] = {}
     for key, field in settings_metadata(await settings.get(db)).items():
-        groups.setdefault(field["category"], []).append((key, field))
+        category = field["category"]
+        if key.startswith(("friend", "max_friend", "max_pending_friend", "dm_")):
+            category = "social"
+        elif key.startswith(("call_history", "avatar_", "allow_avatar")):
+            category = "history"
+        groups.setdefault(category, []).append((key, field))
     return page(request, "settings.html", "Cấu hình", active="settings", groups=groups)
 
 

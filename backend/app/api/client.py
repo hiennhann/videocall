@@ -45,6 +45,18 @@ def mount_client(app: FastAPI, *, dev: bool = False) -> None:
     async def account_page() -> FileResponse:
         return FileResponse(client_root / "account.html")
 
+    @router.get("/friends")
+    async def friends_page() -> FileResponse:
+        return FileResponse(client_root / "friends.html")
+
+    @router.get("/messages")
+    async def messages_page() -> FileResponse:
+        return FileResponse(client_root / "messages.html")
+
+    @router.get("/history")
+    async def history_page() -> FileResponse:
+        return FileResponse(client_root / "history.html")
+
     @router.get("/rooms/join")
     async def join_page() -> FileResponse:
         return FileResponse(client_root / "join.html")

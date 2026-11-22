@@ -1,12 +1,15 @@
+from datetime import UTC, datetime
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Request, Response
+from fastapi.security import HTTPAuthorizationCredentials
 from slowapi import Limiter
 
-from app.api.deps import DB, Auth, CurrentMember, client_info
+from app.api.deps import DB, Auth, CurrentMember, client_info, current_principal
 from app.core.errors import AuthError, ErrorCode
 from app.models import User
 from app.schemas.auth import (
+    AccessResponse,
     DeviceTransferRequest,
     GuestRequest,
     GuestResponse,
@@ -120,6 +123,25 @@ def create_auth_router(limiter: Limiter) -> APIRouter:
             require_same_origin(request)
         await auth.cancel_device_transfer(db, body.transfer_token.get_secret_value())
         return Response(status_code=204)
+
+    @router.post("/session")
+    async def web_session(
+        request: Request, response: Response, db: DB, auth: Auth
+    ) -> AccessResponse:
+        require_same_origin(request)
+        token = request.cookies.get(PAGE_ACCESS_COOKIE)
+        if not token or len(token) > 8192:
+            raise AuthError(ErrorCode.UNAUTHENTICATED)
+        principal = await current_principal(
+            request, HTTPAuthorizationCredentials(scheme="Bearer", credentials=token), auth, db
+        )
+        if principal.user is None:
+            raise AuthError(ErrorCode.UNAUTHENTICATED)
+        expires_in = int((principal.access.expires_at - datetime.now(UTC)).total_seconds())
+        if expires_in <= 5:
+            raise AuthError(ErrorCode.TOKEN_EXPIRED)
+        response.headers["Cache-Control"] = "no-store"
+        return AccessResponse(access_token=token, expires_in=expires_in)
 
     @router.post("/refresh", response_model_exclude_none=True)
     @limiter.limit("30/minute")

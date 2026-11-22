@@ -87,11 +87,12 @@ export async function requireSession() {
 
 async function request(path, method, body, token) {
   const headers = {};
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const multipart = body instanceof FormData;
+  if (body !== undefined && !multipart) headers["Content-Type"] = "application/json";
   if (token) headers.Authorization = "Bearer " + token;
   const response = await fetch("/api/v1" + path, {
-    method, headers, body: body === undefined ? undefined : JSON.stringify(body),
-    cache: "no-store",
+    method, headers, body: body === undefined || multipart ? body : JSON.stringify(body),
+    cache: "no-store", keepalive: path === "/auth/refresh",
   });
   if (response.status === 204) return null;
   const data = await response.json().catch(() => null);
@@ -114,7 +115,13 @@ export async function accessToken(force = false) {
 
   if (!refreshing) {
     const started = revision;
-    refreshing = withSessionLock(() => request("/auth/refresh", "POST"))
+    const bootstrap = !current && !force
+      ? request("/auth/session", "POST").catch(error => {
+        if (error.status !== 401) throw error;
+        return withSessionLock(() => request("/auth/refresh", "POST"));
+      })
+      : withSessionLock(() => request("/auth/refresh", "POST"));
+    refreshing = bootstrap
       .then(data => {
         if (revision !== started) {
           throw new ApiError("Phiên đăng nhập đã kết thúc.", "TOKEN_EXPIRED", 401);

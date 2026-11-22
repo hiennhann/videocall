@@ -1,0 +1,29 @@
+<section id="dashboard-summary" hx-get="/admin/dashboard/summary" hx-trigger="every 5s" hx-target="this" hx-select="#dashboard-summary" hx-swap="outerHTML">
+  <dl class="metrics">
+    <div class="panel"><dt>Phòng đang mở</dt><dd>{{ rooms }}</dd></div>
+    <div class="panel"><dt>Người trong phòng</dt><dd>{{ participants }}</dd></div>
+    <div class="panel"><dt>Kết nối Socket.IO</dt><dd>{{ connections }}</dd></div>
+    <div class="panel"><dt>Cuộc gọi hôm nay (UTC)</dt><dd>{{ activity.calls_today }}</dd></div>
+    <div class="panel"><dt>Phút gọi hôm nay (UTC)</dt><dd>{{ activity.call_minutes_today }}</dd></div>
+    <div class="panel"><dt>Lời mời kết bạn đang chờ</dt><dd>{{ activity.friend_requests_pending }}</dd></div>
+    <div class="panel"><dt>Băng thông TURN ước tính</dt><dd>
+      {% if turn_mbps is not none %}{{ '%.2f'|format(turn_mbps) }} Mbps
+        <small class="text-small">Phiên đã kết thúc · 5 phút{% if turn_capacity %} · {{ '%.0f'|format(turn_mbps / turn_capacity * 100) }}% ngưỡng{% endif %}</small>
+      {% else %}—<small class="text-small">Chưa có số liệu coturn.</small>{% endif %}
+    </dd></div>
+    <div class="panel"><dt>Tỷ lệ vào phòng trong 24 giờ</dt><dd>
+      {% if join_success is not none %}{{ '%.1f'|format(join_success) }}%
+      {% else %}—<small class="text-small">Chưa có chuỗi số liệu 24 giờ.</small>{% endif %}
+    </dd></div>
+  </dl>
+  <section class="panel">
+    <div class="heading-row"><h2>Phòng đang mở</h2><a href="/admin/rooms" hx-boost="false">Xem tất cả</a></div>
+    <div class="table-scroll"><table><thead><tr><th>Phòng</th><th>Chủ trì</th><th>Số người</th><th>Bảo mật</th></tr></thead>
+      <tbody>{% for room in live_rooms %}<tr>
+        <td><a href="/admin/rooms?q={{ room.code }}" hx-boost="false">{{ room.name or room.code }}</a></td>
+        <td>{{ room.host.display_name if room.host else '—' }}</td><td>{{ room.participants|length }}</td>
+        <td>{{ 'Có mật khẩu' if room.is_private else 'Công khai' }}</td>
+      </tr>{% else %}<tr><td colspan="4">Chưa có phòng mở.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+</section>

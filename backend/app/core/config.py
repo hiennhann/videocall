@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     admin_allowed_ips: str = ""
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     prometheus_url: str = ""
+    turn_capacity_mbps: float = Field(default=0, ge=0, allow_inf_nan=False)
     sfu_url: str = ""
     avatar_storage_dir: Path = Path(__file__).resolve().parents[3] / ".data" / "avatars"
 

@@ -3,7 +3,13 @@
 <p class="muted">{{ user.email }} · {{ sessions }} phiên còn hiệu lực · {{ "Đang online" if online else "Offline" }}</p>
 <section class="panel">
   <h2>Thông tin tài khoản</h2>
-  <form action="/admin/users/{{ user.id }}" method="post">
+  {% if avatar %}<img class="profile-avatar" src="{{ avatar }}" alt="Ảnh đại diện của {{ user.display_name }}" width="96" height="96">
+  <form action="/admin/users/{{ user.id }}/avatar/remove" method="post" hx-confirm="Gỡ ảnh đại diện của {{ user.display_name }}?">
+    {% include "_csrf.html" %}<button class="danger">Gỡ ảnh đại diện</button>
+  </form>{% endif %}
+  <p class="muted">Ngày sinh {{ user.birth_date or '—' }} · {{ activity.friends_count }} bạn · {{ activity.calls_count }} cuộc gọi</p>
+  {% if activity.latest_call_at %}<p class="muted">Cuộc gọi gần nhất {{ activity.latest_call_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>{% endif %}
+  <form action="/admin/users/{{ user.id }}" method="post" hx-confirm="Lưu thay đổi cho {{ user.display_name }}?">
     {% include "_csrf.html" %}
     <label>Tên hiển thị <input name="display_name" minlength="2" maxlength="50" value="{{ user.display_name }}" required></label>
     {% if admin.user.id != user.id %}

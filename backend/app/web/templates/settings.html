@@ -1,12 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
-{% set labels = {"branding": "Nhận diện", "access": "Truy cập", "rooms": "Phòng và chat", "media": "Media", "turn": "TURN", "security": "Bảo mật"} %}
+{% set labels = {"branding": "Nhận diện", "access": "Truy cập", "rooms": "Phòng và chat", "media": "Media", "turn": "TURN", "security": "Bảo mật", "social": "Bạn bè và tin nhắn", "history": "Lịch sử và ảnh đại diện"} %}
+<nav aria-label="Cấu hình và bảo mật" class="controls"><a href="/admin/settings" aria-current="page" hx-boost="false">Cấu hình</a><a href="/admin/audit" hx-boost="false">Nhật ký quản trị</a></nav>
 {% for category, fields in groups.items() %}
   <section class="panel settings-group"><h2>{{ labels[category] }}</h2>
   {% for key, field in fields %}
-    <form action="/admin/settings/{{ key }}" method="post" class="setting-row">
+    <form action="/admin/settings/{{ key }}" method="post" class="setting-row" hx-confirm="Áp dụng thay đổi cấu hình này?">
       {% include "_csrf.html" %}
-      <div><label for="setting-{{ key }}">{{ field.description }}</label><small>{{ key }}</small></div>
+      <div><label for="setting-{{ key }}">{{ field.description }}</label><small>Mặc định {{ ('Bật' if field.default else 'Tắt') if field.type == 'bool' else field.default }}</small></div>
       {% if field.type == 'bool' %}
         <select name="value" id="setting-{{ key }}">
           <option value="true"{% if field.value %} selected{% endif %}>Bật</option>

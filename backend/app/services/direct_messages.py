@@ -138,6 +138,9 @@ class DirectMessages:
             "last_message_at": conversation.last_message_at,
             "unread_count": unread,
             "last_read_id": last_read,
+            "peer_last_read_id": conversation.b_last_read_id
+            if actor == conversation.user_a_id
+            else conversation.a_last_read_id,
             "can_send": bool(
                 policy.dm_enabled
                 and user
@@ -181,6 +184,7 @@ class DirectMessages:
             "last_message_at": None,
             "unread_count": 0,
             "last_read_id": 0,
+            "peer_last_read_id": 0,
             "can_send": (await self.settings.get(db)).dm_enabled,
         }
 

@@ -1,22 +1,31 @@
 {% extends "base.html" %}
 {% block content %}
+<form class="filter" method="get" action="/admin/rooms">
+  <label>Tìm phòng hoặc chủ trì <input name="q" maxlength="100" value="{{ q }}"></label>
+  <label>Loại phòng <select name="mode"><option value="">Tất cả</option><option value="meeting" {% if mode == 'meeting' %}selected{% endif %}>Gọi nhóm</option><option value="livestream" {% if mode == 'livestream' %}selected{% endif %}>Livestream</option></select></label>
+  <button>Lọc phòng</button>
+</form>
+<section id="live-rooms-list" hx-get="{{ request.url.path }}?{{ request.query_params }}" hx-trigger="every 5s" hx-target="this" hx-select="#live-rooms-list" hx-swap="outerHTML">
+<p class="muted">{{ rooms|length }} / {{ room_total }} phòng đang mở</p>
 {% for room in rooms %}
 <section class="panel room-listing">
   <div class="heading-row">
-    <div><h2>{{ room.name or room.code }}</h2><p class="muted">{{ room.code }} · {{ room.host.display_name if room.host else 'Chưa có host' }}</p></div>
-    <form action="/admin/rooms/{{ room.code }}/close" method="post" hx-confirm="Đóng phòng và đưa mọi người ra khỏi phòng?">
+    <div><h2>{{ room.name or room.code }}</h2><p class="muted">{{ room.code }} · {{ room.host.display_name if room.host else 'Chưa có host' }} · {{ room.participants|length }} người · {{ 'Có mật khẩu' if room.is_private else 'Công khai' }}</p><small>Mở lúc {{ room.created_at.strftime('%H:%M %d/%m UTC') }} · {{ ((now - room.created_at).total_seconds() // 60)|int }} phút</small></div>
+    <form hx-target="#layout" hx-select="#layout" action="/admin/rooms/{{ room.code }}/close" method="post" hx-confirm="Đóng phòng {{ room.name or room.code }} đang có {{ room.participants|length }} người?">
       {% include "_csrf.html" %}<button class="danger">Đóng phòng</button>
     </form>
   </div>
-  <ul class="participants">
+  <details><summary>Chi tiết người tham gia</summary><ul class="participants">
     {% for peer in room.participants %}
       <li>{{ peer.display_name }}{% if peer.is_guest %} <small>Khách</small>{% endif %}
-        <form action="/admin/rooms/{{ room.code }}/kick" method="post" hx-confirm="Đưa người này ra khỏi phòng?">
+        <small>Vào lúc {{ peer.joined_at.strftime('%H:%M UTC') }}</small>
+        <form hx-target="#layout" hx-select="#layout" action="/admin/rooms/{{ room.code }}/kick" method="post" hx-confirm="Đưa {{ peer.display_name }} ra khỏi phòng?">
           {% include "_csrf.html" %}<input type="hidden" name="peer_id" value="{{ peer.peer_id }}"><button class="secondary">Mời ra</button>
         </form>
       </li>
     {% else %}<li>Chưa có người tham gia.</li>{% endfor %}
-  </ul>
+  </ul></details>
 </section>
 {% else %}<p class="panel">Hiện chưa có phòng đang mở.</p>{% endfor %}
+</section>
 {% endblock %}

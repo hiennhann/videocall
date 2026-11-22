@@ -202,6 +202,10 @@ Chống dò email qua thời gian phản hồi: khi email không tồn tại, v�
 
 Từ A3, đăng nhập thành công cập nhật `last_login_at`.
 
+### POST `/auth/session`
+
+Web dùng cookie truy cập hiện tại để lấy access token và số giây còn lại khi tải một trang riêng. Yêu cầu phải cùng origin và có phiên thành viên hợp lệ. API không xoay refresh token. Khi access token hết hạn, web gọi `/auth/refresh`.
+
 ### POST `/auth/refresh`
 
 Request: `{ "refresh_token": "Zk3..." }` → Response giống `/auth/login` (không có `user`).
@@ -309,6 +313,8 @@ Lỗi: 404 `USER_NOT_FOUND`, `REQUEST_NOT_FOUND`, `NOT_FRIENDS`; 409 `ALREADY_FR
 ## 6. Phòng
 
 Giai đoạn 2 V3 bổ sung API [lời mời gọi](../docs_v3/extend.md#83-api), [lịch sử và xuất chat](../docs_v3/extend.md#93-api), [tin nhắn riêng](../docs_v3/extend.md#72-api-lịch-sử-và-trạng-thái-đọc) và [lịch sử quản trị](../docs_v3/extend.md#11-admin-e7). Xem [cách nghiệm thu](../docs_v3/phase2-completion.md).
+
+`GET /conversations` và `GET /conversations/with/{user_id}` trả thêm `peer_last_read_id` trong thông tin cuộc trò chuyện. Web dùng mốc này để khôi phục trạng thái **Đã xem** sau khi kết nối lại. Trường có giá trị `0` khi chưa có mốc được ghi nhận.
 
 Mật khẩu phòng được kiểm tra ở sự kiện socket `join_room`, **không** có endpoint HTTP riêng, để chỉ một chỗ quyết định ai được vào.
 

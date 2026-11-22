@@ -4,6 +4,7 @@ import { applyBranding } from "./theme.js";
 import { vi } from "./app/i18n/vi.js";
 import { loginUrl } from "./auth-navigation.js";
 import { bindFriendsSync } from "./friends-sync.js";
+import { bindNotifications } from "./notifications.js";
 
 let presence;
 
@@ -32,6 +33,7 @@ export async function loadWorkspace() {
         auth: done => accessToken().then(token => done({token}), () => done({})),
       });
       bindFriendsSync(presence);
+      bindNotifications(presence, config);
       presence.on("connect", () => { status.textContent = vi.connected; });
       presence.on("disconnect", () => { status.textContent = vi.reconnecting; });
       presence.on("connect_error", () => { status.textContent = vi.connectionInterrupted; });
@@ -42,7 +44,7 @@ export async function loadWorkspace() {
       window.addEventListener("pagehide", () => presence.disconnect());
       window.addEventListener("pageshow", event => { if (event.persisted) presence.connect(); });
     }
-    return {profile, config};
+    return {profile, config, socket: presence};
   } catch (error) {
     if (error.status === 401) location.replace(loginUrl());
     else message(error.message, true);

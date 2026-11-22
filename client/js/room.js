@@ -9,6 +9,7 @@ import { initTabs } from "./app/components/primitives.js";
 import { loginUrl } from "./auth-navigation.js";
 import { Precall, mediaButtons, mediaError, setButton } from "./precall.js";
 import { bindRoomInvites, roomMemberRow } from "./room-extras.js";
+import { bindNotifications } from "./notifications.js";
 
 initTabs(document.querySelector("[data-room-sidebar]"));
 
@@ -19,6 +20,9 @@ let roomConfig;
 let roomProfile;
 let inviteId = takeInvite(code);
 let privateRoom = false;
+let quickInvite;
+try { quickInvite = JSON.parse(sessionStorage.getItem("videocall.quick-invite")); } catch { /* Ignore stale session storage. */ }
+if (quickInvite?.code !== code) quickInvite = null;
 const precall = new Precall();
 const updateInviteTab = bindRoomInvites(code, () => Boolean(active?.joined && roomProfile && !roomProfile.is_guest && roomConfig?.friends_enabled));
 
@@ -64,7 +68,14 @@ class RoomCall {
         this.fail(error);
       }),
     });
-    if (session()?.user?.role !== "guest") this.stopFriendsSync = bindFriendsSync(this.socket);
+    if (session()?.user?.role !== "guest") {
+      this.stopFriendsSync = bindFriendsSync(this.socket);
+      this.stopNotifications = bindNotifications(this.socket, roomConfig);
+      for (const event of ["call_invite_responded", "call_invite_cancelled"]) {
+        this.socket.on(event, detail => element("call-invite-form")
+          .dispatchEvent(new CustomEvent("invite-result", {detail})));
+      }
+    }
     this.socket.on("connect", () => this.join());
     this.socket.on("connect_error", error => {
       if (this.accepted && this.socket.active) return;
@@ -246,6 +257,14 @@ class RoomCall {
       message(this.mode === "livestream" || this.peers.size ? "" : "Đang chờ người tham gia.");
       this.firstJoin?.resolve();
       this.firstJoin = null;
+      if (quickInvite) {
+        const {userId} = quickInvite;
+        quickInvite = null;
+        sessionStorage.removeItem("videocall.quick-invite");
+        api(`/rooms/${code}/invites`, {authenticated: true, method: "POST", body: {user_ids: [userId]}})
+          .then(result => message(result.sent.length ? "Đã gửi lời mời vào phòng." : "Hiện không mời được người này.", !result.sent.length))
+          .catch(error => message(error.message, true));
+      }
     } catch (error) {
       if (this.socket.id === sid) {
         if (["INVITE_INVALID", "INVITE_EXPIRED"].includes(error.code)) {
@@ -568,6 +587,7 @@ class RoomCall {
     clearInterval(this.statsTimer);
     clearInterval(this.clockTimer);
     this.stopFriendsSync?.();
+    this.stopNotifications?.();
     element("call-timer").hidden = true;
     element("network-panel").hidden = true;
     this.socket.disconnect();

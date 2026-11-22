@@ -94,6 +94,8 @@ def create_app() -> FastAPI:
     app.state.realtime = realtime
     app.state.friend_service = realtime.friends
     app.state.metrics = metrics
+    app.state.prometheus_url = settings.prometheus_url
+    app.state.turn_capacity_mbps = settings.turn_capacity_mbps
     app.state.avatar_service = avatars
     app.state.turn_service = TurnService(
         settings.turn_secret.get_secret_value(), settings.turn_urls

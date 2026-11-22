@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="heading-row"><p>7 ngày gần nhất · Giờ UTC</p><a class="button" href="/admin/reports/export" hx-boost="false">Xuất CSV</a></div>
+<p class="muted">Giờ bắt đầu cuộc gọi nhiều nhất {{ '%02d:00 UTC'|format(peak) if peak is not none else '—' }}</p>
+<div class="report-charts">
+{% for key, label in [('users','Tài khoản mới'), ('calls','Cuộc gọi bắt đầu'), ('minutes','Phút gọi đã ghi nhận')] %}
+  <section class="panel"><h2>{{ label }}</h2>
+    <svg class="report-chart" viewBox="0 0 280 120" role="img" aria-label="{{ label }} trong 7 ngày">
+      {% for point in days %}{% set height = (point[key] / maxima[key] * 80)|round|int %}
+      <rect x="{{ loop.index0 * 40 + 8 }}" y="{{ 90 - height }}" width="22" height="{{ height }}" rx="3"><title>{{ point.day }}: {{ point[key] }}</title></rect>
+      <text x="{{ loop.index0 * 40 + 19 }}" y="110" text-anchor="middle">{{ point.day.strftime('%d/%m') }}</text>
+      <text x="{{ loop.index0 * 40 + 19 }}" y="{{ 84 - height if height < 72 else 12 }}" text-anchor="middle">{{ point[key] }}</text>
+      {% endfor %}
+    </svg>
+  </section>
+{% endfor %}
+</div>
+<section class="panel"><h2>Cuộc gọi đã kết thúc</h2><div class="table-scroll">
+  <table><thead><tr><th>Phòng</th><th>Chủ trì</th><th>Người tham gia</th><th>Thời lượng</th></tr></thead><tbody>
+    {% for call in history['items'] %}<tr><td><a href="/admin/reports/calls/{{ call.room_code }}">{{ call.name or call.room_code }}</a></td><td>{{ call.host.display_name if call.host else '—' }}</td><td>{{ call.participants_count }}</td><td>{{ call.duration_seconds }} giây</td></tr>
+    {% else %}<tr><td colspan="4">Chưa có cuộc gọi đã kết thúc.</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+{% if total > page_size %}<nav class="controls" aria-label="Trang báo cáo">
+  {% if current_page > 1 %}<a href="?page={{ current_page - 1 }}">Trang trước</a>{% endif %}
+  <span>Trang {{ current_page }}</span>
+  {% if current_page * page_size < total %}<a href="?page={{ current_page + 1 }}">Trang sau</a>{% endif %}
+</nav>{% endif %}
+</section>
+{% endblock %}

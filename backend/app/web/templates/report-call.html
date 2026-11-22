@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<a href="/admin/reports">Về báo cáo</a>
+<section class="panel"><h2>Người tham gia · {{ call.room_code }}</h2>
+  <div class="table-scroll"><table><thead><tr><th>Tên</th><th>Giờ vào (UTC)</th><th>Giờ rời (UTC)</th></tr></thead>
+  <tbody>{% for person in call.participants %}<tr><td>{{ person.display_name }}</td><td>{{ person.joined_at.strftime('%H:%M %d/%m') }}</td><td>{{ person.left_at.strftime('%H:%M %d/%m') if person.left_at else '—' }}</td></tr>{% endfor %}</tbody></table></div>
+</section>
+{% endblock %}

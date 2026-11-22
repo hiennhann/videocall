@@ -6,7 +6,7 @@ export function bindFriendsSync(socket) {
   let loading = false;
   let queued = false;
   let stopped = false;
-  const changes = ["friend_request_received", "friend_added", "friend_removed"];
+  const changes = ["friend_request_received", "friend_added", "friend_removed", "presence_changed", "friend_profile_changed"];
   const communicationChanges = ["call_invite", "call_invite_cancelled", "call_invite_responded", "dm_message", "dm_read"];
   let communicationsRevision = 0;
   let communicationsRefresh;

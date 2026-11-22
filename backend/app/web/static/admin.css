@@ -41,6 +41,8 @@
 .participants { list-style: none; padding: 0; margin: 0; }
 .participants li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
 .room-listing, .settings-group, .account-actions { margin-top: var(--space-6); }
+.admin-user-cell { display: flex; align-items: center; gap: var(--space-2); }
+.admin-user-cell img, .profile-avatar { border-radius: 50%; object-fit: cover; }
 .setting-row { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(140px, .8fr) auto auto; align-items: center; gap: var(--space-3); padding-block: var(--space-4); border-top: 1px solid var(--border); }
 .setting-row label { font-weight: 500; }
 .setting-row small { margin-top: var(--space-1); }
@@ -51,11 +53,14 @@
 .narrow { max-width: 560px; }
 .admin-empty { display: grid; justify-items: center; gap: var(--space-3); padding: var(--space-12); text-align: center; }
 .admin-empty > .icon { width: 40px; height: 40px; color: var(--primary-text); }
+@media (768px <= width < 1200px) {
+  .admin-sidebar > .brand .sidebar-label { display: block; position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+}
 @media (max-width: 1199px) {
   .admin-shell { grid-template-columns: 80px minmax(0, 1fr); }
   .admin-sidebar { padding-inline: var(--space-3); align-items: center; }
   .admin-sidebar > .brand { padding: 0; }
-  .admin-sidebar .sidebar-label, .admin-sidebar .badge, .admin-account p, .admin-account small { display: none; }
+  .admin-nav .sidebar-label, .admin-sidebar .badge, .admin-account p, .admin-account small { display: none; }
   .admin-nav a { width: 44px; justify-content: center; padding: var(--space-3); }
   .admin-account { padding-inline: 0; }
   .admin-account button { font-size: .625rem; padding-inline: var(--space-2); }

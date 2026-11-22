@@ -21,6 +21,9 @@
         <li><a class="menu-item" href="/lobby" aria-label="Trang chủ"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#home"></use></svg><span class="sidebar-label">Trang chủ</span></a></li>
         <li><a class="menu-item" href="/rooms" aria-label="Phòng của tôi"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg><span class="sidebar-label">Phòng của tôi</span></a></li>
         <li><a class="menu-item" href="/account" aria-current="page" aria-label="Tài khoản"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#users"></use></svg><span class="sidebar-label">Tài khoản</span></a></li>
+        <li data-member-only hidden><a class="menu-item" href="/friends" aria-label="Bạn bè"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#users"></use></svg><span class="sidebar-label">Bạn bè</span></a></li>
+        <li data-member-only hidden><a class="menu-item" href="/messages" aria-label="Tin nhắn"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#message"></use></svg><span class="sidebar-label">Tin nhắn</span></a></li>
+        <li data-member-only hidden><a class="menu-item" href="/history" aria-label="Lịch sử"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#history"></use></svg><span class="sidebar-label">Lịch sử</span></a></li>
       </ul></nav>
       <div class="sidebar-account"><p class="eyebrow">VIDEOCALL WORKSPACE</p><p class="text-small muted" data-i18n="lobbySidebarNote">Một nơi cho mọi cuộc trò chuyện.</p></div>
     </aside>
@@ -33,11 +36,47 @@
   <h2 data-i18n="account">Tài khoản</h2><dl class="account-fields">
     <div><dt>Tên hiển thị</dt><dd id="profile"></dd></div><div><dt>Email</dt><dd id="profile-email"></dd></div><div><dt>Vai trò</dt><dd id="profile-role"></dd></div>
   </dl></section>
-<section class="panel" id="password-panel" hidden><h2>Đổi mật khẩu</h2><form id="password-form">
+<div id="account-settings" hidden>
+<div class="tabs" role="tablist" aria-label="Cài đặt tài khoản">
+  <button id="profile-settings-tab" role="tab" type="button" aria-controls="profile-settings" aria-selected="true">Hồ sơ</button>
+  <button id="security-tab" role="tab" type="button" aria-controls="password-panel" aria-selected="false" tabindex="-1">Bảo mật</button>
+  <button id="privacy-tab" role="tab" type="button" aria-controls="privacy-panel" aria-selected="false" tabindex="-1">Quyền riêng tư</button>
+  <button id="appearance-tab" role="tab" type="button" aria-controls="appearance-panel" aria-selected="false" tabindex="-1">Giao diện</button>
+</div>
+<section id="profile-settings" class="panel" role="tabpanel" aria-labelledby="profile-settings-tab" tabindex="0">
+  <h2>Hồ sơ</h2><div id="profile-avatar"></div>
+  <form id="avatar-form">
+    <label>Chọn ảnh đại diện <input name="file" type="file" accept="image/png,image/jpeg,image/webp" required></label>
+    <p id="avatar-help" class="muted text-small"></p><img id="avatar-preview" class="profile-avatar" width="96" height="96" alt="Xem trước ảnh đã chọn" hidden>
+    <div class="controls"><button type="submit">Tải ảnh lên</button><button id="remove-avatar" class="danger" type="button" hidden>Gỡ ảnh</button></div>
+  </form>
+  <form id="profile-form">
+    <label>Họ và tên <input name="display_name" autocomplete="name" minlength="2" maxlength="50" required></label>
+    <label>Ngày sinh (tùy chọn) <input type="date" name="birth_date" autocomplete="bday"></label>
+    <label>Email <input type="email" name="email" readonly></label>
+    <button type="submit" disabled>Lưu thay đổi</button>
+  </form>
+</section>
+<section class="panel" id="password-panel" role="tabpanel" aria-labelledby="security-tab" tabindex="0" hidden><h2>Đổi mật khẩu</h2>
+      <p class="muted">Sau khi đổi mật khẩu, các phiên khác sẽ bị đăng xuất.</p><form id="password-form">
         <label>Mật khẩu hiện tại <input name="current_password" type="password" autocomplete="current-password" required></label>
         <label>Mật khẩu mới <input name="new_password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
+        <label>Nhập lại mật khẩu mới <input name="confirm_password" type="password" maxlength="128" autocomplete="new-password" required></label>
+        <label id="new-password-strength" class="muted text-small">Độ mạnh ước tính <meter id="new-password-meter" value="0" min="0" max="3"></meter></label>
         <button>Đổi mật khẩu</button>
-      </form></section>
+      </form><button id="logout-all" class="danger" type="button">Đăng xuất khỏi mọi thiết bị</button></section>
+<section id="privacy-panel" class="panel" role="tabpanel" aria-labelledby="privacy-tab" tabindex="0" hidden>
+  <h2>Quyền riêng tư</h2><form id="privacy-form">
+    <label class="check-setting"><input type="checkbox" name="discoverable_by_email"><span>Cho phép người khác tìm tôi bằng email<small class="muted">Chỉ khớp khi họ nhập địa chỉ email đầy đủ.</small></span></label>
+    <label class="check-setting"><input type="checkbox" name="show_online_status"><span>Hiển thị trạng thái trực tuyến cho bạn bè<small class="muted">Chỉ người đã kết bạn được xem trạng thái.</small></span></label>
+    <button type="submit" disabled>Lưu quyền riêng tư</button>
+  </form>
+</section>
+<section id="appearance-panel" class="panel" role="tabpanel" aria-labelledby="appearance-tab" tabindex="0" hidden>
+  <h2>Giao diện</h2><label>Chủ đề <select data-theme-select><option value="light">Sáng</option><option value="dark">Tối</option><option value="system">Theo hệ thống</option></select></label>
+  <label class="check-setting"><input id="invite-sound" type="checkbox"><span>Phát âm báo lời mời gọi<small class="muted">Âm thanh phát sau khi bạn tương tác với trang.</small></span></label>
+</section>
+</div>
         <footer class="workspace-footer"><p id="presence-state" class="status-pill" role="status">Đang kết nối…</p></footer>
       </main>
     </div>

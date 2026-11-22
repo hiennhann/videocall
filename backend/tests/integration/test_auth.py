@@ -104,10 +104,22 @@ async def test_browser_cookie_session_can_be_shared_across_tabs(
             flag in cookie
             for flag in ("path=/api/v1/auth", "httponly", "secure", "samesite=strict")
         )
+        assert_error(
+            await web.post("auth/session", headers={"Origin": "https://other"}), 403, "FORBIDDEN"
+        )
+        snapshots = await asyncio.gather(
+            *(web.post("auth/session", headers=origin) for _ in range(2))
+        )
+        for snapshot in snapshots:
+            assert snapshot.status_code == 200
+            assert snapshot.json()["access_token"] == signed_in.json()["access_token"]
+            assert snapshot.headers["cache-control"] == "no-store"
+            assert "set-cookie" not in snapshot.headers
         for _ in range(2):
             response = await web.post("auth/refresh", headers=origin)
             assert response.status_code == 200 and "refresh_token" not in response.json()
         assert (await web.post("auth/logout", headers=origin)).status_code == 204
+        assert_error(await web.post("auth/session", headers=origin), 401, "UNAUTHENTICATED")
         assert_error(await web.post("auth/refresh", headers=origin), 401, "INVALID_REFRESH_TOKEN")
 
 

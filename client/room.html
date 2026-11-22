@@ -111,8 +111,9 @@
         <h2>Mời bạn vào phòng</h2>
         <p id="invite-status" role="status"></p>
         <form id="call-invite-form" hidden>
+          <label>Tìm bạn theo tên <input id="invite-search" type="search" maxlength="50"></label>
           <fieldset><legend>Chọn tối đa 20 người</legend><div id="invite-options"></div></fieldset>
-          <button type="submit">Gửi lời mời</button>
+          <div class="controls"><button type="submit">Gửi lời mời</button><button type="button" class="secondary" id="invite-copy">Sao chép mã phòng</button></div>
         </form>
       </section>
       </aside>

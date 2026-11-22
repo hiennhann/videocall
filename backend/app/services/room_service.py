@@ -666,6 +666,7 @@ class RoomService:
                     "code": room.code,
                     "name": room.name,
                     "mode": room.mode,
+                    "is_private": room.is_private,
                     "host": host_info,
                     "participants": [
                         {**peer.public(), "joined_at": peer.joined_at}

@@ -22,11 +22,12 @@
   <div id="layout" hx-boost="true" hx-target="#layout" hx-select="#layout" hx-swap="outerHTML" class="admin-shell {% if not admin %}solo{% endif %}">
     {% if admin %}
     <aside class="admin-sidebar">
-      <a class="brand" href="/admin" aria-label="Tổng quan quản trị"><span class="brand-mark">{{ icon('video') }}</span><span class="sidebar-label" data-project-name>Videocall</span><span class="badge badge--primary">ADMIN</span></a>
+      <a class="brand" href="/admin"><span class="brand-mark">{{ icon('video') }}</span><span class="sidebar-label" data-project-name>Videocall</span><span class="badge badge--primary">ADMIN</span></a>
       <nav class="admin-nav" aria-label="Quản trị" hx-boost="false">
         {% for name, label, path, symbol in (
           ('dashboard', 'Tổng quan', '/admin', 'home'), ('rooms', 'Phòng trực tiếp', '/admin/rooms', 'video'),
-          ('users', 'Tài khoản', '/admin/users', 'users'), ('settings', 'Cấu hình', '/admin/settings', 'settings'),
+          ('users', 'Tài khoản', '/admin/users', 'users'), ('reports', 'Báo cáo', '/admin/reports', 'history'),
+          ('settings', 'Cấu hình', '/admin/settings', 'settings'),
           ('audit', 'Nhật ký', '/admin/audit', 'history')
         ) %}
         <a href="{{ path }}" aria-label="{{ label }}"{% if active == name %} aria-current="page"{% endif %}>{{ icon(symbol) }}<span class="sidebar-label">{{ label }}</span></a>

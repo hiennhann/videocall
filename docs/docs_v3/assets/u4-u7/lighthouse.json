@@ -1,0 +1,46 @@
+{
+  "lighthouse": "13.6.0",
+  "formFactor": "mobile",
+  "pages": [
+    {
+      "url": "/friends",
+      "score": 100,
+      "issues": []
+    },
+    {
+      "url": "/messages",
+      "score": 100,
+      "issues": []
+    },
+    {
+      "url": "/history",
+      "score": 100,
+      "issues": []
+    },
+    {
+      "url": "/account",
+      "score": 100,
+      "issues": []
+    },
+    {
+      "url": "/admin",
+      "score": 100,
+      "issues": []
+    },
+    {
+      "url": "/admin/rooms",
+      "score": 100,
+      "issues": []
+    },
+    {
+      "url": "/admin/reports",
+      "score": 100,
+      "issues": []
+    },
+    {
+      "url": "/admin/settings",
+      "score": 100,
+      "issues": []
+    }
+  ]
+}

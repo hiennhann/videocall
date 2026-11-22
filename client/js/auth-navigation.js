@@ -1,4 +1,4 @@
-const pages = new Set(["/lobby", "/rooms", "/account", "/rooms/join", "/rooms/create", "/room"]);
+const pages = new Set(["/lobby", "/rooms", "/account", "/rooms/join", "/rooms/create", "/room", "/friends", "/messages", "/history"]);
 
 export function loginDestination(value) {
   if (!value) return "/lobby";

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bạn bè · Videocall</title>
+  <link rel="stylesheet" href="/client/css/tokens.css">
+  <link rel="stylesheet" href="/client/css/base.css">
+  <link rel="stylesheet" href="/client/css/components.css">
+  <link rel="stylesheet" href="/client/styles.css">
+  <link rel="icon" href="data:,">
+  <script src="/client/vendor/socket.io.min.js" defer></script>
+  <script type="module" src="/client/js/friends.js"></script>
+</head>
+<body data-page="friends">
+  <a class="skip-link" href="#main" data-i18n="skip">Đến nội dung chính</a>
+  <div class="workspace">
+    <aside class="app-sidebar">
+      <a class="brand" href="/lobby" aria-label="Trang chủ"><span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg></span><span class="sidebar-label" data-project-name>Videocall</span></a>
+      <nav aria-label="Điều hướng"><ul class="menu-list">
+        <li><a class="menu-item" href="/lobby" aria-label="Trang chủ"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#home"></use></svg><span class="sidebar-label">Trang chủ</span></a></li>
+        <li><a class="menu-item" href="/rooms" aria-label="Phòng của tôi"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg><span class="sidebar-label">Phòng của tôi</span></a></li>
+        <li><a class="menu-item" href="/account" aria-label="Tài khoản"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#users"></use></svg><span class="sidebar-label">Tài khoản</span></a></li>
+        <li data-member-only hidden><a class="menu-item" href="/friends" aria-current="page" aria-label="Bạn bè"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#users"></use></svg><span class="sidebar-label">Bạn bè</span></a></li>
+        <li data-member-only hidden><a class="menu-item" href="/messages" aria-label="Tin nhắn"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#message"></use></svg><span class="sidebar-label">Tin nhắn</span></a></li>
+        <li data-member-only hidden><a class="menu-item" href="/history" aria-label="Lịch sử"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#history"></use></svg><span class="sidebar-label">Lịch sử</span></a></li>
+      </ul></nav>
+      <div class="sidebar-account"><p class="eyebrow">VIDEOCALL WORKSPACE</p><p class="text-small muted" data-i18n="lobbySidebarNote">Một nơi cho mọi cuộc trò chuyện.</p></div>
+    </aside>
+    <div class="workspace-body">
+      <header class="topbar"><div class="shell"><span class="eyebrow" data-i18n="workspace">Không gian của bạn</span><a class="brand mobile-brand" href="/lobby"><span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="/client/icons/sprite.svg#video"></use></svg></span><span data-project-name>Videocall</span></a><div class="header-actions"><label class="theme-picker"><span data-i18n="theme">Giao diện</span><select data-theme-select aria-label="Giao diện"><option value="light" data-i18n="light">Sáng</option><option value="dark" data-i18n="dark">Tối</option><option value="system" data-i18n="system">Theo hệ thống</option></select></label><button id="logout" class="secondary" type="button">Đăng xuất</button></div></div></header>
+      <main class="workspace-main" id="main" tabindex="-1">
+        <h1 id="page-title">Bạn bè</h1>
+<p id="message" class="notice" role="status" hidden></p>
+<section id="friends-content" hidden>
+  <form id="friend-search" class="panel filter" hidden><label>Tìm bạn bằng email<input type="email" name="email" maxlength="254" required></label><button>Tìm</button></form>
+  <div id="friend-search-result" aria-live="polite"></div>
+  <div class="tabs" role="tablist" aria-label="Bạn bè">
+    <button type="button" id="friends-tab" role="tab" aria-selected="true" aria-controls="friends-panel">Bạn bè</button>
+    <button type="button" id="requests-tab" role="tab" aria-selected="false" aria-controls="requests-panel" tabindex="-1">Lời mời</button>
+    <button type="button" id="blocks-tab" role="tab" aria-selected="false" aria-controls="blocks-panel" tabindex="-1">Đã chặn</button>
+  </div>
+  <section id="friends-panel" role="tabpanel" aria-labelledby="friends-tab" tabindex="0"><ul id="friends-list" class="social-list"></ul></section>
+  <section id="requests-panel" role="tabpanel" aria-labelledby="requests-tab" tabindex="0" hidden>
+    <h2>Đã nhận</h2><ul id="friends-incoming" class="social-list"></ul>
+    <h2>Đã gửi</h2><ul id="friends-outgoing" class="social-list"></ul>
+  </section>
+  <section id="blocks-panel" role="tabpanel" aria-labelledby="blocks-tab" tabindex="0" hidden><ul id="friends-blocks" class="social-list"></ul></section>
+  <button id="friends-retry" class="secondary" type="button" hidden>Thử lại</button>
+</section>
+        <footer class="workspace-footer"><p id="presence-state" class="status-pill" role="status">Đang kết nối…</p></footer>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

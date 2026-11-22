@@ -200,6 +200,59 @@ dialog .controls { margin-top: var(--space-6); }
 #room-drawer-toggle, #room-drawer-close { display: none; }
 .call-controls [aria-expanded="true"] { border-color: var(--primary); }
 
+.social-list, .notification-list, .dm-messages { list-style: none; margin: 0; padding: 0; }
+.social-list { display: grid; gap: var(--space-3); margin-block: var(--space-4); }
+.person-row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.person-copy { flex: 1 1 9rem; min-width: 0; overflow-wrap: anywhere; }
+.person-row .controls { flex: 0 1 auto; }
+.profile-avatar { border-radius: var(--radius-round); object-fit: cover; flex: none; }
+.avatar-large { width: 96px; height: 96px; font-size: var(--text-xl); }
+.friend-options > button { margin: var(--space-2) var(--space-2) 0 0; }
+.notification-menu { position: relative; }
+.notification-menu summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; gap: var(--space-2); }
+.notification-list { position: absolute; width: min(26rem, calc(100vw - 2rem)); max-height: 65svh; overflow: auto; right: 0; z-index: 12; box-shadow: var(--shadow-overlay); padding: var(--space-4); }
+.notification-list li + li { padding-top: var(--space-3); margin-top: var(--space-3); border-top: 1px solid var(--border); }
+.notification-list p, .incoming-call p { overflow-wrap: anywhere; }
+.incoming-call { position: fixed; right: var(--space-4); top: 5.5rem; z-index: 10; width: min(24rem, calc(100vw - 2rem)); box-shadow: var(--shadow-overlay); }
+.incoming-call .controls { margin-top: var(--space-3); }
+.dm-layout { display: grid; grid-template-columns: minmax(14rem, .8fr) minmax(0, 1.4fr); gap: var(--space-4); align-items: start; margin-top: var(--space-4); }
+.dm-inbox, .dm-thread { min-width: 0; }
+.dm-inbox .person-row { padding: var(--space-3); box-shadow: none; }
+.dm-messages { min-height: 10rem; max-height: min(54svh, 38rem); overflow: auto; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); }
+.dm-bubble { max-width: min(85%, 36rem); padding: var(--space-3); background: var(--surface-2); border-radius: var(--radius-md); overflow-wrap: anywhere; }
+.dm-bubble p { white-space: pre-wrap; }
+.dm-bubble.own { align-self: flex-end; background: var(--primary-soft); color: var(--text); }
+.dm-bubble time, .dm-bubble span { font-size: var(--text-xs); color: var(--text-muted); margin-inline-end: var(--space-2); }
+.dm-bubble button { font-size: var(--text-xs); }
+.dm-day { align-self: center; color: var(--text-muted); font-size: var(--text-xs); }
+#conversations-back { display: none; }
+#dm-form { margin-top: var(--space-3); }
+.check-setting { display: flex; align-items: start; gap: var(--space-3); margin-block: var(--space-3); }
+.check-setting input { width: 1.25rem; height: 1.25rem; flex: none; }
+.check-setting small { display: block; }
+#account-settings form { margin-block: var(--space-4); }
+.history-drawer { margin: 0 0 0 auto; width: min(38rem, 100%); max-height: 100dvh; height: 100dvh; border-radius: 0; }
+.history-avatars { display: flex; align-items: center; gap: var(--space-1); }
+.history-avatars .avatar { width: 28px; height: 28px; font-size: .625rem; }
+#history-page { margin-block: var(--space-3); }
+#clear-history { margin-top: var(--space-4); }
+#friends-content .tabs, #account-settings .tabs { flex-wrap: wrap; }
+.report-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: var(--space-4); margin-block: var(--space-4); }
+.report-chart { display: block; width: 100%; }
+.report-chart rect { fill: var(--primary); }
+.report-chart text { fill: var(--text); font-size: 10px; }
+
+@media (max-width: 767px) {
+  .app-sidebar > nav { overflow-x: auto; }
+  .app-sidebar .menu-list { min-width: max-content; }
+  .app-sidebar .menu-item { min-width: 54px; min-height: 44px; padding-inline: var(--space-1); }
+  .dm-layout { display: block; }
+  .dm-layout.thread-open .dm-inbox { display: none; }
+  #conversations-back { display: inline-flex; min-height: 40px; align-items: center; }
+  .notification-menu { position: static; }
+  .notification-list { right: var(--space-4); }
+}
+
 @media (max-width: 767px) {
   .home-actions:has([data-member-only]:not([hidden])) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .home-actions .home-action { padding: var(--space-4); gap: var(--space-2); }

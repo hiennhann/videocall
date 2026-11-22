@@ -18,3 +18,9 @@ document.getElementById("admin-confirm-submit").addEventListener("click", () => 
   request?.(true);
 });
 dialog.addEventListener("close", () => { pending = undefined; });
+document.addEventListener("htmx:beforeRequest", event => {
+  const polling = event.detail.elt;
+  if (!polling.matches("#live-rooms-list, #dashboard-summary")) return;
+  if (document.hidden || dialog.open || polling.contains(document.activeElement) ||
+      polling.querySelector("details[open]")) event.preventDefault();
+});

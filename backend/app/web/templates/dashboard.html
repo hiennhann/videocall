@@ -10,14 +10,10 @@
     <div class="panel"><dt>Tài khoản đang hoạt động</dt><dd data-online-accounts>{{ presence.online_accounts }}</dd></div>
   </dl>
 </section>
-<dl class="metrics">
-  <div class="panel"><dt>Tài khoản</dt><dd>{{ total }}</dd></div>
-  <div class="panel"><dt>Phòng đang mở</dt><dd>{{ rooms }}</dd></div>
-  <div class="panel"><dt>Người trong phòng</dt><dd>{{ participants }}</dd></div>
-  <div class="panel"><dt>Kết nối Socket.IO</dt><dd>{{ connections }}</dd></div>
-</dl>
+{% include "_dashboard_summary.html" %}
 <section class="panel">
   <h2>Tài khoản mới trong 7 ngày</h2>
+  <p class="muted">{{ total }} tài khoản đã đăng ký</p>
   <div class="table-scroll"><table><thead><tr><th>Ngày UTC</th><th>Số tài khoản mới</th></tr></thead>
     <tbody>{% for day, count in daily %}<tr><td>{{ day }}</td><td>{{ count }}</td></tr>{% endfor %}</tbody>
   </table></div>

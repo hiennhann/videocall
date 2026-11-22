@@ -9,7 +9,10 @@
 <div class="panel table-scroll">
   <table><thead><tr><th>Tài khoản</th><th>Vai trò</th><th>Trạng thái</th><th>Đăng nhập gần nhất</th></tr></thead>
     <tbody>{% for user in users %}
-      <tr><td><a href="/admin/users/{{ user.id }}">{{ user.display_name }}</a><small>{{ user.email }}</small></td>
+      <tr><td><div class="admin-user-cell">
+        {% if avatars[user.id] %}<img src="{{ avatars[user.id] }}" alt="" width="32" height="32" loading="lazy">{% endif %}
+        <div><a href="/admin/users/{{ user.id }}">{{ user.display_name }}</a><small>{{ user.email }}</small></div>
+      </div></td>
         <td>{{ "Quản trị viên" if user.role == "admin" else "Người dùng" }}</td>
         <td>{{ "Hoạt động" if user.is_active else "Đã khóa" }}</td>
         <td>{{ user.last_login_at.strftime('%Y-%m-%d %H:%M UTC') if user.last_login_at else '—' }}</td></tr>

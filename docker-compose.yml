@@ -47,6 +47,7 @@ services:
       FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-}
       ADMIN_ALLOWED_IPS: ${ADMIN_ALLOWED_IPS:-}
       PROMETHEUS_URL: ${PROMETHEUS_URL:-}
+      TURN_CAPACITY_MBPS: ${TURN_CAPACITY_MBPS:-0}
       SFU_URL: http://sfu:8080
       AVATAR_STORAGE_DIR: /var/lib/videocall/avatars
     volumes:
