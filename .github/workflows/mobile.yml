@@ -1,18 +1,7 @@
 name: Mobile CI
 
 on:
-  push:
-    paths:
-      - 'mobile/**'
-      - 'client/js/webrtc.js'
-      - 'client/js/live.js'
-      - '.github/workflows/mobile.yml'
-  pull_request:
-    paths:
-      - 'mobile/**'
-      - 'client/js/webrtc.js'
-      - 'client/js/live.js'
-      - '.github/workflows/mobile.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read

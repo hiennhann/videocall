@@ -18,7 +18,7 @@ Máy build cần Android SDK và Java phù hợp. Kết nối điện thoại đ
 npm run android -- --device
 ```
 
-Workflow [Mobile CI](../.github/workflows/mobile.yml) cũng tạo artifact `videocall-android-development`. Tải và giải nén artifact rồi cài `app-debug.apk` lên Android arm64. Bản phát triển kết nối tới Metro chạy trên laptop.
+Chạy thủ công workflow [Mobile CI](../.github/workflows/mobile.yml) trong GitHub Actions để tạo artifact `videocall-android-development`. Tải và giải nén artifact rồi cài `app-debug.apk` lên Android arm64. Bản phát triển kết nối tới Metro chạy trên laptop.
 
 ## iPhone
 

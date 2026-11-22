@@ -40,6 +40,18 @@ async def sign_in(web: AsyncClient) -> dict:
     return response.json()
 
 
+async def test_web_assets_revalidate_after_deployment(web: AsyncClient) -> None:
+    login = await web.get("/")
+    assert login.headers["cache-control"] == "no-cache"
+    for path in ("/client/styles.css", "/client/js/room.js", "/client/js/api.js"):
+        response = await web.get(path)
+        assert response.status_code == 200
+        assert response.headers["cache-control"] == "no-cache"
+        unchanged = await web.get(path, headers={"If-None-Match": response.headers["etag"]})
+        assert unchanged.status_code == 304
+        assert unchanged.headers["cache-control"] == "no-cache"
+
+
 async def test_login_protects_html_and_logout_revokes_copied_page_cookie(web: AsyncClient) -> None:
     await sign_in(web)
     token = web.cookies.get(PAGE_ACCESS_COOKIE)

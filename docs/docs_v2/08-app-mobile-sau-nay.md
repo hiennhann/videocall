@@ -38,7 +38,7 @@ Mã và tài liệu đã được push lên `feat/v2-web-dashboard` tại `be59f
 4. Cài bản phát triển lên thiết bị thật. Dùng hai tài khoản để thử gọi web ↔ app, sau đó dùng một tài khoản để thử chuyển thiết bị.
 5. Thử cùng Wi-Fi trước. Khi có server Internet, tiếp tục Wi-Fi ↔ 4G/5G và xác minh đường TURN, tiếng/hình cùng luồng livestream.
 
-Các artifact trên GitHub có thời hạn lưu 7 ngày. Chạy lại workflow để tạo bản cài mới khi cần.
+Các artifact trên GitHub có thời hạn lưu 7 ngày. Dùng **Run workflow** trong Mobile CI để tạo bản cài mới khi cần.
 
 ## Nghiệm thu web trên điện thoại ở giai đoạn hiện tại
 

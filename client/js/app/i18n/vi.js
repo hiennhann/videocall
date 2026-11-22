@@ -1,4 +1,4 @@
-export const productName = "Videocall";
+const productName = "Videocall";
 
 export const vi = {
   brand: productName,
@@ -144,26 +144,17 @@ export const vi = {
   authWelcome: "Chào mừng trở lại",
   authSignIn: "Đăng nhập để tiếp tục cuộc trò chuyện.",
   workspace: "Không gian của bạn",
-  lobbyEyebrow: "CÙNG NHAU, TỪ MỌI NƠI",
-  lobbyHeadline: "Bắt đầu cuộc trò chuyện.",
-  lobbyDescription: "Tạo phòng mới hoặc tham gia bằng mã để kết nối với mọi người.",
   lobbySidebarNote: "Một nơi cho mọi cuộc trò chuyện.",
   roomsDescription: "Các phòng bạn đã tạo, sẵn sàng để tiếp tục.",
-  workspaceFooter: "Videocall · Gọi video và livestream",
-  precallTitle: "Sẵn sàng kết nối?",
-  precallDescription: "Tham gia khi bạn đã sẵn sàng. Mọi người đang ở cách bạn một lần chạm.",
   myRooms: "Phòng của tôi",
   account: "Tài khoản",
   createRoom: "Tạo phòng",
   joinRoom: "Vào phòng",
   createDescription: "Chọn loại phòng, đặt tên và mật khẩu nếu cần.",
-  joinDescription: "Nhập mã để tham gia cuộc gọi hoặc livestream.",
+  joinDescription: "Nhập mã phòng rồi xác nhận tham gia ở màn hình tiếp theo.",
   accountDescription: "Thông tin đăng nhập và mật khẩu của bạn.",
-  homeDescription: "Chọn việc bạn muốn làm để bắt đầu kết nối.",
   createActionDescription: "Bắt đầu cuộc gọi nhóm hoặc phát livestream.",
   joinActionDescription: "Kết nối với mọi người qua mã phòng được chia sẻ.",
-  roomsActionDescription: "Mở danh sách các phòng bạn đã tạo.",
-  accountActionDescription: "Xem tài khoản và đổi mật khẩu.",
   passwordRequired: "Bạn cần đổi mật khẩu trước khi tiếp tục.",
   passwordChanged: "Đã đổi mật khẩu. Bạn có thể tiếp tục sử dụng các trang khác.",
   guestSession: "Đang dùng tên khách",

@@ -22,7 +22,10 @@ class ClientFiles(StaticFiles):
     async def get_response(self, path: str, scope: Scope) -> Response:
         if not self.dev and Path(path).name.casefold() == "styleguide.html":
             raise HTTPException(status_code=404)
-        return await super().get_response(path, scope)
+        response = await super().get_response(path, scope)
+        if Path(path).suffix.casefold() in {".html", ".js", ".css"}:
+            response.headers["Cache-Control"] = "no-cache"
+        return response
 
 
 def mount_client(app: FastAPI, *, dev: bool = False) -> None:
@@ -31,7 +34,7 @@ def mount_client(app: FastAPI, *, dev: bool = False) -> None:
 
     @router.get("/")
     async def login_page() -> FileResponse:
-        return FileResponse(client_root / "index.html")
+        return FileResponse(client_root / "index.html", headers={"Cache-Control": "no-cache"})
 
     @router.get("/lobby")
     async def lobby_page() -> FileResponse:

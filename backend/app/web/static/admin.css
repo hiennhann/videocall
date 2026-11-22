@@ -21,7 +21,7 @@
 .admin-shell.solo { display: block; }
 .admin-layout.solo .panel { padding: var(--space-8); }
 .admin-layout.solo form > button { width: 100%; }
-.inline, .actions form, .participants form { display: inline-block; }
+.actions form, .participants form { display: inline-block; }
 .actions { display: flex; gap: var(--space-3); flex-wrap: wrap; }
 .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); margin: var(--space-6) 0; }
 .metrics .panel { padding: var(--space-6); }
@@ -51,8 +51,6 @@
 .temporary, pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .temporary { display: block; padding: var(--space-4); background: var(--primary-soft); color: var(--primary-text); border-radius: var(--radius-sm); font-size: var(--text-lg); margin-block: var(--space-6); }
 .narrow { max-width: 560px; }
-.admin-empty { display: grid; justify-items: center; gap: var(--space-3); padding: var(--space-12); text-align: center; }
-.admin-empty > .icon { width: 40px; height: 40px; color: var(--primary-text); }
 @media (768px <= width < 1200px) {
   .admin-sidebar > .brand .sidebar-label { display: block; position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 }

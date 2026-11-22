@@ -21,7 +21,7 @@ async function snapshot(page, channel, name) {
   for (const [label, width] of [["desktop",1440], ["tablet",900], ["phone",390]]) {
     await page.setViewportSize({width,height:1000});
     for (const theme of ["light", "dark"]) {
-      await page.locator("[data-theme-select]").selectOption(theme);
+      await page.locator(".topbar [data-theme-select]").selectOption(theme);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${name} ${width} overflow`);
       assert.equal(await page.evaluate(() => document.fonts.check('500 14px "Inter"')), true);
       await page.screenshot({path:path.join(out,`${channel}-${name}-${label}-${theme}.png`),fullPage:true});
@@ -210,7 +210,7 @@ async function mediaContext(browser) {
         }, invitation.id);
         await page.locator("#invite-tab").click();
         await page.locator("#invite-options input").first().check();
-        await page.locator("#call-invite-form button").click();
+        await page.locator("#call-invite-form button[type=submit]").click();
         await page.waitForFunction(() => document.querySelector("#invite-status").textContent.includes("Đã gửi 1"));
         await snapshot(page, channel, "invite-room");
         await friend.locator("#home-room-cards").getByRole("button", {name:"Tham gia", exact:true}).click();
@@ -285,12 +285,6 @@ async function mediaContext(browser) {
     } finally {
       for (const context of contexts) await context.close();
       await browser.close();
-    }
-    if (channel === "chrome") {
-      // Full-document navigation refreshes the in-memory token on each page.
-      // Separate both browser passes to respect the existing 30/minute IP limit.
-      console.log("Chrome checks passed; waiting for the refresh rate-limit window before Edge.");
-      await new Promise(resolve => setTimeout(resolve, 60000));
     }
   }
   assert.deepEqual(errors,[]);

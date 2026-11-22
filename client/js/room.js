@@ -633,6 +633,8 @@ class RoomCall {
 
 onForm("enter-form", async (fields, form) => {
   active?.stop();
+  const status = element("call-state");
+  status.textContent = "Đang vào phòng…";
   const call = active = new RoomCall(fields.password);
   const mic = element("mic");
   const camera = element("camera");
@@ -646,6 +648,7 @@ onForm("enter-form", async (fields, form) => {
     form.reset();
   } catch (error) {
     call.stop();
+    status.textContent = "Chưa thể vào phòng";
     throw new Error(mediaError(error));
   } finally {
     element("preview-area").inert = element("media-devices").inert = false;
@@ -760,8 +763,13 @@ if (await requireSession()) {
     privateRoom = room.has_password;
     showAdmission();
     element("join-panel").hidden = false;
+    element("call-state").textContent = roomMode === "livestream"
+      ? "Bấm Vào livestream để xem." : "Bấm Vào phòng để tham gia.";
   } catch (error) {
     if (error.status === 401) location.replace(loginUrl());
-    else message(error.message, true);
+    else {
+      element("call-state").textContent = "Không mở được phòng";
+      message(error.message, true);
+    }
   }
 }
