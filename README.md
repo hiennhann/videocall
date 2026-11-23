@@ -8,12 +8,14 @@ Mở Docker Desktop rồi chạy PowerShell tại thư mục dự án. Lệnh đ
 
 ```powershell
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
-docker compose up --build --wait
+.\tools\start-docker.ps1
 Invoke-RestMethod http://localhost:8000/health
 Invoke-RestMethod http://localhost:8000/ready
 ```
 
-`/health` kiểm tra process. `/ready` trả `200` khi kết nối được PostgreSQL và Alembic đã ở `head`, hoặc `503` nếu app chưa sẵn sàng. Compose chạy `migrate` trước `app`. Tài khoản ứng dụng và tài khoản migration dùng hai URL riêng. Các giá trị trong `.env.example` dành cho môi trường dev.
+`/health` kiểm tra process. `/ready` trả `200` khi kết nối được PostgreSQL và Alembic đã ở `head`, hoặc `503` nếu app chưa sẵn sàng. Compose chạy `migrate` trước `app`. Lệnh khởi động tự dọn container `migrate` sau khi các dịch vụ sẵn sàng. PostgreSQL, web app, Coturn và SFU tiếp tục phục vụ web, gọi và livestream. Tài khoản ứng dụng và tài khoản migration dùng hai URL riêng.
+
+Dùng `.\tools\start-docker.ps1 -NoBuild` khi đã có image muốn chạy. Nếu đã cấu hình `.lan/compose.yml` cho HTTPS nội bộ, chạy `.\tools\start-docker.ps1 -Lan` để bật thêm proxy Caddy cho điện thoại.
 
 ## Web người dùng
 
